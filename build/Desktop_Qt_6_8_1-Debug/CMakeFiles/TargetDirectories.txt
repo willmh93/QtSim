@@ -1,0 +1,9 @@
+/home/will/Projects/QtSim/build/Desktop_Qt_6_8_1-Debug/CMakeFiles/QtSim.dir
+/home/will/Projects/QtSim/build/Desktop_Qt_6_8_1-Debug/CMakeFiles/edit_cache.dir
+/home/will/Projects/QtSim/build/Desktop_Qt_6_8_1-Debug/CMakeFiles/rebuild_cache.dir
+/home/will/Projects/QtSim/build/Desktop_Qt_6_8_1-Debug/CMakeFiles/list_install_components.dir
+/home/will/Projects/QtSim/build/Desktop_Qt_6_8_1-Debug/CMakeFiles/install.dir
+/home/will/Projects/QtSim/build/Desktop_Qt_6_8_1-Debug/CMakeFiles/install/local.dir
+/home/will/Projects/QtSim/build/Desktop_Qt_6_8_1-Debug/CMakeFiles/install/strip.dir
+/home/will/Projects/QtSim/build/Desktop_Qt_6_8_1-Debug/CMakeFiles/QtSim_autogen_timestamp_deps.dir
+/home/will/Projects/QtSim/build/Desktop_Qt_6_8_1-Debug/CMakeFiles/QtSim_autogen.dir
