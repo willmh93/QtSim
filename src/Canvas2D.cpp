@@ -1,5 +1,5 @@
 ﻿#include "Canvas2D.h"
-#include "simulations/Simulation.h"
+#include "Simulation.h"
 
 
 /*void generate_random_color_frame2(uint8_t* data, int width, int height, int linesize) {

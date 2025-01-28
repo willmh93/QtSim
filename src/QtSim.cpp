@@ -2,7 +2,8 @@
 #include <QDebug>
 
 //#include "simulation_types.h"
-#include "simulations/simulation_factory.h"
+//#include "simulations/simulations.h"
+#include "generated_simulations.h"
 
 QtSim::QtSim(QWidget *parent)
     : QMainWindow(parent)

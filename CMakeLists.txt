@@ -26,9 +26,6 @@ FetchContent_Declare(
     GIT_TAG master # Replace 'master' with a specific commit/branch/tag if desired
 )
 
-# Set options to disable Quick dependency
-set(QNANO_USE_RENDERNODE OFF CACHE BOOL "Disable Qt Quick dependency in QNanoPainter")
-
 # Make the library available
 FetchContent_MakeAvailable(QNanoPainter)
 
@@ -46,16 +43,34 @@ elseif(UNIX)
     link_directories(${FFMPEG_LIBRARY_DIRS})
 endif()
 
+# Auto-generate header simulations.h
+set(SIMULATIONS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src/simulations")  # Replace 'include' with your actual folder
+set(GENERATED_SIMULATIONS "${CMAKE_BINARY_DIR}/generated_simulations.h")
 
-#set(PROJECT_SOURCES
-#        src/main.cpp
-#        src/qtsim.cpp
-#        src/qtsim.h
-#)
+# Collect all simulation header files
+file(GLOB SIMULATION_HEADERS "${SIMULATIONS_DIR}/*.h")
 
-#file(GLOB UI_FILES
-#    "src/*.ui"
-#)
+# Create a list of include commands dynamically
+set(INCLUDE_COMMANDS)
+foreach(HEADER ${SIMULATION_HEADERS})
+    get_filename_component(HEADER_NAME ${HEADER} NAME) # Get only the file name
+    list(APPEND INCLUDE_COMMANDS COMMAND ${CMAKE_COMMAND} -E echo "#include \\\"simulations/${HEADER_NAME}\\\"" >> ${GENERATED_SIMULATIONS})
+endforeach()
+
+# Create the generated header file
+add_custom_command(
+    OUTPUT ${GENERATED_SIMULATIONS}
+    COMMAND ${CMAKE_COMMAND} -E echo "/* Auto-generated header file including all headers from ${SIMULATIONS_DIR} */" > ${GENERATED_SIMULATIONS}
+    COMMAND ${CMAKE_COMMAND} -E echo >> ${GENERATED_SIMULATIONS}
+    COMMAND ${CMAKE_COMMAND} -E echo "#ifndef GENERATED_SIMULATIONS_H" >> ${GENERATED_SIMULATIONS}
+    COMMAND ${CMAKE_COMMAND} -E echo "#define GENERATED_SIMULATIONS_H" >> ${GENERATED_SIMULATIONS}
+    COMMAND ${CMAKE_COMMAND} -E echo >> ${GENERATED_SIMULATIONS}
+    ${INCLUDE_COMMANDS}  # Dynamically add all include commands
+    COMMAND ${CMAKE_COMMAND} -E echo >> ${GENERATED_SIMULATIONS}
+    COMMAND ${CMAKE_COMMAND} -E echo "#endif // GENERATED_SIMULATIONS_H" >> ${GENERATED_SIMULATIONS}
+    DEPENDS ${SIMULATION_HEADERS}  # Regenerate if any header changes
+    COMMENT "Generating ${GENERATED_SIMULATIONS} with includes for all headers in ${SIMULATIONS_DIR}"
+)
 
 file(GLOB PROJECT_SOURCES
     "src/*.cpp"
@@ -67,17 +82,10 @@ file(GLOB PROJECT_SOURCES
     #${UI_FILES}
 )
 
-include_directories("src")
-include_directories("src/simulations")
+# Custom target to trigger generation
+add_custom_target(GenerateSimulationsHeader DEPENDS ${GENERATED_SIMULATIONS})
 
-# Debug output
-#message(STATUS "PROJECT_SOURCES: ${PROJECT_SOURCES}")
-#message(STATUS "UI_FILES: ${UI_FILES}")
 
-#set(PROJECT_SOURCES
-#        src/*.cpp
-#        src/*.h
-#)
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
     qt_add_executable(QtSim
@@ -101,6 +109,11 @@ else()
         )
     endif()
 endif()
+
+# Ensure QtSim depends on the generated header
+add_dependencies(QtSim GenerateSimulationsHeader)
+target_include_directories(QtSim PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_include_directories(QtSim PRIVATE ${CMAKE_BINARY_DIR})
 
 
 # Link Qt libraries

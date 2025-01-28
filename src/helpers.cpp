@@ -34,14 +34,6 @@ QString normalizeSeconds(double seconds)
     if (days < 365.2422)
         return QString::number(days, 'f', 2) + " days";
 
-    //double weeks = hours / 24.0;
-    //if (days < 30)
-    //    return QString::number(weeks, 'f', 2) + " weeks";
-
-    //double months = days / 30.0;
-    //if (months < 12)
-    //    return QString::number(months, 'f', 2) + " months";
-
     double years = days / 365.2422;
     if (years < 10)
         return QString::number(years, 'f', 2) + " years";

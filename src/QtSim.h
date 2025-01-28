@@ -8,7 +8,7 @@
 #include <QAction>
 #include <QMessageBox>
 
-#include "simulations/Simulation.h"
+#include "Simulation.h"
 #include "Canvas2D.h"
 //#include "SimSelector.h"
 #include "Options.h"

@@ -12,12 +12,13 @@
 #include <limits>
 #include <unordered_map>
 
-#include "../Options.h"
+
 #include "qnanopainter.h"
 
-#include "../World.h"
-#include "../graphics.h"
-#include "../helpers.h"
+#include "Options.h"
+#include "World.h"
+#include "graphics.h"
+#include "helpers.h"
 
 extern "C" {
 #include <libavcodec/avcodec.h>

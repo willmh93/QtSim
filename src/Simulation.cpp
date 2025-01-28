@@ -1,6 +1,6 @@
 #include "Simulation.h"
 
-#include "../Canvas2D.h"
+#include "Canvas2D.h"
 
 
 //#include <cstdlib>
