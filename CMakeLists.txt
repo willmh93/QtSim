@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.16)
 
 project(QtSim VERSION 0.1 LANGUAGES CXX)
 
+include(FetchContent)
+
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
@@ -9,14 +11,46 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets)
-find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets)
+find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Core Gui Widgets Xml OpenGL OpenGLWidgets)
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Gui Widgets Xml OpenGL OpenGLWidgets)
+
+
+# Fetch qnanopainter
+FetchContent_Declare(
+    QNanoPainter
+    GIT_REPOSITORY https://github.com/willmh93/qnanopainter
+    GIT_TAG master # Replace 'master' with a specific commit/branch/tag if desired
+)
+
+# Make the library available
+FetchContent_MakeAvailable(QNanoPainter)
+
+# Add FFmpeg paths
+if(WIN32)
+    set(FFMPEG_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external/ffmpeg/windows)
+    include_directories(${FFMPEG_DIR}/include)
+    link_directories(${FFMPEG_DIR}/lib)
+elseif(APPLE)
+    set(FFMPEG_LIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external/ffmpeg/macos/lib)
+    include_directories(${FFMPEG_DIR}/include)
+    link_directories(${FFMPEG_DIR}/lib)
+elseif(UNIX)
+    set(FFMPEG_LIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external/ffmpeg/linux/lib)
+    include_directories(${FFMPEG_DIR}/include)
+    link_directories(${FFMPEG_DIR}/lib)
+endif()
+
 
 set(PROJECT_SOURCES
-        main.cpp
-        qtsim.cpp
-        qtsim.h
+        src/main.cpp
+        src/qtsim.cpp
+        src/qtsim.h
 )
+
+#set(PROJECT_SOURCES
+#        src/*.cpp
+#        src/*.h
+#)
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
     qt_add_executable(QtSim
@@ -41,7 +75,22 @@ else()
     endif()
 endif()
 
-target_link_libraries(QtSim PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
+
+# Link Qt libraries
+target_link_libraries(QtSim PRIVATE Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Gui Qt${QT_VERSION_MAJOR}::Widgets Qt${QT_VERSION_MAJOR}::Xml Qt${QT_VERSION_MAJOR}::OpenGL Qt${QT_VERSION_MAJOR}::OpenGLWidgets)
+#target_link_libraries(QtSim PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
+
+# Link FFmpeg libraries
+target_link_libraries(QtSim PRIVATE
+    avcodec
+    avformat
+    avutil
+    swscale
+)
+
+# Link qnanopainter to your target
+target_link_libraries(QtSim PRIVATE qnanopainter)
+
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.
 # If you are developing for iOS or macOS you should consider setting an
