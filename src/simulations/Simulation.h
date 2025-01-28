@@ -87,20 +87,8 @@ public slots:
 
 using namespace std;
 
-class Simulation;
+//class Simulation;
 
-template <typename T>
-struct AutoRegisterSimulation
-{
-    AutoRegisterSimulation(QString name)
-    {
-        // Here, we push a lambda that creates a new T() 
-        // (which is a subclass of Simulation).
-        Simulation::addFactoryItem(name, []() -> Simulation* {
-            return new T();
-        });
-    }
-};
 
 #define SIM_BEG(id) namespace NS_##id { //struct Sim; inline AutoRegisterSimulation<Sim> register_##id;
 #define SIM_DECLARE(id, name) namespace NS_##id { AutoRegisterSimulation<Sim> register_##id(name);
@@ -302,6 +290,20 @@ signals:
     void frameReady(uint8_t* data);
     void endRecording();
 };
+
+template <typename T>
+struct AutoRegisterSimulation
+{
+    AutoRegisterSimulation(QString name)
+    {
+        // Here, we push a lambda that creates a new T()
+        // (which is a subclass of Simulation).
+        Simulation::addFactoryItem(name, []() -> Simulation* {
+            return new T();
+        });
+    }
+};
+
 
 /*void addFactoryItem(std::function<Simulation* (void)> creator)
 {  

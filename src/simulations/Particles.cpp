@@ -10,7 +10,7 @@ void Sim::prepare()
     gravity = 0;
 
     options->slider("Particles", &particle_count, 10, 100000);
-    options->slider("Gravity", &gravity, -1.0, 1.0);
+    options->slider("Gravity", &gravity, -1.0, 1.0, 0.1);
 }
 
 void Sim::start()

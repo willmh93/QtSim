@@ -26,6 +26,9 @@ FetchContent_Declare(
     GIT_TAG master # Replace 'master' with a specific commit/branch/tag if desired
 )
 
+# Set options to disable Quick dependency
+set(QNANO_USE_RENDERNODE OFF CACHE BOOL "Disable Qt Quick dependency in QNanoPainter")
+
 # Make the library available
 FetchContent_MakeAvailable(QNanoPainter)
 
@@ -64,7 +67,8 @@ file(GLOB PROJECT_SOURCES
     #${UI_FILES}
 )
 
-
+include_directories("src")
+include_directories("src/simulations")
 
 # Debug output
 #message(STATUS "PROJECT_SOURCES: ${PROJECT_SOURCES}")

@@ -33,7 +33,7 @@ public:
         std::variant<double, double*> target,
         std::variant<double, double*> min,
         std::variant<double, double*> max,
-        std::variant<double, double*> step = 1,
+        std::variant<double, double*> step,
         std::function<void(double)> on_change = nullptr);
 
     AttributeItem* checkbox(

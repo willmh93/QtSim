@@ -11,7 +11,6 @@
 
 //std::vector<std::function<Simulation* (void)>> Simulation::sim_factory;
 
-
 bool FFmpegWorker::startRecording()
 {
     const int fps = 60;
