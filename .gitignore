@@ -54,4 +54,3 @@ compile_commands.json
 *_qmlcache.qrc
 
 build/*
-/gittoken.txt
