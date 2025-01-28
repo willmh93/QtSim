@@ -246,7 +246,7 @@ AttributeItem::AttributeItem(const QString& name, AttributeType _type, QWidget* 
 
     input->setContentsMargins(2,2,2,2);
     layout->addWidget(frame);
-    setLayout(layout);
+    //setLayout(layout);
 }
 
 void AttributeItem::updateUIValue()

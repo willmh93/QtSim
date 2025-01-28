@@ -72,20 +72,18 @@ add_custom_command(
     COMMENT "Generating ${GENERATED_SIMULATIONS} with includes for all headers in ${SIMULATIONS_DIR}"
 )
 
-file(GLOB PROJECT_SOURCES
-    "src/*.cpp"
-    "src/*.h"
-    "src/simulations/*.cpp"
-    "src/simulations/*.h"
-    "src/*.ui"
-    "src/Options.ui"
+file(GLOB PROJECT_SOURCES CONFIGURE_DEPENDS
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/*.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/simulations/*.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/simulations/*.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/*.ui"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Options.ui"
     #${UI_FILES}
 )
 
 # Custom target to trigger generation
 add_custom_target(GenerateSimulationsHeader DEPENDS ${GENERATED_SIMULATIONS})
-
-
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
     qt_add_executable(QtSim
