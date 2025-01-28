@@ -11,6 +11,9 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT QtSim)
+
+
 find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Core Gui Widgets Xml OpenGL OpenGLWidgets)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Gui Widgets Xml OpenGL OpenGLWidgets)
 
@@ -49,6 +52,7 @@ set(GENERATED_SIMULATIONS "${CMAKE_BINARY_DIR}/generated_simulations.h")
 
 # Collect all simulation header files
 file(GLOB SIMULATION_HEADERS "${SIMULATIONS_DIR}/*.h")
+file(GLOB SIMULATION_SOURCES "${SIMULATIONS_DIR}/*.cpp")
 
 # Create a list of include commands dynamically
 set(INCLUDE_COMMANDS)
@@ -78,8 +82,19 @@ file(GLOB PROJECT_SOURCES CONFIGURE_DEPENDS
     "${CMAKE_CURRENT_SOURCE_DIR}/src/simulations/*.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/simulations/*.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/*.ui"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/Options.ui"
+    #"${CMAKE_CURRENT_SOURCE_DIR}/src/Options.ui"
     #${UI_FILES}
+)
+
+#set(PYTHON_SCRIPTS
+#    new_sim.py
+#)
+#source_group("Scripts" FILES ${PYTHON_SCRIPTS})
+
+
+source_group("Simulations" FILES
+    ${SIMULATION_HEADERS}
+    ${SIMULATION_SOURCES}
 )
 
 # Custom target to trigger generation
@@ -89,6 +104,7 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
     qt_add_executable(QtSim
         MANUAL_FINALIZATION
         ${PROJECT_SOURCES}
+        #${PYTHON_SCRIPTS}
     )
 # Define target properties for Android with Qt 6 as:
 #    set_property(TARGET QtSim APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR

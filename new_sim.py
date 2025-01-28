@@ -1,8 +1,43 @@
 import os
+import subprocess
+import platform
 
 # Paths
 SIMULATIONS_FOLDER = "./src/simulations"
 TEMPLATES_FOLDER = "./templates"
+
+BUILD_DIR = "./build"  # Adjust to match your actual build directory
+GENERATOR = "Visual Studio 17 2022"  # Adjust for your Visual Studio version
+CONFIG = "Debug"
+
+def regenerate_project():
+    print("Regenerating project files...")
+    if platform.system() == "Windows":
+        # Windows: Regenerate Visual Studio project files
+        result = subprocess.run(
+            ["cmake", "-S", ".", "-B", BUILD_DIR, "-G", GENERATOR, f"-DCMAKE_BUILD_TYPE={CONFIG}"],
+            capture_output=True,
+            text=True
+        )
+        if result.returncode != 0:
+            print("CMake regeneration failed!")
+            print(result.stderr)
+        else:
+            print("CMake regeneration complete!")
+            print(result.stdout)
+    else:
+        # Linux/macOS: Regenerate using default CMake generator (e.g., Unix Makefiles)
+        result = subprocess.run(
+            ["cmake", "-S", ".", "-B", BUILD_DIR],
+            capture_output=True,
+            text=True
+        )
+        if result.returncode != 0:
+            print("CMake regeneration failed!")
+            print(result.stderr)
+        else:
+            print("CMake regeneration complete!")
+            print(result.stdout)
 
 # Function to read a template file
 def read_template(template_name):
@@ -59,5 +94,8 @@ def generate_simulation():
     print("Simulation files created successfully!")
 
 
+
+
 if __name__ == "__main__":
     generate_simulation()
+    regenerate_project()
