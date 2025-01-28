@@ -13,7 +13,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Core Gui Widgets Xml OpenGL OpenGLWidgets)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Gui Widgets Xml OpenGL OpenGLWidgets)
-
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(FFMPEG REQUIRED libavcodec libavformat libavutil libswscale)
 
 # Fetch qnanopainter
 FetchContent_Declare(
@@ -31,20 +32,24 @@ if(WIN32)
     include_directories(${FFMPEG_DIR}/include)
     link_directories(${FFMPEG_DIR}/lib)
 elseif(APPLE)
-    set(FFMPEG_LIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external/ffmpeg/macos/lib)
-    include_directories(${FFMPEG_DIR}/include)
-    link_directories(${FFMPEG_DIR}/lib)
+    #set(FFMPEG_LIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external/ffmpeg/macos/lib)
+    #include_directories(${FFMPEG_DIR}/include)
+    #link_directories(${FFMPEG_DIR}/lib)
 elseif(UNIX)
-    set(FFMPEG_LIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external/ffmpeg/linux/lib)
-    include_directories(${FFMPEG_DIR}/include)
-    link_directories(${FFMPEG_DIR}/lib)
+    include_directories(${FFMPEG_INCLUDE_DIRS})
+    link_directories(${FFMPEG_LIBRARY_DIRS})
 endif()
 
 
-set(PROJECT_SOURCES
-        src/main.cpp
-        src/qtsim.cpp
-        src/qtsim.h
+#set(PROJECT_SOURCES
+#        src/main.cpp
+#        src/qtsim.cpp
+#        src/qtsim.h
+#)
+
+file(GLOB PROJECT_SOURCES
+    "src/*.cpp"
+    "src/*.h"
 )
 
 #set(PROJECT_SOURCES
@@ -81,12 +86,9 @@ target_link_libraries(QtSim PRIVATE Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_M
 #target_link_libraries(QtSim PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
 
 # Link FFmpeg libraries
-target_link_libraries(QtSim PRIVATE
-    avcodec
-    avformat
-    avutil
-    swscale
-)
+if(UNIX)
+    target_link_libraries(QtSim PRIVATE ${FFMPEG_LIBRARIES})
+endif()
 
 # Link qnanopainter to your target
 target_link_libraries(QtSim PRIVATE qnanopainter)
