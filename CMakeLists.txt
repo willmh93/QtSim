@@ -13,8 +13,11 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Core Gui Widgets Xml OpenGL OpenGLWidgets)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Gui Widgets Xml OpenGL OpenGLWidgets)
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(FFMPEG REQUIRED libavcodec libavformat libavutil libswscale)
+
+if(UNIX)
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(FFMPEG REQUIRED libavcodec libavformat libavutil libswscale)
+endif()
 
 # Fetch qnanopainter
 FetchContent_Declare(
@@ -47,10 +50,25 @@ endif()
 #        src/qtsim.h
 #)
 
+#file(GLOB UI_FILES
+#    "src/*.ui"
+#)
+
 file(GLOB PROJECT_SOURCES
     "src/*.cpp"
     "src/*.h"
+    "src/simulations/*.cpp"
+    "src/simulations/*.h"
+    "src/*.ui"
+    "src/Options.ui"
+    #${UI_FILES}
 )
+
+
+
+# Debug output
+#message(STATUS "PROJECT_SOURCES: ${PROJECT_SOURCES}")
+#message(STATUS "UI_FILES: ${UI_FILES}")
 
 #set(PROJECT_SOURCES
 #        src/*.cpp
@@ -86,7 +104,14 @@ target_link_libraries(QtSim PRIVATE Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_M
 #target_link_libraries(QtSim PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
 
 # Link FFmpeg libraries
-if(UNIX)
+if(WIN32)
+    target_link_libraries(QtSim PRIVATE
+        ${FFMPEG_DIR}/lib/avcodec.lib
+        ${FFMPEG_DIR}/lib/avformat.lib
+        ${FFMPEG_DIR}/lib/avutil.lib
+        ${FFMPEG_DIR}/lib/swscale.lib
+    )
+elseif(UNIX)
     target_link_libraries(QtSim PRIVATE ${FFMPEG_LIBRARIES})
 endif()
 
