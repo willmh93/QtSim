@@ -53,6 +53,7 @@ public:
 
     bool getRecordChecked();
     Size getRecordResolution();
+
     QString getRecordPath();
 
 signals:

@@ -34,9 +34,8 @@ QNanoPainter* OffscreenNanoPainter::begin(int w, int h, bool capture_pixels)
         QOpenGLFramebufferObjectFormat format;
         format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
         m_fbo = new QOpenGLFramebufferObject(m_width, m_height, format);
+        painter = new QNanoPainter();
     }
-
-    painter = new QNanoPainter();
 
     GLint viewport[4];
     glF.glGetIntegerv(GL_VIEWPORT, viewport);
@@ -64,8 +63,8 @@ void OffscreenNanoPainter::end()
     QOpenGLFunctions glF(QOpenGLContext::currentContext());
     glF.glViewport(0, 0, old_vw, old_vh);
 
-    delete painter;
-    painter = nullptr;
+    //delete painter;
+    //painter = nullptr;
 
     m_fbo->release();
 }

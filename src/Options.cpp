@@ -1,4 +1,5 @@
 #include "Options.h"
+#include "helpers.h"
 
 Options::Options(QWidget *parent)
     : QWidget(parent)
@@ -20,6 +21,9 @@ Options::Options(QWidget *parent)
         else
             ui.frame_recordOptions->hide();
     });
+
+    ui.lineEdit_output_path->setText(getDesktopPath() + "\\output.mp4");
+
     ui.frame_recordOptions->hide();
 
     /*attributeList->on_update = [this]()
