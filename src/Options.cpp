@@ -22,7 +22,7 @@ Options::Options(QWidget *parent)
             ui.frame_recordOptions->hide();
     });
 
-    ui.lineEdit_output_path->setText(getDesktopPath() + "\\output.mp4");
+    ui.lineEdit_output_path->setText(QDir::toNativeSeparators(getDesktopPath() + "/output.mp4"));
 
     ui.frame_recordOptions->hide();
 

@@ -4,8 +4,6 @@ project(QtSim VERSION 0.1 LANGUAGES CXX)
 
 include(FetchContent)
 
-
-
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
@@ -98,23 +96,36 @@ file(GLOB PROJECT_SOURCES CONFIGURE_DEPENDS
     "${CMAKE_CURRENT_SOURCE_DIR}/src/simulations/*.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/*.ui"
     "resources.qrc"
-    #"${CMAKE_CURRENT_SOURCE_DIR}/src/Options.ui"
-    #${UI_FILES}
 )
 
-#set(PYTHON_SCRIPTS
-#    new_sim.py
-#)
-#source_group("Scripts" FILES ${PYTHON_SCRIPTS})
+file(GLOB CORE_SOURCES
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/*.h"
+)
 
+file(GLOB UI_SOURCES
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/*.ui"
+)
+
+source_group("Project" FILES
+    ${CORE_SOURCES}
+)
 
 source_group("Simulations" FILES
     ${SIMULATION_HEADERS}
     ${SIMULATION_SOURCES}
 )
 
+source_group("UI" FILES
+    ${UI_SOURCES}
+)
+
 # Custom target to trigger generation
 add_custom_target(GenerateSimulationsHeader DEPENDS ${GENERATED_SIMULATIONS})
+#add_custom_target(UpdateIntelliSense
+#    COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target QtSim_autogen
+#    COMMENT "Running CMake to generate Qt auto-files for IntelliSense"
+#)
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
     qt_add_executable(QtSim
@@ -156,8 +167,6 @@ target_link_libraries(QtSim PRIVATE
     Qt${QT_VERSION_MAJOR}::OpenGL
     Qt${QT_VERSION_MAJOR}::OpenGLWidgets
 )
-
-#target_link_libraries(QtSim PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
 
 # Link FFmpeg libraries
 if(WIN32)

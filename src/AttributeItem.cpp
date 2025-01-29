@@ -52,7 +52,7 @@ AttributeItem::AttributeItem(const QString& name, AttributeType _type, QWidget* 
     QFrame* frame = new QFrame(this);
     frame->setFrameShape(QFrame::StyledPanel);
     frame->setFrameShadow(QFrame::Raised);
-    frame->setLineWidth(2);
+    frame->setLineWidth(1);
 
     // Create inner layout for components
     QVBoxLayout* frameLayout = new QVBoxLayout(frame);
