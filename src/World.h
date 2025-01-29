@@ -69,10 +69,20 @@ struct Camera
         double right,
         double bottom);
 
+    void cameraToWorld(
+        double left,
+        double top,
+        double right,
+        double bottom,
+        bool stretch=false
+    );
+
     Vec2 toStage(const Vec2& pt);
     Vec2 toStage(double x, double y);
     Vec2 toStageSize(const Vec2& size);
     Vec2 toStageSize(double w, double h);
+    FRect toStageRect(double x0, double y0, double x1, double y1);
+    FRect toStageRect(const Vec2& pt1, const Vec2& pt2);
 
 
     void panBegin(int x, int y)

@@ -12,6 +12,7 @@ struct Sim : public NS_SpaceEngine::Sim
 
     void prepare();
     void start();
+    void process();
 };
 
 SIM_END

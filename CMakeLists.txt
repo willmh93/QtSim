@@ -107,6 +107,11 @@ file(GLOB UI_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/src/*.ui"
 )
 
+message(STATUS "PROJECT_SOURCES: ${PROJECT_SOURCES}")
+
+#set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+#source_group("" FILES ${PROJECT_SOURCES})
+
 source_group("Project" FILES
     ${CORE_SOURCES}
 )
@@ -194,6 +199,11 @@ if(WIN32)
         COMMAND ${CMAKE_COMMAND} -E copy_if_different "${FFMPEG_DIR}/bin/avutil.dll"   "${CMAKE_BINARY_DIR}/avutil.dll"
         COMMAND ${CMAKE_COMMAND} -E copy_if_different "${FFMPEG_DIR}/bin/swscale.dll"  "${CMAKE_BINARY_DIR}/swscale.dll"
     )
+
+    find_library(AVCODEC_LIBRARY avcodec PATHS "${FFMPEG_DIR}/bin/avcodec.dll")
+    find_library(AVFORMAT_LIBRARY avformat PATHS "${FFMPEG_DIR}/bin/avformat.dll")
+    find_library(AVUTIL_LIBRARY avutil PATHS "${FFMPEG_DIR}/bin/avutil.dll")
+    find_library(SWSCALE_LIBRARY swscale PATHS "${FFMPEG_DIR}/bin/swscale.dll")
 endif()
 
 

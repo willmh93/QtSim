@@ -23,8 +23,10 @@ void* avutilLib = nullptr;
 void* swscaleLib = nullptr;
 #endif
 
-bool LoadFFmpegLibraries()
+/*bool LoadFFmpegLibraries()
 {
+    HMODULE avcodecLib = LoadLibrary(L"avcodec.dll");
+
 #ifdef _WIN32
     avcodecLib = LOAD_LIBRARY("avcodec.dll");
     avformatLib = LOAD_LIBRARY("avformat.dll");
@@ -43,20 +45,20 @@ bool LoadFFmpegLibraries()
     }
 
     return true;
-}
+}*/
 
-void UnloadFFmpegLibraries()
+/*void UnloadFFmpegLibraries()
 {
     if (avcodecLib) CLOSE_LIBRARY(avcodecLib);
     if (avformatLib) CLOSE_LIBRARY(avformatLib);
     if (avutilLib) CLOSE_LIBRARY(avutilLib);
     if (swscaleLib) CLOSE_LIBRARY(swscaleLib);
-}
+}*/
 
 bool FFmpegWorker::startRecording()
 {
-    if (!LoadFFmpegLibraries())
-        return false;
+    //if (!LoadFFmpegLibraries())
+    //    return false;
 
     const int fps = 60;
 
@@ -277,6 +279,12 @@ void Simulation::_stop()
 
 void Simulation::_process()
 {
+    for (Camera* cam : attachedCameras)
+    {
+        cam->viewport_w = width();
+        cam->viewport_h = height();
+    }
+
     if (!encoder_busy)
     {
         timer.start();
@@ -293,13 +301,6 @@ void Simulation::_process()
 
 void Simulation::_draw(QNanoPainter* p)
 {
-    for (Camera* cam : attachedCameras)
-    {
-        cam->viewport_w = width();
-        cam->viewport_h = height();
-    }
-
-
     if (main_cam.enabled)
     {
         // Move to center of stage

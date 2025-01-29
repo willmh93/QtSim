@@ -50,7 +50,7 @@ AttributeItem::AttributeItem(const QString& name, AttributeType _type, QWidget* 
 
     // Create frame
     QFrame* frame = new QFrame(this);
-    frame->setFrameShape(QFrame::StyledPanel);
+    frame->setFrameShape(QFrame::Box);
     frame->setFrameShadow(QFrame::Raised);
     frame->setLineWidth(1);
 
@@ -61,7 +61,7 @@ AttributeItem::AttributeItem(const QString& name, AttributeType _type, QWidget* 
     QLabel* lbl = new QLabel(this);
     lbl->setText(name);
     frameLayout->addWidget(lbl);
-    frameLayout->setContentsMargins(3,3,3,3);
+    frameLayout->setContentsMargins(5,5,5,5);
     //frameLayout->addSpacing(1);
 
     switch (type)
@@ -195,6 +195,8 @@ AttributeItem::AttributeItem(const QString& name, AttributeType _type, QWidget* 
 
             // Set input / value label text
             //spinBox->setValue(value_float);
+            frameLayout->setDirection(QBoxLayout::LeftToRight);
+            frameLayout->addStretch(1);
             frameLayout->addWidget(checkBox);
 
             // Handle change

@@ -28,7 +28,7 @@ extern "C" {
 #include <libavutil/imgutils.h>
 }
 
-#ifdef _WIN32
+/*#ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <windows.h>
@@ -40,7 +40,7 @@ extern "C" {
 #define LOAD_LIBRARY(name) dlopen(name, RTLD_LAZY)
 #define GET_PROC_ADDR(lib, func) dlsym(lib, func)
 #define CLOSE_LIBRARY(lib) dlclose(lib)
-#endif
+#endif*/
 
 // Load FFmpeg dynamically
 bool LoadFFmpegLibraries();

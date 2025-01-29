@@ -8,7 +8,7 @@ void Sim::prepare()
     world_size_max = 10000;
     steps_per_frame = 1;
     step_seconds = 0.001;
-    particle_count = 20000;
+    particle_count = 5000;
     collision_substeps = 10;
     gravity_cell_near_ratio = 0.01;
     //start_particle_radius = 0.05;
@@ -76,6 +76,26 @@ void Sim::start()
     }*/
 
     
+}
+
+void Sim::process()
+{
+    SpaceEngine::process();
+
+    double x1 = std::numeric_limits<double>::max();
+    double x2 = std::numeric_limits<double>::lowest();
+    double y1 = std::numeric_limits<double>::max();
+    double y2 = std::numeric_limits<double>::lowest();
+
+    for (const Particle &p: particles)
+    {
+        if (p.x < x1) x1 = p.x;
+        if (p.x > x2) x2 = p.x;
+        if (p.y < y1) y1 = p.y;
+        if (p.y > y2) y2 = p.y;
+    }
+
+    cam.cameraToWorld(x1, y1, x2, y2);
 }
 
 SIM_END
