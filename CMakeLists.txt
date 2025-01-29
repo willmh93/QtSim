@@ -4,6 +4,8 @@ project(QtSim VERSION 0.1 LANGUAGES CXX)
 
 include(FetchContent)
 
+
+
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
@@ -14,29 +16,42 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT QtSim)
 
 
-find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Core Gui Widgets Xml OpenGL OpenGLWidgets)
-find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Gui Widgets Xml OpenGL OpenGLWidgets)
+find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Core Gui Widgets Quick Xml OpenGL OpenGLWidgets)
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Gui Widgets Quick Xml OpenGL OpenGLWidgets)
 
 if(UNIX)
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(FFMPEG REQUIRED libavcodec libavformat libavutil libswscale)
 endif()
 
+# Force QNANO_USE_RENDERNODE to be ON
+#set(QNANO_USE_RENDERNODE ON CACHE BOOL "Enable QRenderNode in QNanoPainter" FORCE)
+#set(IS_QUICK_IN_QT OFF CACHE BOOL "Disable Quick" FORCE)
+
 # Fetch qnanopainter
 FetchContent_Declare(
     QNanoPainter
     GIT_REPOSITORY https://github.com/willmh93/qnanopainter
-    GIT_TAG master # Replace 'master' with a specific commit/branch/tag if desired
+    GIT_TAG master # Replace 'master' with a specific commit/branch/tag if desiredbin
 )
 
+#set(IS_QUICK_IN_QT OFF CACHE BOOL "Disable Quick in QNanoPainter" FORCE)
+
 # Make the library available
-FetchContent_MakeAvailable(QNanoPainter)
+#FetchContent_MakeAvailable(QNanoPainter)
+FetchContent_Populate(QNanoPainter)
+add_subdirectory(${qnanopainter_SOURCE_DIR}/libqnanopainter
+                 ${qnanopainter_BINARY_DIR}/libqnanopainter)
+
+# Ensure the macro is applied to QNanoPainter
+target_compile_definitions(qnanopainter PUBLIC QNANO_USE_RENDERNODE)
 
 # Add FFmpeg paths
 if(WIN32)
     set(FFMPEG_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external/ffmpeg/windows)
     include_directories(${FFMPEG_DIR}/include)
     link_directories(${FFMPEG_DIR}/lib)
+    message(STATUS "FFMPEG_DIR: ${FFMPEG_DIR}")
 elseif(APPLE)
     #set(FFMPEG_LIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external/ffmpeg/macos/lib)
     #include_directories(${FFMPEG_DIR}/include)
@@ -82,6 +97,7 @@ file(GLOB PROJECT_SOURCES CONFIGURE_DEPENDS
     "${CMAKE_CURRENT_SOURCE_DIR}/src/simulations/*.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/simulations/*.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/*.ui"
+    "resources.qrc"
     #"${CMAKE_CURRENT_SOURCE_DIR}/src/Options.ui"
     #${UI_FILES}
 )
@@ -131,7 +147,16 @@ target_include_directories(QtSim PRIVATE ${CMAKE_BINARY_DIR})
 
 
 # Link Qt libraries
-target_link_libraries(QtSim PRIVATE Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Gui Qt${QT_VERSION_MAJOR}::Widgets Qt${QT_VERSION_MAJOR}::Xml Qt${QT_VERSION_MAJOR}::OpenGL Qt${QT_VERSION_MAJOR}::OpenGLWidgets)
+target_link_libraries(QtSim PRIVATE
+    Qt${QT_VERSION_MAJOR}::Core
+    Qt${QT_VERSION_MAJOR}::Gui
+    Qt${QT_VERSION_MAJOR}::Widgets
+    Qt${QT_VERSION_MAJOR}::Quick
+    Qt${QT_VERSION_MAJOR}::Xml
+    Qt${QT_VERSION_MAJOR}::OpenGL
+    Qt${QT_VERSION_MAJOR}::OpenGLWidgets
+)
+
 #target_link_libraries(QtSim PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
 
 # Link FFmpeg libraries
@@ -148,6 +173,19 @@ endif()
 
 # Link qnanopainter to your target
 target_link_libraries(QtSim PRIVATE qnanopainter)
+
+
+if(WIN32)
+    #set(FFMPEG_LIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external/ffmpeg/windows/bin)
+    message(STATUS "QtSim Source File Directory: ${FFMPEG_DIR}/bin/")
+    message(STATUS "QtSim Target File Directory: ${CMAKE_BINARY_DIR}")
+    add_custom_command(TARGET QtSim POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different "${FFMPEG_DIR}/bin/avcodec.dll"  "${CMAKE_BINARY_DIR}/avcodec.dll"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different "${FFMPEG_DIR}/bin/avformat.dll" "${CMAKE_BINARY_DIR}/avformat.dll"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different "${FFMPEG_DIR}/bin/avutil.dll"   "${CMAKE_BINARY_DIR}/avutil.dll"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different "${FFMPEG_DIR}/bin/swscale.dll"  "${CMAKE_BINARY_DIR}/swscale.dll"
+    )
+endif()
 
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.
@@ -174,3 +212,4 @@ install(TARGETS QtSim
 if(QT_VERSION_MAJOR EQUAL 6)
     qt_finalize_executable(QtSim)
 endif()
+

@@ -25,19 +25,19 @@ def regenerate_project():
         else:
             print("CMake regeneration complete!")
             print(result.stdout)
-    else:
-        # Linux/macOS: Regenerate using default CMake generator (e.g., Unix Makefiles)
-        result = subprocess.run(
-            ["cmake", "-S", ".", "-B", BUILD_DIR],
-            capture_output=True,
-            text=True
-        )
-        if result.returncode != 0:
-            print("CMake regeneration failed!")
-            print(result.stderr)
-        else:
-            print("CMake regeneration complete!")
-            print(result.stdout)
+    #else:
+    #    # Linux/macOS: Regenerate using default CMake generator (e.g., Unix Makefiles)
+    #    result = subprocess.run(
+    #        ["cmake", "-S", ".", "-B", BUILD_DIR],
+    #        capture_output=True,
+    #        text=True
+    #    )
+    #    if result.returncode != 0:
+    #        print("CMake regeneration failed!")
+    #        print(result.stderr)
+    #    else:
+    #        print("CMake regeneration complete!")
+    #        print(result.stdout)
 
 # Function to read a template file
 def read_template(template_name):

@@ -11,8 +11,53 @@
 
 //std::vector<std::function<Simulation* (void)>> Simulation::sim_factory;
 
+#ifdef _WIN32
+HMODULE avcodecLib = nullptr;
+HMODULE avformatLib = nullptr;
+HMODULE avutilLib = nullptr;
+HMODULE swscaleLib = nullptr;
+#else
+void* avcodecLib = nullptr;
+void* avformatLib = nullptr;
+void* avutilLib = nullptr;
+void* swscaleLib = nullptr;
+#endif
+
+bool LoadFFmpegLibraries()
+{
+#ifdef _WIN32
+    avcodecLib = LOAD_LIBRARY("avcodec.dll");
+    avformatLib = LOAD_LIBRARY("avformat.dll");
+    avutilLib = LOAD_LIBRARY("avutil.dll");
+    swscaleLib = LOAD_LIBRARY("swscale.dll");
+#else
+    avcodecLib = LOAD_LIBRARY("libavcodec.so");
+    avformatLib = LOAD_LIBRARY("libavformat.so");
+    avutilLib = LOAD_LIBRARY("libavutil.so");
+    swscaleLib = LOAD_LIBRARY("libswscale.so");
+#endif
+
+    if (!avcodecLib || !avformatLib || !avutilLib || !swscaleLib)
+    {
+        return false;
+    }
+
+    return true;
+}
+
+void UnloadFFmpegLibraries()
+{
+    if (avcodecLib) CLOSE_LIBRARY(avcodecLib);
+    if (avformatLib) CLOSE_LIBRARY(avformatLib);
+    if (avutilLib) CLOSE_LIBRARY(avutilLib);
+    if (swscaleLib) CLOSE_LIBRARY(swscaleLib);
+}
+
 bool FFmpegWorker::startRecording()
 {
+    if (!LoadFFmpegLibraries())
+        return false;
+
     const int fps = 60;
 
     // Output file

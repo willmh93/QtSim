@@ -75,7 +75,7 @@ struct CellData
     double com_y;
 };
 
-struct CellCoordHash 
+/*struct CellCoordHash
 {
     std::size_t operator()(const CellCoord& c) const 
     {
@@ -85,6 +85,17 @@ struct CellCoordHash
         auto h1 = std::hash<long long>()(((long long)c.cx << 32) ^ (c.cx >> 32));
         auto h2 = std::hash<long long>()(((long long)c.cy << 32) ^ (c.cy >> 32));
         return h1 ^ (h2 + 0x9e3779b97f4a7c15ULL + (h1 << 6) + (h1 >> 2));
+    }
+};*/
+struct CellCoordHash
+{
+    std::size_t operator()(const CellCoord& c) const
+    {
+        constexpr uint64_t prime1 = 73856093ULL;  // Large prime
+        constexpr uint64_t prime2 = 19349663ULL;  // Another large prime
+
+        return (static_cast<uint64_t>(c.cx) * prime1) ^
+               (static_cast<uint64_t>(c.cy) * prime2);
     }
 };
 
