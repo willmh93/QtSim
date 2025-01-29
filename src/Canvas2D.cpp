@@ -252,9 +252,13 @@ void Canvas2D::paint(QNanoPainter* p)
     if (!sim || !sim->started)
         return;
 
+    QScreen* screen = this->screen();// w.windowHandle()->screen();
+    qreal scaleFactor = screen->devicePixelRatio();
+
     int vw = width();
     int vh = height();
-    p->beginFrame(vw, vh);
+    p->beginFrame(vw*scaleFactor, vh*scaleFactor);
+    p->scale(scaleFactor);
     
     if (!render_to_offscreen)
     {
