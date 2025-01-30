@@ -2,7 +2,7 @@
 
 SIM_BEG(Particles)
 
-void Sim::prepare()
+void Particles::prepare()
 {
     main_cam.enable();
 
@@ -13,7 +13,7 @@ void Sim::prepare()
     options->slider("Gravity", &gravity, -1.0, 1.0, 0.1);
 }
 
-void Sim::start()
+void Particles::start()
 {
     for (int i = 0; i < particle_count; i++)
     {
@@ -26,12 +26,12 @@ void Sim::start()
     }
 }
 
-void Sim::destroy()
+void Particles::destroy()
 {
     particles.clear();
 }
 
-void Sim::process()
+void Particles::process()
 {
     size_t len = particles.size();
     for (size_t i = 0; i < len; i++)
@@ -43,7 +43,7 @@ void Sim::process()
     }
 }
 
-void Sim::draw(QNanoPainter* p)
+void Particles::draw(QNanoPainter* p)
 {
     p->setLineCap(QNanoPainter::CAP_ROUND);
     p->setFillStyle({ 255,255,255 });
@@ -66,7 +66,7 @@ void Sim::draw(QNanoPainter* p)
     }
 }
 
-void Sim::mouseWheel(int delta)
+void Particles::mouseWheel(int delta)
 {
     main_cam.zoom_x += ((double)delta) / 1000.0;
     main_cam.zoom_y += ((double)delta) / 1000.0;

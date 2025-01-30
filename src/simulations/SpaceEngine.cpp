@@ -1,8 +1,8 @@
 ﻿#include "SpaceEngine.h"
-#include "../Options.h"
+#include "Options.h"
 SIM_BEG(SpaceEngine)
 
-void Sim::prepare()
+void SpaceEngine::prepare()
 {
     //camera.enable();
 
@@ -62,7 +62,7 @@ void Sim::prepare()
 }
 
 
-void Sim::start()
+void SpaceEngine::start()
 {
     world_size = start_world_size;
     bmp_scale = world_size / density_bmp_size;
@@ -76,7 +76,7 @@ void Sim::start()
     //particles = start_particles;
 }
 
-void Sim::destroy()
+void SpaceEngine::destroy()
 {
     particles.clear();
 }
@@ -133,7 +133,7 @@ void Sim::destroy()
     }
 }*/
 
-void Sim::process()
+void SpaceEngine::process()
 {
     for (int i = 0; i < steps_per_frame; i++)
     {
@@ -201,7 +201,7 @@ void Sim::process()
     }
 }
 
-void Sim::buildUniformGrid(double cellSize, ParticleGrid& grid)
+void SpaceEngine::buildUniformGrid(double cellSize, ParticleGrid& grid)
 {
     grid.clear();
     grid.reserve(particles.size());
@@ -225,7 +225,7 @@ void Sim::buildUniformGrid(double cellSize, ParticleGrid& grid)
     }
 }
 
-void Sim::processParticlePairGravity(Particle* n0, Particle* n1)
+void SpaceEngine::processParticlePairGravity(Particle* n0, Particle* n1)
 {
     double dx = n1->x - n0->x;
     double dy = n1->y - n0->y;
@@ -272,46 +272,77 @@ inline float fastSqrt(float number) {
     return number * y; // Since y is approximately 1/sqrt(number), multiply to get sqrt(number)
 }
 
-void Sim::processCellPairGravity(CellData& c0, CellData& c1)
+void SpaceEngine::processCellPairGravity(CellData& c0, CellData& c1)
 {
-    double dx = c1.cx - c0.cx;
-    double dy = c1.cy - c0.cy;
+    //double dx = c1.cx - c0.cx;
+    //double dy = c1.cy - c0.cy;
+    //double r = sqrt(dx * dx + dy * dy);
+
+    double dx = c1.com_x - c0.com_x;
+    double dy = c1.com_y - c0.com_y;
+    //float r = fastSqrt(dx * dx + dy * dy);
     double r = sqrt(dx * dx + dy * dy);
 
-    /*float dx = c1.com_x - c0.com_x;
-    float dy = c1.com_y - c0.com_y;
-    float r = fastSqrt(dx * dx + dy * dy);
-
-    float force_magnitude = gravity * (c0.total_mass * c1.total_mass) / (r * r); // No r^2 because F = G_2D * m1 * m2 / r
-    float fx = force_magnitude * (dx / r);
-    float fy = force_magnitude * (dy / r);
+    double force_magnitude = gravity * (c0.total_mass * c1.total_mass) / (r * r); // No r^2 because F = G_2D * m1 * m2 / r
+    double fx = force_magnitude * (dx / r);
+    double fy = force_magnitude * (dy / r);
 
     // Compute accelerations
     double ax1 = fx / c0.total_mass;
-    double ay1 = fy / c0.total_mass;*/
+    double ay1 = fy / c0.total_mass;
 
     // By Newton's Third Law, apply the opposite force to particle 2
-    //double ax2 = -fx / c1.total_mass;
-    //double ay2 = -fy / c1.total_mass;
+    double ax2 = -fx / c1.total_mass;
+    double ay2 = -fy / c1.total_mass;
+
+    for (Particle* p : c0.particles)
+    {
+        p->vx += ax1 * step_seconds;
+        p->vy += ay1 * step_seconds;
+    }
+    for (Particle* p : c1.particles)
+    {
+        p->vx += ax2 * step_seconds;
+        p->vy += ay2 * step_seconds;
+    }
 
     // Update velocities of particle 1
-    for (Particle* p : c0.particles)
+    /*for (Particle* p : c0.particles)
     {
         float dx = c1.com_x - p->x;
         float dy = c1.com_y - p->y;
-        //double r = fastSqrt(dx * dx + dy * dy);
+        double r = sqrt(dx * dx + dy * dy);
 
         double force_magnitude = gravity * (p->mass * c1.total_mass) / (r * r); // No r^2 because F = G_2D * m1 * m2 / r
         double fx = force_magnitude * (dx / r);
         double fy = force_magnitude * (dy / r);
 
         // Compute accelerations
-        double ax1 = fx / c0.total_mass;
-        double ay1 = fy / c0.total_mass;
+        double ax = fx / c0.total_mass;
+        double ay = fy / c0.total_mass;
 
-        p->vx += ax1 * step_seconds;
-        p->vy += ay1 * step_seconds;
+        p->vx += ax * step_seconds;
+        p->vy += ay * step_seconds;
     }
+
+    // Update velocities of particle 1
+    for (Particle* p : c1.particles)
+    {
+        float dx = c0.com_x - p->x;
+        float dy = c0.com_y - p->y;
+        double r = sqrt(dx * dx + dy * dy);
+
+        double force_magnitude = gravity * (p->mass * c0.total_mass) / (r * r); // No r^2 because F = G_2D * m1 * m2 / r
+        double fx = force_magnitude * (dx / r);
+        double fy = force_magnitude * (dy / r);
+
+        // Compute accelerations
+        double ax = fx / c1.total_mass;
+        double ay = fy / c1.total_mass;
+
+        p->vx += ax * step_seconds;
+        p->vy += ay * step_seconds;
+    }*/
 
     //for (Particle* p : c1.particles)
     //{
@@ -321,7 +352,7 @@ void Sim::processCellPairGravity(CellData& c0, CellData& c1)
 }
 
 
-void Sim::processGravity()
+void SpaceEngine::processGravity()
 {
     int len = particles.size();
 
@@ -335,12 +366,6 @@ void Sim::processGravity()
         //buildUniformGrid(world_size * gravity_cell_far_ratio, gravity_grid_far);
 
         // Calculate all short-distance attractions first, flag them as "gravity_applied"
-
-        forEachCellAndNeighbors(gravity_grid_near, [&](Particle* a, Particle* b)
-        {
-            processParticlePairGravity(a, b);
-        }, gravity_cell_near_grid_radius);
-
         for (auto& cell : gravity_grid_near)
         {
             CellData& cellData = cell.second;
@@ -362,6 +387,13 @@ void Sim::processGravity()
             cellData.com_y = (sum_y_mass_prod / sum_mass);
             cellData.total_mass = sum_mass;
         }
+
+        forEachCellAndNeighborsParticles(gravity_grid_near, [&](Particle* a, Particle* b)
+        {
+            processParticlePairGravity(a, b);
+        }, gravity_cell_near_grid_radius);
+
+        
 
         int r = gravity_cell_near_grid_radius;
         for (auto it1 = gravity_grid_near.begin(); it1 != gravity_grid_near.end(); ++it1)
@@ -486,7 +518,7 @@ void Sim::processGravity()
 }
 
 // Return true if a collision was resolved, false if not
-bool Sim::checkAndResolveCollision(Particle* n0, Particle* n1)
+bool SpaceEngine::checkAndResolveCollision(Particle* n0, Particle* n1)
 {
     double dx = n1->x - n0->x;
     double dy = n1->y - n0->y;
@@ -551,7 +583,7 @@ bool Sim::checkAndResolveCollision(Particle* n0, Particle* n1)
     return true;
 }
 
-void Sim::processCollisions()
+void SpaceEngine::processCollisions()
 {
     int len = particles.size();
 
@@ -585,7 +617,7 @@ void Sim::processCollisions()
         if (optimize_collisions)
         {
             // Optimized
-            forEachCellAndNeighbors(collision_grid, [&](Particle* a, Particle* b)
+            forEachCellAndNeighborsParticles(collision_grid, [&](Particle* a, Particle* b)
             {
                 checkAndResolveCollision(a, b);
             });
@@ -606,7 +638,7 @@ void Sim::processCollisions()
     }
 }
 
-void Sim::draw(QNanoPainter* p)
+void SpaceEngine::draw(QNanoPainter* p)
 {
     double left = -world_size / 2;
     double top = -world_size / 2;
@@ -658,6 +690,52 @@ void Sim::draw(QNanoPainter* p)
     if (draw_collision_grid)
     collision_grid.draw(p, cam, "#007f00");
 
+    p->beginPath();
+    p->setLineWidth(10);
+    p->setStrokeStyle({ 0,255,0,50 });
+    forEachCellAndNeighbors(gravity_grid_near, [this, p](CellData& a, CellData& b)
+    {
+        Vec2 pt1 = cam.toStage(a.cx, a.cy);
+        Vec2 pt2 = cam.toStage(b.cx, b.cy);
+        Draw::arrow(p, pt1, pt2, { 0,255,0,50 });
+
+        //p->moveTo(pt1);
+        //p->lineTo(pt2);
+
+        
+    }, gravity_cell_near_grid_radius);
+    p->stroke();
+
+    p->beginPath();
+    p->setStrokeStyle({ 0,0,255,50 });
+    int r = gravity_cell_near_grid_radius;
+    for (auto it1 = gravity_grid_near.begin(); it1 != gravity_grid_near.end(); ++it1)
+    {
+        CellData& a = it1->second;
+        int cx = it1->first.cx;
+        int cy = it1->first.cy;
+
+        //for (auto it2 = std::next(it1); it2 != gravity_grid_near.end(); ++it2)
+        for (auto it2 = gravity_grid_near.begin(); it2 != gravity_grid_near.end(); ++it2)
+        {
+            CellData& b = it2->second;
+
+            int dx = it2->first.cx - cx;
+            int dy = it2->first.cy - cy;
+            if (dx < 0) dx = -dx;
+            if (dy < 0) dy = -dy;
+            if (dx <= r && dy <= r)
+                continue;
+
+            Vec2 pt1 = cam.toStage(a.cx, a.cy);
+            Vec2 pt2 = cam.toStage(b.cx, b.cy);
+            p->moveTo(pt1);
+            p->lineTo(pt2);
+        }
+    }
+    p->stroke();
+    
+
     /*p->setStrokeStyle({255,255,255,100});
     p->setLineWidth(1);
     p->beginPath();
@@ -699,7 +777,7 @@ void Sim::draw(QNanoPainter* p)
     p->fillText(QString("Frame dt: %1").arg(frame_dt), 5, ty);
 }
 
-void Sim::mouseWheel(int delta)
+void SpaceEngine::mouseWheel(int delta)
 {
     Simulation::mouseWheel(delta);
 }

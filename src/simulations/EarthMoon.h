@@ -4,7 +4,7 @@
 SIM_BEG(EarthMoon)
 BASE_SIM(SpaceEngine)
 
-struct Sim : public SpaceEngine
+struct EarthMoon : public SpaceEngine
 {
     //const double zettagram_kg = 10.0e+18; // kg in a zettagram
 

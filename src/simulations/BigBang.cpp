@@ -2,13 +2,14 @@
 
 SIM_DECLARE(BigBang, "Big Bang")
 
-void Sim::prepare()
+void BigBang::prepare()
 {
+
     world_size_min = 100;
     world_size_max = 10000;
     steps_per_frame = 1;
     step_seconds = 0.001;
-    particle_count = 5000;
+    particle_count = 50;// 5000;
     collision_substeps = 10;
     gravity_cell_near_ratio = 0.01;
     //start_particle_radius = 0.05;
@@ -16,17 +17,21 @@ void Sim::prepare()
 
     start_world_size = 5000;
 
+    step_seconds_step = step_seconds * 0.1;
+    step_seconds_min = 0;// step_seconds * 0.5;
+    step_seconds_max = step_seconds * 10;
+
     SpaceEngine::prepare();
 
     
 
 }
 
-void Sim::start()
+void BigBang::start()
 {
     SpaceEngine::start();
 
-    auto universe_particles = newPlanetFromParticleCount(0, 0, 50, 20, particle_count);
+    auto universe_particles = newPlanetFromParticleCount(0, 0, 50, start_world_size, particle_count);
 
     double explode_speed = 100.0;
     double max_perp_speed_ratio = 1;
@@ -78,7 +83,7 @@ void Sim::start()
     
 }
 
-void Sim::process()
+void BigBang::process()
 {
     SpaceEngine::process();
 
@@ -95,7 +100,26 @@ void Sim::process()
         if (p.y > y2) y2 = p.y;
     }
 
-    cam.cameraToWorld(x1, y1, x2, y2);
+    if (!focus_rect_initialized)
+    {
+        focus_rect_initialized = true;
+        focus_rect.set(x1, y1, x2, y2);
+    }
+    else
+    {
+        focus_rect = lerpRect(focus_rect, FRect(x1, y1, x2, y2), 0.1);
+    }
+
+    cam.cameraToWorld(focus_rect);
+}
+
+void BigBang::draw(QNanoPainter* p)
+{
+    SpaceEngine::draw(p);
+    FRect r = cam.toStageRect(-world_size / 2, -world_size / 2, world_size / 2, world_size / 2);
+
+    p->setStrokeStyle({ 255,255,255 });
+    p->strokeRect(r);
 }
 
 SIM_END

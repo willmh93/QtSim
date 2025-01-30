@@ -2,7 +2,7 @@
 
 SIM_DECLARE(EarthMoon, "Earth Moon")
 
-void Sim::prepare()
+void EarthMoon::prepare()
 {
     SpaceEngine::prepare();
     //sim_factory.push_back([]() {
@@ -52,7 +52,7 @@ void Sim::prepare()
     //options->slider("Particle Mass (zg)", &start_particle_mass, &particle_mass_min, &particle_mass_max, &particle_mass_step);
 }
 
-void Sim::start()
+void EarthMoon::start()
 {
     SpaceEngine::start();
 

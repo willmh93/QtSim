@@ -9,7 +9,7 @@ struct Particle
     double vx, vy;
 };
 
-struct Sim : public Simulation
+struct Particles : public Simulation
 {
     int particle_count;
     double gravity;

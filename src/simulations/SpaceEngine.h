@@ -146,7 +146,7 @@ struct ParticleGrid : public std::unordered_map<CellCoord, CellData, CellCoordHa
     }
 };
 
-struct Sim : public Simulation
+struct SpaceEngine : public Simulation
 {
     Camera cam;
 
@@ -291,8 +291,46 @@ struct Sim : public Simulation
         }
     }*/
 
+
     template <typename Func>
     void forEachCellAndNeighbors(
+        std::unordered_map<CellCoord, CellData, CellCoordHash>& grid,
+        Func processCellPair,
+        int r = 1)
+    {
+        for (auto& kv : grid)
+        {
+            const CellCoord& cell = kv.first;
+            CellData& cellData = kv.second;
+
+            // For each neighbor cell (including the cell itself)
+            for (int ny = -r; ny <= r; ny++)
+            {
+                for (int nx = -r; nx <= r; nx++)
+                {
+                    CellCoord neighborCell{ cell.cx + nx, cell.cy + ny };
+
+                    auto it = grid.find(neighborCell);
+                    if (it == grid.end())
+                        continue;
+
+                    CellData& neighborCellData = it->second;
+
+                    if (nx == 0 && ny == 0)
+                    {
+                        processCellPair(cellData, neighborCellData);
+                    }
+                    else if (nx > 0 || (nx == 0 && ny >= 0))
+                    {
+                        processCellPair(cellData, neighborCellData);
+                    }
+                }
+            }
+        }
+    }
+
+    template <typename Func>
+    void forEachCellAndNeighborsParticles(
         std::unordered_map<CellCoord, CellData, CellCoordHash>& grid,
         Func processPair,
         int r = 1)

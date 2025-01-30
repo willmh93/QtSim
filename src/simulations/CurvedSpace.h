@@ -51,12 +51,20 @@ struct Side
 {
     CoordinateNode* a;
     CoordinateNode* b;
+    CoordinateNode* cw; // (Positive Side, Visually Clockwise)
+    CoordinateNode* ccw; // (Negative Side, Visually Counter-Clockwise)
     //Side* clockwise_side;
 
-    Side(CoordinateNode* _a, CoordinateNode* _b)
+    Side(
+        CoordinateNode* _a,
+        CoordinateNode* _b,
+        CoordinateNode* _cw,
+        CoordinateNode* _ccw)
     {
         a = _a;
         b = _b;
+        cw = _cw;
+        ccw = _ccw;
     }
 
     double size()
@@ -143,16 +151,19 @@ struct Particle
         double x_val = (slide_a * vec_b.y - slide_b * vec_b.x) / denominator;
         double y_val = (vec_a.x * slide_b - vec_a.y * slide_a) / denominator;*/
 
+        double a_len = side_a->size();
+        double b_len = side_b->size();
+
         CoordinateSystem coordSys(
             Vector2D(0,0),
-            Vector2D(vec_a.x, vec_a.y),
-            Vector2D(vec_b.x, vec_b.y));
-
-        Vector2D p = coordSys.getPoint(slide_a/100, slide_b/100);
+            Vector2D(vec_a.x/a_len, vec_a.y/a_len),
+            Vector2D(vec_b.x/b_len, vec_b.y/b_len));
+        
+        Vector2D p = coordSys.getPoint(slide_a, slide_b);
 
         return Vec2(
-            side_a->a->x + p.x, 
-            side_a->a->y + p.y
+            side_a->a->x + p.x * a_len, 
+            side_a->a->y + p.y * b_len
         );
 
         /*double a_angle = side_a->angle();
@@ -191,7 +202,7 @@ struct Particle
     }*/
 };
 
-struct Sim : public Simulation
+struct CurvedSpace : public Simulation
 {
     Camera cam;
 
@@ -202,9 +213,12 @@ struct Sim : public Simulation
     CoordinateNode* a;
     CoordinateNode* b;
     CoordinateNode* c;
+    CoordinateNode* d;
     Side* s1;
     Side* s2;
     Side* s3;
+    Side* s4;
+    Side* s5;
     Particle* p1;
 
     double world_size;
@@ -216,7 +230,7 @@ struct Sim : public Simulation
     void process();
     void draw(QNanoPainter* p);
 
-    std::vector<CoordinateNode*> makeTriangleGrid(
+    std::vector<CoordinateNode*> createDelaunayMesh(
         double x0,
         double y0,
         double x1,

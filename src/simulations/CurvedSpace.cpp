@@ -2,7 +2,7 @@
 
 SIM_DECLARE(CurvedSpace, "Curved Space")
 
-void Sim::prepare()
+void CurvedSpace::prepare()
 {
     attachCameraControls(&cam);
 
@@ -10,18 +10,25 @@ void Sim::prepare()
     //makeTriangleGrid(0, 0, world_size, world_size, 5);
 
     a = new CoordinateNode(30, 20);
-    b = new CoordinateNode(60, 30);
+    b = new CoordinateNode(60, 25);
     c = new CoordinateNode(45, 50);
+    d = new CoordinateNode(80, 65);
     a->node_id = "a";
     b->node_id = "b";
     c->node_id = "c";
+    d->node_id = "d";
     coordinate_nodes.push_back(a);
     coordinate_nodes.push_back(b);
     coordinate_nodes.push_back(c);
+    coordinate_nodes.push_back(d);
 
-    s1 = new Side(a, b);
-    s2 = new Side(b, c);
-    s3 = new Side(a, c);
+    s1 = new Side(a, b, c, nullptr); // x
+    s3 = new Side(a, c, nullptr, b); // y
+
+    s4 = new Side(d, c, b, nullptr); // -x
+    s5 = new Side(d, b, nullptr, c); // y
+
+    s2 = new Side(b, c, a, d); // diagonal
     //s1->clockwise_side = s2;
     //s2->clockwise_side = s3;
     //s3->clockwise_side = s1;
@@ -29,6 +36,8 @@ void Sim::prepare()
     sides.push_back(s1);
     sides.push_back(s2);
     sides.push_back(s3);
+    sides.push_back(s4);
+    sides.push_back(s5);
 
     //Particle* p1 = new Particle(s1, 0.5);
     //
@@ -39,22 +48,24 @@ void Sim::prepare()
     particles.push_back(p1);
 }
 
-void Sim::start()
+void CurvedSpace::start()
 {
     cam.setZoom(((double)height()) / world_size);
 }
 
-void Sim::destroy()
+void CurvedSpace::destroy()
 {
 }
 
-void Sim::process()
+void CurvedSpace::process()
 {
-    p1->slide_a = mouse_x;
-    p1->slide_b = mouse_y;
+    p1->slide_a = mouse_x / (double)width();
+    p1->slide_b = mouse_y / (double)height();
+
+    
 }
 
-void Sim::draw(QNanoPainter* p)
+void CurvedSpace::draw(QNanoPainter* p)
 {
     p->setLineWidth(1);
     p->setStrokeStyle("#ff0000");
@@ -107,9 +118,17 @@ void Sim::draw(QNanoPainter* p)
     }
 
     s1->draw_projected_adjacent(p, cam);
+
+    p->setTextAlign(QNanoPainter::TextAlign::ALIGN_LEFT);
+    p->setTextBaseline(QNanoPainter::TextBaseline::BASELINE_TOP);
+    p->setFillStyle({ 255,255,255 });
+    if (p1->slide_a + p1->slide_b > 1)
+    {
+        p->fillText("Second triangle", 0, 0);
+    }
 }
 
-void Sim::mouseWheel(int delta)
+void CurvedSpace::mouseWheel(int delta)
 {
 }
 
