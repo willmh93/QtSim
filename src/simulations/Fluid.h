@@ -13,7 +13,7 @@ struct Particle : public Vec2
     Particle(double x, double y) : Vec2(x,y) {}
 };
 
-struct FluidInstance : public SimulationInstance, public Options
+struct FluidInstance : public SimulationInstance
 {
     double world_w = 250.0;
     double world_h = 250.0;
