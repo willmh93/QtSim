@@ -245,63 +245,64 @@ void Canvas2D::initializeGL()
 
 void Canvas2D::paint(QNanoPainter* p)
 {
-    int vw = width();
-    int vh = height();
-    p->setFillStyle({ 10,10,15 });
-    p->fillRect(0, 0, vw, vh);
-
-    if (!sim || !sim->started)
-        return;
-
     QScreen* screen = this->screen();// w.windowHandle()->screen();
     qreal scaleFactor = screen->devicePixelRatio();
 
+    int vw = width();
+    int vh = height();
+
     p->beginFrame(vw*scaleFactor, vh*scaleFactor);
     p->scale(scaleFactor);
-    
-    if (!render_to_offscreen)
-    {
-        sim->_draw(p);
-    }
-    else
-    {
-        double offscreen_aspect_ratio = ((double)offscreen_w / (double)offscreen_h);
-        double viewport_aspect_ratio = ((double)vw / (double)vh);
-        double off_x = 0, off_y = 0, scale_x = 1, scale_y = 1;
 
-        if (offscreen_aspect_ratio > viewport_aspect_ratio)
+    p->setFillStyle({ 10,10,15 });
+    p->fillRect(0, 0, vw, vh);
+
+    if (sim && sim->started)
+    {
+        if (!render_to_offscreen)
         {
-            // Offscreen is wider relative to viewport
-            scale_x = static_cast<double>(vw) / static_cast<double>(offscreen_w);
-            scale_y = scale_x;
-
-            // Center vertically
-            off_y = (vh - (offscreen_h * scale_y)) / 2.0;
+            sim->_draw(p);
         }
         else
         {
-            // Offscreen is taller relative to viewport
-            scale_y = static_cast<double>(vh) / static_cast<double>(offscreen_h);
-            scale_x = scale_y;
+            double offscreen_aspect_ratio = ((double)offscreen_w / (double)offscreen_h);
+            double viewport_aspect_ratio = ((double)vw / (double)vh);
+            double off_x = 0, off_y = 0, scale_x = 1, scale_y = 1;
 
-            // Center horizontally
-            off_x = (vw - (offscreen_w * scale_x)) / 2.0;
+            if (offscreen_aspect_ratio > viewport_aspect_ratio)
+            {
+                // Offscreen is wider relative to viewport
+                scale_x = static_cast<double>(vw) / static_cast<double>(offscreen_w);
+                scale_y = scale_x;
+
+                // Center vertically
+                off_y = (vh - (offscreen_h * scale_y)) / 2.0;
+            }
+            else
+            {
+                // Offscreen is taller relative to viewport
+                scale_y = static_cast<double>(vh) / static_cast<double>(offscreen_h);
+                scale_x = scale_y;
+
+                // Center horizontally
+                off_x = (vw - (offscreen_w * scale_x)) / 2.0;
+            }
+
+            // Draw simulation to offscreen painter
+            auto offscreen_painter = offscreen_nano_painter.begin(offscreen_w, offscreen_h, true);
+            sim->_draw(offscreen_painter);
+            offscreen_nano_painter.end();
+
+            // Provide simulation with frame pixels
+            sim->onPainted(offscreen_nano_painter.getPixels());
+
+            // Draw offscreen painter to main painter
+            offscreen_nano_painter.drawToPainter(p,
+                off_x,
+                off_y,
+                scale_x * offscreen_w,
+                scale_y * offscreen_h);
         }
-
-        // Draw simulation to offscreen painter
-        auto offscreen_painter = offscreen_nano_painter.begin(offscreen_w, offscreen_h, true);
-        sim->_draw(offscreen_painter);
-        offscreen_nano_painter.end();
-
-        // Provide simulation with frame pixels
-        sim->onPainted(offscreen_nano_painter.getPixels());
-
-        // Draw offscreen painter to main painter
-        offscreen_nano_painter.drawToPainter(p, 
-            off_x, 
-            off_y, 
-            scale_x * offscreen_w, 
-            scale_y * offscreen_h);
     }
 
     p->endFrame();

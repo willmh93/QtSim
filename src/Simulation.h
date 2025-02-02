@@ -317,7 +317,7 @@ struct Panel
     {}
 
     template<typename T, typename... Args>
-    T* create(Args&&... args) 
+    T* create(Args&&... args)
     {
         sim = new T(std::forward<Args>(args)...);
         sim->panel = ctx.panel;

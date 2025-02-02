@@ -4,7 +4,7 @@ SIM_DECLARE(CurvedSpace, "Curved Space")
 void CurvedSpace::prepare()
 {
     //options->checkbox("Manual Transform", &custom_scaling);
-    options->slider("Gravity", &gravity, 0, 1, 0.1);
+    options->slider("Gravity", &gravity, 0.0, 1.0, 0.1);
 }
 
 void CurvedSpace::start()
