@@ -1,20 +1,20 @@
 #include "World.h"
 #include <cmath>
 
-void Camera::setCamera(
+/*void Camera::setCamera(
     double camera_x,
     double camera_y,
     double camera_zoom_x,
     double camera_zoom_y,
     double camera_rotation)
 {
-    enabled = true;
+    //enabled = true;
     x = camera_x;
     y = camera_y;
     zoom_x = camera_zoom_x;
     zoom_y = camera_zoom_y;
     rotation = camera_rotation;
-}
+}*/
 
 // Scale world to fit viewport rect
 void Camera::cameraToViewport(
@@ -29,7 +29,7 @@ void Camera::cameraToViewport(
     double port_w = viewport_w;
     double port_h = viewport_h;
 
-    enabled = true;
+    //enabled = true;
     rotation = 0;
     zoom_x = port_w / world_w;
     zoom_y = port_h / world_h;
@@ -41,8 +41,7 @@ void Camera::cameraToWorld(double left, double top, double right, double bottom,
 {
     double world_w = right - left;
     double world_h = bottom - top;
-    //pan_x = 0;
-    //pan_y = 0;
+    rotation = 0;
 
     if (stretch)
     {
@@ -53,47 +52,113 @@ void Camera::cameraToWorld(double left, double top, double right, double bottom,
     }
     else
     {
-        
-        
-
         double aspect_view = viewport_w / viewport_h;
         double aspect_rect = world_w / world_h;
 
-        double ox = 0;
-        double oy = 0;
-
         if (aspect_rect > aspect_view)
         {
-            // Rect too wide, Grow View Height to fit, gap left and right
-            zoom_x = (viewport_w / world_w); // (viewport_w / (world_w / zoom_x));
-            zoom_y = zoom_x;
-            
+            // Shrink Height, gap top and bottom
+            zoom_x = zoom_y = (viewport_w / world_w);
             pan_x = 0;
             pan_y = ((viewport_h - (world_h * zoom_y)) / 2.0) / zoom_y;
         }
         else
         {
             // Shrink Width, gap left and right
-            zoom_y = (viewport_h / world_h); // (viewport_h / (world_h / zoom_y));
-            zoom_x = zoom_y;
-           
+            zoom_x = zoom_y = (viewport_h / world_h);
             pan_x = ((viewport_w - (world_w * zoom_x)) / 2.0) / zoom_x;
             pan_y = 0;
         }
 
-        x = (left + (viewport_w / 2) / zoom_x) + ox;
-        y = (top + (viewport_h / 2) / zoom_y) + oy;
+        x = (left + (viewport_w / 2) / zoom_x);
+        y = (top + (viewport_h / 2) / zoom_y);
     }
-    
-    rotation = 0;
 }
 
-Vec2 Camera::toStage(const Vec2& pt)
+void Camera::cameraToWorld(const FRect& r, bool stretch)
 {
-    if (!enabled)
-        return pt;
+    cameraToWorld(r.x1, r.y1, r.x2, r.y2, stretch);
+}
 
-    // Precompute trigonometric values
+void Camera::originToCenterViewport()
+{
+    x = 0;
+    y = 0;
+}
+
+Vec2 Camera::toWorld(const Vec2& pt)
+{
+    /*double cos_r = cos(rotation);
+    double sin_r = sin(rotation);
+
+    // Rotate
+    double x_new = (cos_r * pt.x - sin_r * pt.y);
+    double y_new = (sin_r * pt.x + cos_r * pt.y);
+
+    // Zoom
+    x_new *= zoom_x;
+    y_new *= zoom_y;
+
+    // Translate
+    x_new += viewport_w / 2 + (pan_x * zoom_x) - (x * zoom_x);
+    y_new += viewport_h / 2 + (pan_y * zoom_y) - (y * zoom_y);
+
+    return { x_new, y_new };*/
+
+    double cos_r = cos(rotation);
+    double sin_r = sin(rotation);
+
+    double px = pt.x;
+    double py = pt.y;
+
+    /// Translations
+
+    // Point
+    px -= (x * zoom_x);
+    py -= (y * zoom_y);
+
+    // Pan
+    px += (pan_x * zoom_x);
+    py += (pan_y * zoom_y);
+
+    // Center viewport
+    px += (viewport_w / 2);
+    py += (viewport_h / 2);
+
+    // Zoom
+    px /= zoom_x;
+    py /= zoom_y;
+    
+    // Apply inverse rotation
+    double x_orig = px * cos_r - py * sin_r;
+    double y_orig = py * cos_r + px * sin_r;
+
+    return { x_orig, y_orig };
+
+    /// Untranslate
+
+    // Point
+    //px -= (x / zoom_x);
+    //py -= (y / zoom_y);
+    //
+    //// Unpan
+    //px -= (pan_x / zoom_x);
+    //py -= (pan_y / zoom_y);
+
+    //// Uncenter viewport
+    //px -= (viewport_w / 2);
+    //py -= (viewport_h / 2);
+
+    //// Unzoom
+    //px /= zoom_x;
+    //py /= zoom_y;
+
+    //// Unrotate
+    //double x_orig = px * cos_r - py * sin_r;
+    //double y_orig = py * cos_r + px * sin_r;
+
+    return { x_orig, y_orig };
+    /*// Precompute trigonometric values
     double cos_r = cos(rotation);
     double sin_r = sin(rotation);
 
@@ -101,11 +166,63 @@ Vec2 Camera::toStage(const Vec2& pt)
     double tx = viewport_w / 2 + (pan_x * zoom_x) - (x * zoom_x);
     double ty = viewport_h / 2 + (pan_y * zoom_y) - (y * zoom_y);
 
+    // Reverse transformations
+    double x_unzoomed = (pt.x - tx) / zoom_x;
+    double y_unzoomed = (pt.y - ty) / zoom_y;
+
+    // Apply inverse rotation
+    double x_orig = cos_r * x_unzoomed + sin_r * y_unzoomed;
+    double y_orig = -sin_r * x_unzoomed + cos_r * y_unzoomed;
+
+    return { x_orig, y_orig };*/
+}
+
+Vec2 Camera::toWorld(double x, double y)
+{
+    return toWorld({ x, y });
+}
+
+Vec2 Camera::toStage(const Vec2& pt)
+{
+    // Precompute trigonometric values
+    double cos_r = cos(rotation);
+    double sin_r = sin(rotation);
+
+    double px = pt.x;
+    double py = pt.y;
+
+
+    // p->rotate(main_cam.rotation);
+    px = zoom_x * (cos_r * px - sin_r * py);
+    py = zoom_y * (sin_r * px + cos_r * py);
+    
+    // p->translate( (main_cam.pan_x * main_cam.zoom_x),
+    //               (main_cam.pan_y * main_cam.zoom_y) );
+    px += (pan_x * zoom_x);
+    py += (pan_y * zoom_y);
+
+    // p->translate( -main_cam.x * main_cam.zoom_x,
+    //               -main_cam.y * main_cam.zoom_y);
+    px += (this->x * zoom_x);
+    py += (this->y * zoom_y);
+
+    //p->scale(main_cam.zoom_x, main_cam.zoom_y);
+    //px *= zoom_x;
+    //py *= zoom_y;
+
+    return { px, py };
+
+    ////////
+
+    /*// Compute translation offsets
+    double tx = viewport_w / 2 + (pan_x * zoom_x) - (x * zoom_x);
+    double ty = viewport_h / 2 + (pan_y * zoom_y) - (y * zoom_y);
+
     // Apply transformations
     double x_new = zoom_x * (cos_r * pt.x - sin_r * pt.y) + tx;
     double y_new = zoom_y * (sin_r * pt.x + cos_r * pt.y) + ty;
 
-    return { x_new, y_new };
+    return { x_new, y_new };*/
 }
 
 Vec2 Camera::toStage(double x, double y)

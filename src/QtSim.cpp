@@ -8,29 +8,28 @@
 QtSim::QtSim(QWidget *parent)
     : QMainWindow(parent)
 {
-    
-
-
     // Main Menu
-    /* {
+    {
         QMenuBar* menuBar = new QMenuBar(this);
         setMenuBar(menuBar);
+
+        menuBar->setStyleSheet("color: rgb(255,255,255);");
 
         // Create File menu
         QMenu* fileMenu = menuBar->addMenu("Simulation");
 
         // Add actions to the File menu
-        QAction* newAction = new QAction("New", this);
-        QAction* openAction = new QAction("Open", this);
+        //QAction* newAction = new QAction("New", this);
+        //QAction* openAction = new QAction("Open", this);
         QAction* exitAction = new QAction("Exit", this);
 
-        fileMenu->addAction(newAction);
-        fileMenu->addAction(openAction);
+        //fileMenu->addAction(newAction);
+        //fileMenu->addAction(openAction);
         fileMenu->addSeparator(); // Optional: Add a separator
         fileMenu->addAction(exitAction);
 
         // Connect actions to slots
-        connect(newAction, &QAction::triggered, this, &QtSim::onSimSelector);
+        //connect(newAction, &QAction::triggered, this, &QtSim::onSimSelector);
         connect(exitAction, &QAction::triggered, this, &QtSim::close);
 
         // Create Help menu
@@ -41,7 +40,16 @@ QtSim::QtSim(QWidget *parent)
         helpMenu->addAction(aboutAction);
 
         connect(aboutAction, &QAction::triggered, this, &QtSim::onAbout);
-    }*/
+    }
+
+    // Main Menu
+    {
+        QStatusBar* statusBar = new QStatusBar(this);
+        statusBar->setStyleSheet("color: rgb(255,255,255);");
+
+        statusBar->showMessage("No simulation active");
+        setStatusBar(statusBar);
+    }
 
     simulation_type = -1;
     simulation = nullptr;
@@ -119,6 +127,14 @@ QtSim::QtSim(QWidget *parent)
 QtSim::~QtSim()
 {}
 
+void QtSim::resizeEvent(QResizeEvent * event)
+{
+    /*if (canvas)
+    {
+        canvas->update();
+    }*/
+}
+
 void QtSim::setSimulation(int type)
 {
     if (simulation)
@@ -133,6 +149,8 @@ void QtSim::setSimulation(int type)
     simulation = Simulation::getCreators()[simulation_type]();
     simulation->setCanvas(canvas);
     simulation->setOptions(options);
+    simulation->configure();
+
     canvas->setSimulation(simulation);
 
     simulation->prepare();
@@ -144,7 +162,7 @@ void QtSim::startSelectedSimulation()
     if (!simulation)
         return;
 
-    simulation->destroy();
+    simulation->_destroy();
     simulation->started = true;
     simulation->_start();
 }

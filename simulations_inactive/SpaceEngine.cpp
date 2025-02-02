@@ -6,7 +6,7 @@ void SpaceEngine::prepare()
 {
     //camera.enable();
 
-    attachCameraControls(&cam);
+    setFocusedCamera(&cam);
 
     //n.x = random(-world_size / 2, world_size / 2);
      //n.y = random(-world_size / 2, world_size / 2);
@@ -777,9 +777,5 @@ void SpaceEngine::draw(QNanoPainter* p)
     p->fillText(QString("Frame dt: %1").arg(frame_dt), 5, ty);
 }
 
-void SpaceEngine::mouseWheel(int delta)
-{
-    Simulation::mouseWheel(delta);
-}
 
 SIM_END

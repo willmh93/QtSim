@@ -14,8 +14,10 @@ class Canvas2D : public QNanoWidget, protected QOpenGLFunctions
 {
     Q_OBJECT;
 
+
 public:
 
+    // Todo: Completely remove Simulation from Canvas
     Simulation* sim = nullptr;
     int offscreen_w;
     int offscreen_h;

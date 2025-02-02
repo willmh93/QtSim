@@ -4,7 +4,7 @@ SIM_BEG(Particles)
 
 void Particles::prepare()
 {
-    main_cam.enable();
+    //main_cam.enable();
 
     particle_count = 100;
     gravity = 0;
@@ -49,10 +49,6 @@ void Particles::draw(QNanoPainter* p)
     p->setFillStyle({ 255,255,255 });
     p->setStrokeStyle({ 255,0,0 });
 
-    main_cam.pan_x = mouse_x - (width()/2);
-    main_cam.pan_y = mouse_y - (height()/2);
-    main_cam.rotation += 0.003;
-
     size_t len = particles.size();
     for (size_t i = 0; i < len; i++)
     {
@@ -64,12 +60,6 @@ void Particles::draw(QNanoPainter* p)
         p->fill();
         //p->stroke();
     }
-}
-
-void Particles::mouseWheel(int delta)
-{
-    main_cam.zoom_x += ((double)delta) / 1000.0;
-    main_cam.zoom_y += ((double)delta) / 1000.0;
 }
 
 SIM_END

@@ -103,3 +103,8 @@ public:
         return painter;
     }
 };
+
+namespace Draw
+{
+    void arrow(QNanoPainter* p, Vec2 &a, Vec2 &b, QColor color = QColor({ 255,255,255 }), double arrow_size=-1.0);
+}

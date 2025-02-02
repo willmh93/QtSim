@@ -1,43 +1,36 @@
 #include "{CLASS_NAME}.h"
 SIM_DECLARE({CLASS_NAME}, "{SIM_NAME}")
 
-void Sim::prepare()
+void {CLASS_NAME}::prepare()
 {{
-    //camera.enable(); // Main scene camera (affects all drawing)
-    //attachCameraControls(&cam); // Custom camera (for transforms)
+    //main_cam.originToCenterViewport(); // Global origin in center of viewport
+    //setFocusedCamera(&cam);            // If using custom camera for manual transforms
 }}
 
-void Sim::start()
+void {CLASS_NAME}::start()
 {{}}
 
-void Sim::destroy()
+void {CLASS_NAME}::destroy()
 {{}}
 
-void Sim::process()
+void {CLASS_NAME}::process()
 {{}}
 
-void Sim::draw(QNanoPainter* p)
+void {CLASS_NAME}::draw(QNanoPainter* p)
 {{}}
 
+/// User Interaction
 
-void Sim::mouseDown(int x, int y, Qt::MouseButton btn)
-{{
-    Simulation::mouseDown(x, y, btn);
-}}
+void {CLASS_NAME}::mouseDown(int x, int y, Qt::MouseButton btn)
+{{}}
 
-void Sim::mouseUp(int x, int y, Qt::MouseButton btn)
-{{
-    Simulation::mouseUp(x, y, btn);
-}}
+void {CLASS_NAME}::mouseUp(int x, int y, Qt::MouseButton btn)
+{{}}
 
-void Sim::mouseMove(int x, int y)
-{{
-    Simulation::mouseMove(x, y);
-}}
+void {CLASS_NAME}::mouseMove(int x, int y)
+{{}}
 
-void Sim::mouseWheel(int delta)
-{{
-    Simulation::mouseWheel(delta);
-}}
+void {CLASS_NAME}::mouseWheel(int delta)
+{{}}
 
 SIM_END

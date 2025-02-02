@@ -1,11 +1,18 @@
 #include "Fluid.h"
 SIM_DECLARE(Fluid, "Fluid")
 
+// Shared variables (available to all instances)
+double timestep = 0.1;
+int particle_count = 200;
+double spring_dist = 20.0;
+double spring_stiffness = 1;
+double spring_damping = 0.01;
+double viscosity_strength = 1;
+double viscosity_spring_dist_ratio = 10.0;
+
 void Fluid::prepare()
 {
-    main_cam.enable(); // Main scene camera (affects all drawing)
-    //attachCameraControls(&cam); // Custom camera (for transforms)
-
+    options->slider("Panel Count", &panel_count, 1, 36, 2);
     options->slider("Timestep", &timestep, 0.01, 0.1, 0.01);
     options->slider("Particle Count", &particle_count, 10, 1000, 10);
 
@@ -14,10 +21,17 @@ void Fluid::prepare()
     options->slider("Spring Damping", &spring_damping, 0.0001, 0.1, 0.0001);
 
     options->slider("Viscosity Strength", &viscosity_strength, 0.0, 1.0, 0.01);
-    options->slider("Viscosity Distance", &viscosity_dist, 10, 1000.0, 10);
+    options->slider("Viscosity Spring Dist-Ratio", &viscosity_spring_dist_ratio, 1.0, 100.0, 0.1);
 }
 
 void Fluid::start()
+{
+    auto& layout = setLayout(panel_count);
+    for (Panel* panel : layout)
+        panel->create<FluidInstance>();
+}
+
+void FluidInstance::prepare()
 {
     particles.clear();
     for (int i = 0; i < particle_count; i++)
@@ -31,10 +45,11 @@ void Fluid::start()
     }
 }
 
-void Fluid::destroy()
-{}
+void FluidInstance::destroy()
+{
+}
 
-void Fluid::process()
+void FluidInstance::process(DrawingContext* ctx)
 {
     delaunay.triangulate(particles, triangles);
     delaunay.extractLinks(triangles, links);
@@ -44,7 +59,14 @@ void Fluid::process()
         spring(link.p1, link.p2, spring_dist, spring_stiffness, spring_damping, timestep);
     }
 
-    applyViscosity(viscosity_dist, viscosity_strength, timestep);
+    for (const Link<Particle>& link : links)
+    {
+        double link_dist = link.dist();
+        double viscosity_dist = spring_dist * viscosity_spring_dist_ratio;
+        applyLinkViscosity(link.p1, link.p2, viscosity_dist, viscosity_strength, timestep);
+    }
+
+    //applyViscosity(viscosity_dist, viscosity_strength, timestep);
 
     for (Particle* n : particles)
     {
@@ -53,70 +75,99 @@ void Fluid::process()
     }
 }
 
-void Fluid::draw(QNanoPainter* p)
+void FluidInstance::draw(DrawingContext* ctx)
 {
-    p->setFillStyle({255, 255, 255});
-    for (Particle *n : particles)
-    {
-        p->beginPath();
-        p->circle(n->x, n->y, 2);
-        p->fill();
-    }
+    ctx->setLineCap(LineCap::CAP_ROUND);
 
-    
-    p->setLineWidth(1);
-    p->setStrokeStyle({ 255,255,255 });
-    p->beginPath();
+    // Fill triangles
+    ctx->setFillStyle(127, 0, 0 );
+    ctx->beginPath();
     for (auto& tri : triangles)
     {
-        p->moveTo(tri.a->x, tri.a->y);
-        p->lineTo(tri.b->x, tri.b->y);
-        p->lineTo(tri.c->x, tri.c->y);
+        ctx->moveTo(tri.a->x, tri.a->y);
+        ctx->lineTo(tri.b->x, tri.b->y);
+        ctx->lineTo(tri.c->x, tri.c->y);
     }
-    p->stroke();
+    ctx->fill();
+
+    // Fill particles
+    ctx->setFillStyle(255, 255, 255);
+    for (Particle* n : particles)
+    {
+        ctx->beginPath();
+        ctx->circle(n->x, n->y, 2);
+        ctx->fill();
+    }
+
+    // Draw links
+    ctx->setLineWidth(1);
+    ctx->setStrokeStyle(255,255,255);
+    ctx->beginPath();
+    for (auto& link : links)
+    {
+        ctx->moveTo(link.p1->x, link.p1->y);
+        ctx->lineTo(link.p2->x, link.p2->y);
+    }
+    ctx->stroke();
+
+    //ctx->restore();
+
+    int ty = 5;
+    int row_h = 18;
+
+    ctx->setTextAlign(QNanoPainter::TextAlign::ALIGN_LEFT);
+    ctx->setTextBaseline(QNanoPainter::TextBaseline::BASELINE_TOP);
+    ctx->setFillStyle("#ffffff");
+
+    ty += row_h;
+    //p->fillText(QString("Frame dt: %1").arg(frame_dt), 5, ty);
 }
 
-void Fluid::applyViscosity(double r, double strength, double dt)
+void FluidInstance::applyLinkViscosity(Particle* a, Particle* b, double r, double strength, double dt)
 {
     const double radiusSq = r * r;
 
+    // Calculate distance between particles
+    double dx = b->x - a->x;
+    double dy = b->y - a->y;
+    double distSq = dx * dx + dy * dy;
+
+    if (distSq > radiusSq || distSq == 0) return;
+
+    double distance = sqrt(distSq);
+    double invDist = 1.0 / distance;
+
+    // Velocity difference between particles
+    double dvx = b->vx - a->vx;
+    double dvy = b->vy - a->vy;
+
+    // Smoothing kernel (quartic falloff)
+    double kernel = 1.0 - (distance / r);
+    kernel *= kernel * kernel * kernel;  // Quartic kernel
+
+    // Viscosity impulse calculation
+    double impulse = strength * kernel * dt;
+
+    // Apply damping to both particles
+    a->vx += dvx * impulse;
+    a->vy += dvy * impulse;
+    b->vx -= dvx * impulse;
+    b->vy -= dvy * impulse;
+}
+
+void FluidInstance::applyViscosityAll(double r, double strength, double dt)
+{
     for (Particle* a : particles)
     {
         for (Particle *b : particles) 
         {
-            if (a == b) continue;  // Skip self-comparison
-
-            // Calculate distance between particles
-            double dx = b->x - a->x;
-            double dy = b->y - a->y;
-            double distSq = dx * dx + dy * dy;
-
-            if (distSq > radiusSq || distSq == 0) continue;
-
-            double distance = sqrt(distSq);
-            double invDist = 1.0 / distance;
-
-            // Velocity difference between particles
-            double dvx = b->vx - a->vx;
-            double dvy = b->vy - a->vy;
-
-            // Smoothing kernel (quartic falloff)
-            double kernel = 1.0 - (distance / r);
-            kernel *= kernel * kernel * kernel;  // Quartic kernel
-
-            // Viscosity impulse calculation
-            double impulse = strength * kernel * dt;
-
-            // Apply damping to both particles
-            a->vx += dvx * impulse;
-            a->vy += dvy * impulse;
-            b->vx -= dvx * impulse;
-            b->vy -= dvy * impulse;
+            if (a == b) continue;
+            applyLinkViscosity(a, b, r, strength, dt);
         }
     }
 }
 
-void Fluid::spring(Particle* a, Particle* b, double restLength, double k, double damping, double deltaTime)
+void FluidInstance::spring(Particle* a, Particle* b, double restLength, double k, double damping, double deltaTime)
 {
     // Direction vector between particles
     double dx = b->x - a->x;
@@ -148,24 +199,5 @@ void Fluid::spring(Particle* a, Particle* b, double restLength, double k, double
 }
 
 
-void Fluid::mouseDown(int x, int y, Qt::MouseButton btn)
-{
-    Simulation::mouseDown(x, y, btn);
-}
-
-void Fluid::mouseUp(int x, int y, Qt::MouseButton btn)
-{
-    Simulation::mouseUp(x, y, btn);
-}
-
-void Fluid::mouseMove(int x, int y)
-{
-    Simulation::mouseMove(x, y);
-}
-
-void Fluid::mouseWheel(int delta)
-{
-    Simulation::mouseWheel(delta);
-}
 
 SIM_END

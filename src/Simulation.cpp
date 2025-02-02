@@ -240,25 +240,58 @@ void FFmpegWorker::doFinalize()
 }
 
 
-Simulation::Simulation() : gen(rd())
+
+
+Simulation::Simulation() {}
+Simulation::~Simulation() {}
+
+void Simulation::configure()
 {
     started = false;
     paused = false;
 
-    mouse_x = 0;
-    mouse_y = 0;
+    //main_cam.enabled = true;
 
-    main_cam.enabled = false;
-    attachCameraControls(&main_cam);
+    
+
 }
 
-Simulation::~Simulation()
+void Simulation::_destroy()
 {
+    //attachedCameras.clear();
 }
+
+/*void Simulation::setFocusedCamera(Camera* cam, bool panning, bool zooming)
+{
+    configureCamera(cam);
+
+    focused_cam = cam;
+    cam->panning_enabled = panning;
+    cam->zooming_enabled = zooming;
+
+    if (std::find(attachedCameras.begin(), attachedCameras.end(), cam) == attachedCameras.end())
+        attachedCameras.push_back(cam);
+
+    //configureCamera(cam, panning, zooming);
+    //attachedCameras.push_back(cam);
+}
+
+void Simulation::configureCamera(Camera* cam)
+{
+    cam->viewport_w = width();
+    cam->viewport_h = height();
+}*/
 
 void Simulation::_start()
 {
     start();
+
+    for (Panel* panel : panels)
+    {
+        panel->sim->width = panel->width;
+        panel->sim->height = panel->height;
+        panel->sim->prepare();
+    }
 
     if (options->getRecordChecked())
         startRecording();
@@ -279,45 +312,106 @@ void Simulation::_stop()
 
 void Simulation::_process()
 {
-    for (Camera* cam : attachedCameras)
+    /*for (Camera* cam : attachedCameras)
     {
         cam->viewport_w = width();
         cam->viewport_h = height();
+    }*/
+
+    double w = width();
+    double h = height();
+    double panel_width = w / panels_x;
+    double panel_height = h / panels_y;
+
+    for (Panel* panel : panels)
+    {
+        panel->x = panel->panel_x * panel_width;
+        panel->y = panel->panel_y * panel_height;
+        panel->width = panel_width - 1;
+        panel->height = panel_height - 1;
+        panel->ctx.main_cam.viewport_w = panel_width - 1;
+        panel->ctx.main_cam.viewport_h = panel_height - 1;
+        //context.main_cam.cameraToViewport(0, 0, panel_width, panel_height);
     }
 
     if (!encoder_busy)
     {
+        // Process each panel
         timer.start();
         
-        process();
+        int i = 0;
+        for (Panel* panel : panels)
+        {
+            //active_context = context;
+            //process(context);
+
+            active_panel = panel;
+            active_panel->sim->process(&panel->ctx);
+        }
         
         frame_dt = timer.elapsed();
 
+        // Prepare to encode the next frame
         encode_next_paint = true;
+    }
+}
 
+void Simulation::prepare()
+{
+}
 
+void Simulation::destroy()
+{
+}
+
+void Simulation::postProcess()
+{
+    for (Panel* panel : panels)
+    {
+        active_panel = panel;
+        panel->sim->postProcess();
     }
 }
 
 void Simulation::_draw(QNanoPainter* p)
 {
-    if (main_cam.enabled)
-    {
-        // Move to center of stage
-        p->translate(
-            width() / 2 + main_cam.pan_x * main_cam.zoom_x,
-            height() / 2 + main_cam.pan_y * main_cam.zoom_y
-        );
+    p->setFillStyle({ 255,255,255 });
+    p->setStrokeStyle({ 255,255,255 });
 
-        p->rotate(main_cam.rotation);
-        p->translate(
-            -main_cam.x * main_cam.zoom_x,
-            -main_cam.y * main_cam.zoom_y
-        );
-        p->scale(main_cam.zoom_x, main_cam.zoom_y);
+    int i = 0;
+    for (Panel* panel : panels)
+    {
+        active_panel = panel;
+
+        p->setClipRect(panel->x, panel->y, panel->width, panel->height);
+        panel->ctx.drawPanel(p, panel->width, panel->height);
+        p->resetClipping();
     }
 
-    draw(p);
+    for (Panel* panel : panels)
+    {
+        p->setLineWidth(6);
+        p->setStrokeStyle("#2E2E3E");
+        p->beginPath();
+
+        // Draw vert line
+        if (panel->panel_x < panels_x - 1)
+        {
+            double line_x = floor(panel->x + panel->width) + 0.5;
+            p->moveTo(line_x, panel->y);
+            p->lineTo(line_x, panel->y + panel->height + 1);
+        }
+
+        // Draw horiz line
+        if (panel->panel_y < panels_y - 1)
+        {
+            double line_y = floor(panel->y + panel->height) + 0.5;
+            p->moveTo(panel->x + panel->width + 1, line_y);
+            p->lineTo(panel->x, line_y);
+        }
+
+        p->stroke();
+    }
 }
 
 void Simulation::onPainted(const std::vector<GLubyte> &frame)
@@ -333,8 +427,10 @@ void Simulation::onPainted(const std::vector<GLubyte> &frame)
     }
 }
 
-void Simulation::postProcess()
+void SimulationInstance::postProcess()
 {
+    // Keep delta until entire frame processed and drawn
+    mouse.scroll_delta = 0;
 }
 
 bool Simulation::startRecording()
@@ -400,4 +496,74 @@ int Simulation::height()
     return canvas->height();
 }
 
+void DrawingContext::drawPanel(QNanoPainter* p, double vw, double vh)
+{
+    painter = p;
 
+    p->save();
+
+    // Move origin relative to viewport
+    //p->translate(
+    //    x + (vw * origin_ratio_x),
+    //    y + (vh * origin_ratio_y)
+    //);
+
+    // Scale by default (use built-in transformer)
+    scaleGraphics(true, true);
+
+    //if (!main_cam.scale_graphics)
+    //    save();
+
+    panel->sim->draw(this);
+
+    scaleGraphics(false, true);
+
+    while (scale_stack.size())
+        restore();
+
+    p->restore();
+}
+
+inline void DrawingContext::scaleGraphics(bool b, bool force)
+{
+    if ((force && b) || (!main_cam.scale_graphics && b))
+    {
+        // If we WEREN'T scaling, but now we ARE
+        painter->save();
+
+        /// Transform world to stage
+
+        // Always zoom to CENTER of viewport, regardless of origin
+        //painter->translate(width / 2, height / 2);
+
+        // Move origin relative to viewport (when resizing window, this doesn't move)
+        double viewport_cx = (panel->width / 2.0);
+        double viewport_cy = (panel->height / 2.0);
+
+        double origin_ox = (panel->width * (origin_ratio_x - 0.5) * main_cam.zoom_x);
+        double origin_oy = (panel->height * (origin_ratio_y - 0.5) * main_cam.zoom_y);
+
+        painter->translate(panel->x + viewport_cx, panel->y + viewport_cy);
+
+        painter->translate(
+            (main_cam.pan_x * main_cam.zoom_x) + origin_ox,
+            (main_cam.pan_y * main_cam.zoom_y) + origin_oy
+        );
+
+        painter->rotate(main_cam.rotation);
+        painter->translate(
+            -main_cam.x * main_cam.zoom_x,
+            -main_cam.y * main_cam.zoom_y
+        );
+
+        painter->scale(main_cam.zoom_x, main_cam.zoom_y);
+
+        //painter->translate(-width / 2, -height / 2);
+    }
+    else if ((force && !b) || (!b && main_cam.scale_graphics))
+    {
+        // If we WERE scaling, but now we're NOT
+        painter->restore();
+    }
+    main_cam.scale_graphics = b;
+}

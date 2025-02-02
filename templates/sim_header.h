@@ -4,7 +4,7 @@
 
 SIM_BEG({CLASS_NAME})
 
-struct Sim : public Simulation
+struct {CLASS_NAME} : public Simulation
 {{
     //Camera cam; // Optional camera for custom transforms
 

@@ -505,7 +505,6 @@ struct SpaceEngine : public Simulation
         return sum;
     }
 
-    void mouseWheel(int delta);
 };
 
 SIM_END

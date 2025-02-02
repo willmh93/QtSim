@@ -10,6 +10,7 @@
 #include <vector>
 #include <queue>
 #include <limits>
+#include <set>
 #include <unordered_map>
 
 
@@ -106,16 +107,278 @@ public slots:
 
 using namespace std;
 
-//class Simulation;
 
-
-#define SIM_BEG(id) namespace NS_##id { //struct Sim; inline AutoRegisterSimulation<Sim> register_##id;
-#define SIM_DECLARE(id, name) namespace NS_##id { AutoRegisterSimulation<Sim> register_##id(name);
-#define BASE_SIM(id) using namespace NS_##id; typedef NS_##id::Sim id;
+#define SIM_BEG(cls) namespace NS_##cls { //struct Sim; inline AutoRegisterSimulation<Sim> register_##id;
+#define SIM_DECLARE(cls, name) namespace NS_##cls { AutoRegisterSimulation<cls> register_##cls(name);
+#define BASE_SIM(cls) using namespace NS_##cls; //typedef NS_##cls::Sim cls;
 //#define BASE_SIM(id) namespace NS_##id {
 #define SIM_END }
 
 class Canvas2D;
+class Simulation;
+struct Panel;
+
+using LineCap = QNanoPainter::LineCap;
+using LineJoin = QNanoPainter::LineJoin;
+using TextAlign = QNanoPainter::TextAlign;
+using TextBaseline = QNanoPainter::TextBaseline;
+
+struct DrawingContext
+{
+    //int panel_index;
+    //int panel_x;
+    //int panel_y;
+
+    //double x;
+    //double y;
+    //double width;
+    //double height;
+
+    Panel* panel = nullptr;
+
+    double origin_ratio_x;
+    double origin_ratio_y;
+
+    Camera main_cam;
+    //Camera* focused_cam = nullptr;
+
+    // Drawing abstraction
+    QNanoPainter* painter;
+    std::vector<bool> scale_stack;
+
+    DrawingContext() {}
+    /*DrawingContext(
+        int _panel_index, 
+        int _panel_x, 
+        int _panel_y, 
+        double _x, double _y, 
+        double _w, double _h)
+    {
+        panel_index = _panel_index;
+        panel_x = _panel_x;
+        panel_y = _panel_y;
+        x = _x;
+        y = _y;
+        width = _w;
+        height = _h;
+    }*/
+
+    void drawPanel(QNanoPainter *p, double vw, double vh);
+
+    Vec2 PT(double x, double y)
+    {
+        if (main_cam.scale_graphics)
+            return { x, y };
+        else
+            return main_cam.toStage(x, y);
+    }
+
+    void save()
+    {
+        //painter->save();
+        scale_stack.push_back(main_cam.scale_graphics);
+    }
+
+    void restore()
+    {
+        //painter->restore();
+
+        bool b = scale_stack.back();
+        scale_stack.pop_back();
+
+        scaleGraphics(b);
+    }
+
+    void scaleGraphics(bool b, bool force = false);
+
+    void beginPath()
+    {
+        painter->beginPath();
+    }
+
+    void setFillStyle(int r, int g, int b, int a = 255)
+    {
+        painter->setFillStyle({ r,g,b,a });
+    }
+
+    void setFillStyle(const QNanoColor& color)
+    {
+        painter->setFillStyle(color);
+    }
+
+    void setStrokeStyle(int r, int g, int b, int a = 255)
+    {
+        painter->setStrokeStyle({ r,g,b,a });
+    }
+
+    void setStrokeStyle(const QNanoColor& color)
+    {
+        painter->setStrokeStyle(color);
+    }
+
+    void setLineWidth(int width)
+    {
+        painter->setLineWidth(width);
+    }
+
+    void setLineCap(LineCap cap)
+    {
+        painter->setLineCap(cap);
+    }
+
+    void fill()
+    {
+        painter->fill();
+    }
+
+    void stroke()
+    {
+        painter->stroke();
+    }
+
+    void circle(double cx, double cy, double r)
+    {
+        Vec2 pt = PT(cx, cy);
+        painter->circle(pt.x, pt.y, r);
+    }
+
+    void moveTo(double px, double py)
+    {
+        Vec2 pt = PT(px, py);
+        painter->moveTo(pt.x, pt.y);
+    }
+
+    void lineTo(double px, double py)
+    {
+        Vec2 pt = PT(px, py);
+        painter->lineTo(pt.x, pt.y);
+    }
+
+    void setTextAlign(TextAlign align)
+    {
+        painter->setTextAlign(align);
+    }
+
+    void setTextBaseline(TextBaseline align)
+    {
+        painter->setTextBaseline(align);
+    }
+};
+
+class SimulationInstance
+{
+    std::random_device rd;
+    std::mt19937 gen;
+
+public:
+
+
+    Simulation* main;
+    Panel* panel;
+    Camera* camera;
+
+    MouseInfo mouse;
+
+    double width;
+    double height;
+
+    SimulationInstance() : gen(rd())
+    {}
+
+    virtual void prepare() {}
+    virtual void start() {}
+    virtual void stop() {}
+    virtual void destroy() {}
+    virtual void process(DrawingContext* ctx) {}
+    virtual void draw(DrawingContext* ctx) {}
+    virtual void postProcess();
+
+    double random(double min = 0, double max = 1)
+    {
+        std::uniform_real_distribution<> dist(min, max);
+        return dist(gen);
+    }
+};
+
+struct Panel
+{
+    DrawingContext ctx;
+    SimulationInstance* sim;
+
+    int panel_index;
+    int panel_x;
+    int panel_y;
+    double x;
+    double y;
+    double width;
+    double height;
+
+    Panel()
+    {}
+
+    template<typename T, typename... Args>
+    T* create(Args&&... args) 
+    {
+        sim = new T(std::forward<Args>(args)...);
+        sim->panel = ctx.panel;
+        sim->camera = &ctx.main_cam;
+        return dynamic_cast<T*>(sim);
+    }
+};
+
+struct Layout
+{
+    std::vector<Panel*> panels;
+    int panels_x;
+    int panels_y;
+
+    // Custom iterator
+    using iterator = typename std::vector<Panel*>::iterator;
+    using const_iterator = typename std::vector<Panel*>::const_iterator;
+
+    ~Layout()
+    {
+        clear();
+    }
+
+    void clear()
+    {
+        for (Panel* p : panels)
+            delete p;
+        panels.clear();
+    }
+
+    void add(
+        int _panel_index,
+        int _panel_x,
+        int _panel_y,
+        double _x, double _y,
+        double _w, double _h)
+    {
+        Panel* panel = new Panel();
+        panel->ctx.panel = panel;
+        panel->panel_index = _panel_index;
+        panel->panel_x = _panel_x;
+        panel->panel_y = _panel_y;
+        panel->x = _x;
+        panel->y = _y;
+        panel->width = _w;
+        panel->height = _h;
+        panels.push_back(panel);
+    }
+
+    Panel* at(int i)
+    {
+        return panels[i];
+    }
+
+    iterator begin() { return panels.begin(); }
+    iterator end() { return panels.end(); }
+
+    const_iterator begin() const { return panels.begin(); }
+    const_iterator end() const { return panels.end(); }
+};
+
 //class Options;
 class Simulation : public QObject
 {
@@ -123,8 +386,7 @@ class Simulation : public QObject
 
     QString name;
 
-    std::random_device rd;
-    std::mt19937 gen;
+    
 
     // We keep the global list in a function-scope static 
     // so it is only instantiated once.
@@ -136,7 +398,13 @@ class Simulation : public QObject
     QThread* ffmpeg_thread;
     FFmpegWorker* ffmpeg_worker;
 
+    Layout panels;
+    int panels_x = 1;
+    int panels_y = 1;
+
 public:
+
+    Panel* active_panel = nullptr;
 
     int frame_dt;
 
@@ -175,98 +443,230 @@ public:
 
     //static void addFactoryItem(std::function<Simulation* (void)> creator)
     
-
-    Camera main_cam;
-
-    vector<Camera*> attachedCameras;
-    void attachCameraControls(
-        Camera *cam,
-        bool panning = true,
-        bool zooming = true
-    )
+    Layout &setLayout(int _panels_x, int _panels_y)
     {
-        cam->panning_enabled = panning;
-        cam->zooming_enabled = zooming;
-        attachedCameras.push_back(cam);
+        panels.clear();
+        panels.panels_x = _panels_x;
+        panels.panels_y = _panels_y;
+
+        panels_x = _panels_x;
+        panels_y = _panels_y;
+
+        int count = (panels_x * panels_y);
+        double panel_w = width() / panels_x;
+        double panel_h = height() / panels_y;
+
+        //for (int i = 0; i < count; i++)
+        //    context_list.emplace_back(DrawingContext(panel_w, panel_h));
+
+        for (int y = 0; y < panels_y; y++)
+        {
+            for (int x = 0; x < panels_x; x++)
+            {
+                int i = (y * panels_x) + x;
+
+                panels.add(
+                    i,
+                    x,
+                    y,
+                    x * panel_w, 
+                    y * panel_h, 
+                    panel_w - 1, 
+                    panel_h - 1
+                );
+
+                DrawingContext& context = panels.at(i)->ctx;
+
+                context.main_cam.viewport_w = panel_w - 2;
+                context.main_cam.viewport_h = panel_h - 2;
+                context.origin_ratio_x = 0.5;
+                context.origin_ratio_y = 0.5;
+                //context.main_cam.pan_x = 0;//-context.main_cam.viewport_w * context.origin_ratio_x;
+                //context.main_cam.pan_y = 0;//-context.main_cam.viewport_h * context.origin_ratio_y;
+                //context.main_cam.cameraToViewport(0, 0, panel_w - 2, panel_h - 2);
+            }
+        }
+
+        return panels;
     }
+   
+    Layout& setLayout(int panel_count)
+    {
+        int panels_y = sqrt(panel_count);
+        int panels_x = panel_count / panels_y;
+        return setLayout(panels_x, panels_y);
+    }
+
+    //vector<Camera*> attachedCameras;
+
+    //void setFocusedCamera(Camera *cam, bool panning = true, bool zooming = true);
+    //void configureCamera(Camera* cam);
 
     bool started;
     bool paused;
 
     Options* options;
 
-    int mouse_x;
-    int mouse_y;
+    //int mouse_x;
+    //int mouse_y;
 
+    
+    
     Simulation();
     ~Simulation();
 
-    virtual void prepare() {}
-    virtual void start() {}
-    virtual void stop() {}
-    virtual void destroy() {}
-    virtual void process() {}
-    virtual void draw(QNanoPainter* p) {}
-    virtual void postProcess();
+    void configure();
 
+    
+
+    virtual void mouseDown(MouseInfo mouse) {}
+    virtual void mouseUp(MouseInfo mouse) {}
+    virtual void mouseMove(MouseInfo mouse) {}
+    virtual void mouseWheel(MouseInfo mouse) {}
+
+    void _destroy();
     void _start();
     void _stop();
     void _process();
 
+    virtual void prepare();
+    virtual void destroy();
+    virtual void postProcess();
+
+    virtual void start() {}
+    virtual void stop() {}
+
     //void startRecording();
     //void endRecording();
 
-    virtual void mouseDown(int x, int y, Qt::MouseButton btn)
+    void _updateSimMouseInfo(int x, int y)
     {
-        for (Camera* cam : attachedCameras)
+        /*mouse.stage_x = x;
+        mouse.stage_y = y;
+
+        //if (focused_cam)
         {
-            if (cam->enabled && 
-                cam->panning_enabled &&
-                btn == Qt::MiddleButton)
-            {
-                cam->panBegin(x, y);
-            }
-        }
+            Vec2 wp = main_cam.toWorld(mouse.stage_x, mouse.stage_y);
+            mouse.world_x = wp.x;
+            mouse.world_y = wp.y;
+        }*/
     }
 
-    virtual void mouseUp(int x, int y, Qt::MouseButton btn)
-    {
-        for (Camera* cam : attachedCameras)
-        {
-            if (cam->enabled &&
-                cam->panning_enabled &&
-                btn == Qt::MiddleButton)
-            {
-                cam->panEnd(x, y);
-            }
 
+    void _mouseDown(int x, int y, Qt::MouseButton btn)
+    {
+        for (Panel* panel : panels)
+        {
+            double panel_mx = x - panel->x;
+            double panel_my = y - panel->y;
+
+            if (panel_mx >= 0 && panel_my >= 0 &&
+                panel_mx <= panel->width && panel_my <= panel->height)
+            {
+                Camera& cam = panel->ctx.main_cam;
+                if (cam.panning_enabled && btn == Qt::MiddleButton)
+                {
+                    cam.panBegin(x, y);
+                }
+            }
         }
+
+        /*if (focused_cam)
+        {
+            if (focused_cam->panning_enabled && btn == Qt::MiddleButton)
+            {
+                focused_cam->panBegin(x, y);
+            }
+        }
+
+        _updateSimMouseInfo(x, y);
+        mouseDown(mouse);*/
     }
 
-    virtual void mouseMove(int x, int y)
+    void _mouseUp(int x, int y, Qt::MouseButton btn)
     {
-        for (Camera* cam : attachedCameras)
+        for (Panel* panel : panels)
         {
-            if (cam->enabled &&
-                cam->panning_enabled &&
-                cam->panning)
+            double panel_mx = x - panel->x;
+            double panel_my = y - panel->y;
+
+            if (panel_mx >= 0 && panel_my >= 0 &&
+                panel_mx <= panel->width && panel_my <= panel->height)
             {
-                cam->panProcess(x, y);
+                Camera& cam = panel->ctx.main_cam;
+                if (cam.panning_enabled && btn == Qt::MiddleButton)
+                {
+                    cam.panEnd(x, y);
+                }
             }
         }
+
+        /*if (focused_cam)
+        {
+            if (focused_cam->panning_enabled && btn == Qt::MiddleButton)
+            {
+                focused_cam->panEnd(x, y);
+            }
+        }
+
+        _updateSimMouseInfo(x, y);
+        mouseUp(mouse);*/
     }
 
-    virtual void mouseWheel(int delta)
+    void _mouseMove(int x, int y)
     {
-        for (Camera* cam : attachedCameras)
+        for (Panel* panel : panels)
         {
-            if (cam->enabled &&
-                cam->zooming_enabled)
+            double panel_mx = x - panel->x;
+            double panel_my = y - panel->y;
+
+            Camera& cam = panel->ctx.main_cam;
+            if (cam.panning_enabled)
+                cam.panProcess(x, y);
+        }
+
+        /*if (focused_cam)
+        {
+            if (focused_cam->panning_enabled &&focused_cam->panning)
             {
-                cam->zoom_x += (((double)delta) * cam->zoom_x) / 1000.0;
-                cam->zoom_y = cam->zoom_x;
+                focused_cam->panProcess(x, y);
             }
         }
+
+        _updateSimMouseInfo(x, y);
+        mouseMove(mouse);*/
+    }
+
+    void _mouseWheel(int x, int y, int delta)
+    {
+        for (Panel* panel : panels)
+        {
+            double panel_mx = x - panel->x;
+            double panel_my = y - panel->y;
+
+            if (panel_mx >= 0 && panel_my >= 0 &&
+                panel_mx <= panel->width && panel_my <= panel->height)
+            {
+                Camera& cam = panel->ctx.main_cam;
+                if (cam.zooming_enabled)
+                {
+                    cam.zoom_x += (((double)delta) * cam.zoom_x) / 1000.0;
+                    cam.zoom_y = cam.zoom_x;
+                }
+            }
+        }
+
+        /*if (focused_cam)
+        {
+            if (focused_cam->zooming_enabled)
+            {
+                focused_cam->zoom_x += (((double)delta) * focused_cam->zoom_x) / 1000.0;
+                focused_cam->zoom_y = focused_cam->zoom_x;
+            }
+        }
+        
+        mouse.scroll_delta = delta;
+        mouseWheel(mouse);*/
     }
 
 
@@ -286,11 +686,7 @@ public:
     int width();
     int height();
 
-    double random(double min=0, double max=1)
-    {
-        std::uniform_real_distribution<> dist(min, max);
-        return dist(gen);
-    }
+    
 
     void setCanvas(Canvas2D* _canvas) { 
         canvas = _canvas;
@@ -302,6 +698,36 @@ public:
     bool startRecording();
     bool encodeFrame(uint8_t* data);
     void finalizeRecording();
+
+    /*
+void updateTransform()
+{
+    painter->translate(
+        (main_cam.pan_x * main_cam.zoom_x),
+        (main_cam.pan_y * main_cam.zoom_y)
+    );
+
+    painter->rotate(main_cam.rotation);
+    painter->translate(
+        -main_cam.x * main_cam.zoom_x,
+        -main_cam.y * main_cam.zoom_y
+    );
+    if (main_cam.scale_graphics)
+    {
+        painter->scale(main_cam.zoom_x, main_cam.zoom_y);
+    }
+}
+*/
+
+    /*void save() { active_context->save(); }
+    void restore() { active_context->restore(); }
+    void scaleGraphics(bool b, bool force = false) { active_context->scaleGraphics(b, force); }
+    void beginPath() { active_context->beginPath(); }
+    void setFillStyle(int r, int g, int b, int a = 255) { active_context->setFillStyle(r,g,b,a); }
+    void setStrokeStyle(int r, int g, int b, int a = 255) { active_context->setStrokeStyle(r,g,b,a); }
+    void fill() { active_context->fill(); }
+    void stroke() { active_context->stroke(); }
+    void circle(double cx, double cy, double r) { active_context->circle(cx, cy, r); }*/
 
 signals:
 
@@ -322,6 +748,7 @@ struct AutoRegisterSimulation
         });
     }
 };
+
 
 
 /*void addFactoryItem(std::function<Simulation* (void)> creator)

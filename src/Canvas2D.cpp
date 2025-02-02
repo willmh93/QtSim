@@ -204,13 +204,12 @@ Canvas2D::~Canvas2D()
 }
 
 
+
 void Canvas2D::mousePressEvent(QMouseEvent* event)
 {
     if (!sim) return;
     QPointF mousePos = event->position();
-    sim->mouse_x = mousePos.x();
-    sim->mouse_y = mousePos.y();
-    sim->mouseDown(sim->mouse_x, sim->mouse_y, event->button());
+    sim->_mouseDown(mousePos.x(), mousePos.y(), event->button());
     update();
 }
 
@@ -218,9 +217,7 @@ void Canvas2D::mouseReleaseEvent(QMouseEvent* event)
 {
     if (!sim) return;
     QPointF mousePos = event->position();
-    sim->mouse_x = mousePos.x();
-    sim->mouse_y = mousePos.y();
-    sim->mouseUp(sim->mouse_x, sim->mouse_y, event->button());
+    sim->_mouseUp(mousePos.x(), mousePos.y(), event->button());
     update();
 }
 
@@ -228,16 +225,15 @@ void Canvas2D::mouseMoveEvent(QMouseEvent* event)
 {
     if (!sim) return;
     QPointF mousePos = event->position();
-    sim->mouse_x = mousePos.x();
-    sim->mouse_y = mousePos.y();
-    sim->mouseMove(sim->mouse_x, sim->mouse_y);
+    sim->_mouseMove(mousePos.x(), mousePos.y());
     update();
 }
 
 void Canvas2D::wheelEvent(QWheelEvent* event)
 {
     if (!sim) return;
-    sim->mouseWheel(event->angleDelta().y());
+    QPointF mousePos = event->position();
+    sim->_mouseWheel(mousePos.x(), mousePos.y(), event->angleDelta().y());
     update();
 }
 
@@ -249,14 +245,17 @@ void Canvas2D::initializeGL()
 
 void Canvas2D::paint(QNanoPainter* p)
 {
+    int vw = width();
+    int vh = height();
+    p->setFillStyle({ 10,10,15 });
+    p->fillRect(0, 0, vw, vh);
+
     if (!sim || !sim->started)
         return;
 
     QScreen* screen = this->screen();// w.windowHandle()->screen();
     qreal scaleFactor = screen->devicePixelRatio();
 
-    int vw = width();
-    int vh = height();
     p->beginFrame(vw*scaleFactor, vh*scaleFactor);
     p->scale(scaleFactor);
     

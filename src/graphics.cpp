@@ -108,3 +108,36 @@ QImage OffscreenNanoPainter::toImage() const
 {
     return m_fbo->toImage();
 }
+
+void Draw::arrow(QNanoPainter* p, Vec2& a, Vec2& b, QColor color, double arrow_size)
+{
+    double dx = b.x - a.x;
+    double dy = b.y - a.y;
+    double len = sqrt(dx * dx + dy * dy);
+    double angle = atan2(dy, dx);
+    constexpr double tip_sharp_angle = 45.0 * M_PI / 180.0;
+
+    if (arrow_size < 0)
+        arrow_size = len * 0.05;
+
+    //p->setLineCap(QNanoPainter::LineCap::CAP_ROUND);
+    QNanoColor c = QNanoColor::fromQColor(color);
+    p->setFillStyle(c);
+    p->setStrokeStyle(c);
+    p->beginPath();
+    p->moveTo(a);
+    p->lineTo(b);
+    p->stroke();
+
+    double rx1 = b.x + cos(angle + tip_sharp_angle) * arrow_size;
+    double ry1 = b.y + sin(angle + tip_sharp_angle) * arrow_size;
+    double rx2 = b.x + cos(angle - tip_sharp_angle) * arrow_size;
+    double ry2 = b.y + sin(angle - tip_sharp_angle) * arrow_size;
+
+    p->beginPath();
+    p->moveTo(b);
+    p->lineTo(rx1, ry1);
+    p->lineTo(rx2, ry2);
+    p->closePath();
+    p->fill();
+}

@@ -3,10 +3,10 @@ import subprocess
 import platform
 
 # Paths
-SIMULATIONS_FOLDER = "./src/simulations"
-TEMPLATES_FOLDER = "./templates"
+SIMULATIONS_FOLDER = "../src/simulations"
+TEMPLATES_FOLDER = "../templates"
 
-BUILD_DIR = "./build"  # Adjust to match your actual build directory
+BUILD_DIR = "../build"  # Adjust to match your actual build directory
 GENERATOR = "Visual Studio 17 2022"  # Adjust for your Visual Studio version
 CONFIG = "Debug"
 
@@ -98,4 +98,6 @@ def generate_simulation():
 
 if __name__ == "__main__":
     generate_simulation()
+
+    os.chdir(os.pardir)
     regenerate_project()

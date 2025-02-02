@@ -6,14 +6,242 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>297</width>
+    <width>300</width>
     <height>597</height>
    </rect>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>300</width>
+    <height>0</height>
+   </size>
   </property>
   <property name="windowTitle">
    <string>Options</string>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout_2" stretch="1,100">
+  <property name="autoFillBackground">
+   <bool>false</bool>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">/* Global Style */
+* {
+    background-color: #2E2E3E;  /* Dark background */
+    color: #E0E0E0;            /* Light gray text */
+    selection-background-color: #7373B9; /* More contrast for selected items */
+    selection-color: #FFFFFF;
+    border: none;
+}
+
+/* Main Window */
+QWidget:not(QScrollBar)  {
+    background-color: #1E1E2E;
+}
+
+/* Frames */
+QFrame {
+    border: 1px solid #4A4A7A; /* Stronger contrast on frame edges */
+    border-radius: 6px;
+}
+
+/* Checkboxes &amp; Radio Buttons */
+/*QCheckBox, QRadioButton {
+    spacing: 4px;
+    padding: 4px;
+}
+
+QCheckBox::indicator, QRadioButton::indicator {
+    width: 16px;
+    height: 16px;
+    border: 1px solid #5A5A8E;
+    background-color: #282838;
+    border-radius: 3px;
+    padding: 4px;
+    margin: 4px;
+}
+
+QCheckBox::indicator:checked, QRadioButton::indicator:checked {
+    background-color: #7373B9;
+    border: 1px solid #9A9ADF;
+}*/
+
+QCheckBox::indicator {
+    width: 12px;
+    height: 12px;
+    border: 4px solid #2E2E3E; /* Makes the checkmark fill smaller */
+    border-radius: 4px;
+    background: #2E2E3E;
+}
+
+QCheckBox::indicator:checked {
+    width: 12px;
+    height: 12px;
+    background: #7373B9;
+    border: 4px solid #2E2E3E; /* Makes the checkmark fill smaller */
+    border-radius: 3px;
+}
+
+
+/* SpinBox */
+QSpinBox {
+    background-color: #282838;
+    color: #E0E0E0;
+    border: 2px solid #5A5A8E;
+    border-radius: 4px;
+    min-height: 22px;
+    font-size: 12px;
+    padding: 2px;
+}
+
+/*QSpinBox::up-button, QSpinBox::down-button {
+    border: 2px solid #5A5A8E;
+    border-radius: 1px;
+    color: #FFFFFF;
+    background: transparent;
+}*/
+
+
+/* Buttons */
+QPushButton {
+    background-color: #2A2A3A;
+    color: #FFFFFF;
+    border: 1px solid #5A5A8E; /* Stronger border */
+    border-radius: 6px;
+    padding: 6px 6px;
+}
+
+QPushButton:hover {
+    background-color: #3A3A5A;
+    border-color: #7373B9;
+}
+
+QPushButton:pressed {
+    background-color: #5A5A8E;
+    border-color: #9A9ADF;
+}
+
+
+QToolButton {
+    background-color: #2A2A3A;
+    color: #FFFFFF;
+    border: 1px solid #5A5A8E; /* Stronger border */
+    border-radius: 6px;
+    padding: 6px 6px;
+}
+
+QToolButton:hover {
+    background-color: #3A3A5A;
+    border-color: #7373B9;
+}
+
+QToolButton:pressed {
+    background-color: #5A5A8E;
+    border-color: #9A9ADF;
+}
+
+
+
+/* Labels */
+QLabel {
+    color: #E0E0E0;
+    border: 0px solid #000000;
+}
+
+/* List Widget &amp; Item Selection */
+QListWidget, QTreeWidget, QTableWidget {
+    background-color: #282838;
+    color: #E0E0E0;
+    border: 1px solid #5A5A8E; /* Stronger border */
+    selection-background-color: #7373B9; /* More visible selection */
+    selection-color: #FFFFFF;
+}
+
+
+/* ComboBox */
+QComboBox {
+    background-color: #282838;
+    color: #E0E0E0;
+    border: 2px solid #5A5A8E; /* Stronger contrast */
+    border-radius: 4px;
+    padding: 2px;
+}
+
+QComboBox QAbstractItemView {
+    background-color: #282838;
+    color: #E0E0E0;
+    border: 2px solid #7373B9;
+    selection-background-color: #7373B9;
+}
+
+/* Scrollbars */
+/*QScrollBar:vertical, QScrollBar:horizontal {
+    background: #2A2A3A;
+    width: 12px;
+    margin: 2px;
+    border-radius: 6px;
+    border: 2px solid #5A5A8E;
+}
+
+QScrollBar::handle:vertical, QScrollBar::handle:horizontal {
+    background: #7373B9;
+    border-radius: 6px;
+}
+
+QScrollBar::handle:vertical:hover, QScrollBar::handle:horizontal:hover {
+    background: #9A9ADF;
+}*/
+
+/* Tabs */
+QTabWidget::pane {
+    border: 2px solid #5A5A8E; /* More contrast */
+    background: #282838;
+}
+
+QTabBar::tab {
+    background: #2A2A3A;
+    padding: 6px;
+    border: 2px solid #5A5A8E;
+    border-radius: 4px;
+}
+
+QTabBar::tab:selected {
+    background: #7373B9;
+    color: #FFFFFF;
+    border-color: #9A9ADF;
+}
+
+/* Progress Bar */
+QProgressBar {
+    background: #282838;
+    color: #E0E0E0;
+    border: 2px solid #5A5A8E; /* More visible border */
+    border-radius: 4px;
+    text-align: center;
+}
+
+QProgressBar::chunk {
+    background: #7373B9;
+}
+
+/* Tooltips */
+QToolTip {
+    background-color: #3A3A5A;
+    color: #FFFFFF;
+    border: 2px solid #5A5A8E;
+    padding: 4px;
+}
+
+/* Line Edits &amp; Text Fields */
+QLineEdit, QTextEdit {
+    background-color: #282838;
+    color: #FFFFFF;
+    border: 2px solid #FFFFFF;
+    outline: none;
+    border-radius: 4px;
+    padding: 4px;
+}
+</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout_2" stretch="1">
    <property name="spacing">
     <number>0</number>
    </property>
@@ -39,15 +267,18 @@
      </property>
      <item>
       <widget class="QFrame" name="frame">
+       <property name="styleSheet">
+        <string notr="true"/>
+       </property>
        <property name="frameShape">
         <enum>QFrame::Shape::StyledPanel</enum>
        </property>
        <property name="frameShadow">
         <enum>QFrame::Shadow::Raised</enum>
        </property>
-       <layout class="QVBoxLayout" name="verticalLayout_3" stretch="0,0,0">
+       <layout class="QVBoxLayout" name="verticalLayout_3" stretch="0,0,0,0">
         <property name="spacing">
-         <number>2</number>
+         <number>8</number>
         </property>
         <property name="sizeConstraint">
          <enum>QLayout::SizeConstraint::SetDefaultConstraint</enum>
@@ -66,16 +297,28 @@
         </property>
         <item>
          <widget class="QListView" name="simList">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
           <property name="minimumSize">
            <size>
             <width>0</width>
-            <height>150</height>
+            <height>100</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>16777215</width>
+            <height>200</height>
            </size>
           </property>
           <property name="baseSize">
            <size>
             <width>0</width>
-            <height>0</height>
+            <height>100</height>
            </size>
           </property>
           <property name="toolTipDuration">
@@ -85,6 +328,12 @@
         </item>
         <item>
          <widget class="QFrame" name="horizontalFrame">
+          <property name="maximumSize">
+           <size>
+            <width>16777215</width>
+            <height>50</height>
+           </size>
+          </property>
           <property name="frameShape">
            <enum>QFrame::Shape::Box</enum>
           </property>
@@ -123,6 +372,18 @@
         </item>
         <item>
          <widget class="QFrame" name="frame_record">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>16777215</width>
+            <height>150</height>
+           </size>
+          </property>
           <property name="frameShape">
            <enum>QFrame::Shape::Box</enum>
           </property>
@@ -135,10 +396,19 @@
              <property name="text">
               <string>Record</string>
              </property>
+             <property name="checkable">
+              <bool>true</bool>
+             </property>
+             <property name="checked">
+              <bool>false</bool>
+             </property>
             </widget>
            </item>
            <item>
             <widget class="QFrame" name="frame_recordOptions">
+             <property name="styleSheet">
+              <string notr="true">padding: 2px; </string>
+             </property>
              <property name="frameShape">
               <enum>QFrame::Shape::NoFrame</enum>
              </property>
@@ -160,6 +430,9 @@
               </property>
               <item>
                <widget class="QFrame" name="frame_3">
+                <property name="styleSheet">
+                 <string notr="true">border: 0px; margin: 0px;</string>
+                </property>
                 <property name="frameShape">
                  <enum>QFrame::Shape::Box</enum>
                 </property>
@@ -167,8 +440,14 @@
                  <enum>QFrame::Shadow::Raised</enum>
                 </property>
                 <layout class="QHBoxLayout" name="horizontalLayout_3">
+                 <property name="bottomMargin">
+                  <number>0</number>
+                 </property>
                  <item>
                   <widget class="QSpinBox" name="spinBox_width">
+                   <property name="styleSheet">
+                    <string notr="true">border: 1px solid #5A5A8E</string>
+                   </property>
                    <property name="suffix">
                     <string> px</string>
                    </property>
@@ -191,6 +470,9 @@
                  </item>
                  <item>
                   <widget class="QSpinBox" name="spinBox_height">
+                   <property name="styleSheet">
+                    <string notr="true">border: 1px solid #5A5A8E</string>
+                   </property>
                    <property name="suffix">
                     <string> px</string>
                    </property>
@@ -210,6 +492,9 @@
                  </item>
                  <item>
                   <widget class="QSpinBox" name="spinBox_fps">
+                   <property name="styleSheet">
+                    <string notr="true">border: 1px solid #5A5A8E</string>
+                   </property>
                    <property name="suffix">
                     <string> fps</string>
                    </property>
@@ -229,6 +514,9 @@
               </item>
               <item>
                <widget class="QFrame" name="frame_5">
+                <property name="styleSheet">
+                 <string notr="true">border: 0px;</string>
+                </property>
                 <property name="frameShape">
                  <enum>QFrame::Shape::Box</enum>
                 </property>
@@ -236,8 +524,20 @@
                  <enum>QFrame::Shadow::Raised</enum>
                 </property>
                 <layout class="QHBoxLayout" name="horizontalLayout_4">
+                 <property name="topMargin">
+                  <number>0</number>
+                 </property>
                  <item>
                   <widget class="QLineEdit" name="lineEdit_output_path">
+                   <property name="minimumSize">
+                    <size>
+                     <width>0</width>
+                     <height>26</height>
+                    </size>
+                   </property>
+                   <property name="styleSheet">
+                    <string notr="true">border: 1px solid #5A5A8E</string>
+                   </property>
                    <property name="text">
                     <string>output.mp4</string>
                    </property>
@@ -245,6 +545,15 @@
                  </item>
                  <item>
                   <widget class="QToolButton" name="toolButton">
+                   <property name="minimumSize">
+                    <size>
+                     <width>26</width>
+                     <height>26</height>
+                    </size>
+                   </property>
+                   <property name="styleSheet">
+                    <string notr="true">border: 1px solid #5A5A8E</string>
+                   </property>
                    <property name="text">
                     <string>...</string>
                    </property>
@@ -259,42 +568,14 @@
           </layout>
          </widget>
         </item>
-       </layout>
-      </widget>
-     </item>
-    </layout>
-   </item>
-   <item>
-    <layout class="QVBoxLayout" name="verticalLayout_5">
-     <property name="spacing">
-      <number>0</number>
-     </property>
-     <item>
-      <widget class="QFrame" name="frame_2">
-       <property name="frameShape">
-        <enum>QFrame::Shape::StyledPanel</enum>
-       </property>
-       <property name="frameShadow">
-        <enum>QFrame::Shadow::Raised</enum>
-       </property>
-       <layout class="QVBoxLayout" name="verticalLayout_6">
-        <property name="spacing">
-         <number>0</number>
-        </property>
-        <property name="leftMargin">
-         <number>0</number>
-        </property>
-        <property name="topMargin">
-         <number>0</number>
-        </property>
-        <property name="rightMargin">
-         <number>0</number>
-        </property>
-        <property name="bottomMargin">
-         <number>0</number>
-        </property>
         <item>
          <widget class="QScrollArea" name="scrollArea">
+          <property name="autoFillBackground">
+           <bool>false</bool>
+          </property>
+          <property name="styleSheet">
+           <string notr="true">QScrollBar { all: unset; }</string>
+          </property>
           <property name="widgetResizable">
            <bool>true</bool>
           </property>
@@ -303,11 +584,35 @@
             <rect>
              <x>0</x>
              <y>0</y>
-             <width>291</width>
-             <height>235</height>
+             <width>284</width>
+             <height>184</height>
             </rect>
            </property>
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+             <horstretch>0</horstretch>
+             <verstretch>1</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>273</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="baseSize">
+            <size>
+             <width>0</width>
+             <height>100</height>
+            </size>
+           </property>
+           <property name="styleSheet">
+            <string notr="true">QScrollBar { background: none; border: none; }</string>
+           </property>
            <layout class="QVBoxLayout" name="verticalLayout_8">
+            <property name="sizeConstraint">
+             <enum>QLayout::SizeConstraint::SetMinimumSize</enum>
+            </property>
             <property name="leftMargin">
              <number>2</number>
             </property>
@@ -321,7 +626,17 @@
              <number>2</number>
             </property>
             <item>
-             <widget class="AttributeList" name="attributeList" native="true"/>
+             <widget class="AttributeList" name="attributeList" native="true">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="styleSheet">
+               <string notr="true">background: transparent;</string>
+              </property>
+             </widget>
             </item>
            </layout>
           </widget>

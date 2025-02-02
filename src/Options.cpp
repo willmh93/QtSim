@@ -1,5 +1,42 @@
 #include "Options.h"
-#include "helpers.h"
+//#include "helpers.h"
+#include <QDir>
+
+QString getEnvironmentVariable(const char* varName) {
+#ifdef _WIN32
+    // Use _dupenv_s on Windows
+    char* buffer = nullptr;
+    size_t size = 0;
+    if (_dupenv_s(&buffer, &size, varName) == 0 && buffer != nullptr) {
+        QString value = QString::fromLocal8Bit(buffer);
+        free(buffer);  // Free the allocated buffer
+        return value;
+    }
+    return QString();  // Return an empty QString if the environment variable is not found
+#else
+    // Use getenv on other platforms
+    const char* value = std::getenv(varName);
+    return value ? QString::fromLocal8Bit(value) : QString();
+#endif
+}
+
+QString getDesktopPath() {
+#ifdef _WIN32
+    QString userProfile = getEnvironmentVariable("USERPROFILE");
+    if (!userProfile.isEmpty()) {
+        return QDir::toNativeSeparators(userProfile + "\\Desktop");
+    }
+#elif defined(__APPLE__) || defined(__linux__)
+    QString homeDir = getEnvironmentVariable("HOME");
+    if (!homeDir.isEmpty()) {
+        return QDir::toNativeSeparators(homeDir + "/Desktop");
+    }
+#endif
+
+    // Fallback: Use the current working directory
+    return QDir::toNativeSeparators(QDir::currentPath());
+}
+
 
 Options::Options(QWidget *parent)
     : QWidget(parent)
@@ -143,6 +180,7 @@ AttributeItem* Options::checkbox(
     std::function<void(bool)> on_change)
 {
     auto* item = attributeList->add(name, AttributeType::CHECKBOX);// ->setRange(min, max, step);
+    item->bool_change = on_change;
     assign_ptr(target, item->value_bool_ptr, item->value_bool);
 
     item->updateUIValue();

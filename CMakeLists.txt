@@ -38,11 +38,36 @@ FetchContent_Declare(
 # Make the library available
 #FetchContent_MakeAvailable(QNanoPainter)
 FetchContent_Populate(QNanoPainter)
+
+###################
+
+## Treat qnanopainter as a precompiled library
+#add_library(qnanopainter STATIC IMPORTED)
+## Set the correct paths dynamically
+#set(QNANOPAINTER_BUILD_DIR "${CMAKE_BINARY_DIR}/_deps/qnanopainter-build/qnanopainter")
+#if(WIN32)
+#    set(QNANOPAINTER_LIB "${QNANOPAINTER_BUILD_DIR}/qnanopainter.lib")
+#    #set(QNANOPAINTER_LIB "${QNANOPAINTER_BUILD_DIR}/Release/qnanopainter.lib") # MSVC usually places it in Release/
+#else()
+#    set(QNANOPAINTER_LIB "${QNANOPAINTER_BUILD_DIR}/libqnanopainter.a")
+#endif()
+#
+#set_target_properties(qnanopainter PROPERTIES
+#    IMPORTED_LOCATION "${QNANOPAINTER_LIB}"
+#    INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_BINARY_DIR}/_deps/qnanopainter-src/libqnanopainter"
+#)
+
+####################
+
+
 add_subdirectory(${qnanopainter_SOURCE_DIR}/libqnanopainter
                  ${qnanopainter_BINARY_DIR}/libqnanopainter)
 
-# Ensure the macro is applied to QNanoPainter
+## Ensure the macro is applied to QNanoPainter
 target_compile_definitions(qnanopainter PUBLIC QNANO_USE_RENDERNODE)
+
+####################
+
 
 # Add FFmpeg paths
 if(WIN32)

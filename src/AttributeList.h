@@ -20,4 +20,8 @@ public:
 
     AttributeItem* add(const QString& name, AttributeType type);
     void clear();
+
+    QSize sizeHint() const override {
+        return layout->sizeHint();
+    }
 };

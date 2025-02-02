@@ -4,6 +4,7 @@
 #include <QSplitter>
 #include <QTimer>
 #include <QMenuBar>
+#include <QStatusBar>
 #include <QMenu>
 #include <QAction>
 #include <QMessageBox>
@@ -25,10 +26,14 @@ public:
     QtSim(QWidget *parent = nullptr);
     ~QtSim();
 
+protected:
+
+    void resizeEvent(QResizeEvent* event) override;
+
 private:
 
-    Options* options;
-    Canvas2D* canvas;
+    Options* options = nullptr;
+    Canvas2D* canvas = nullptr;
 
     Simulation* simulation;
     int simulation_type;
@@ -37,16 +42,9 @@ private:
     void startSelectedSimulation();
     void stopSelectedSimulation();
 
-    /*private slots:
+    private slots:
 
-    void onSimSelector() {
-        SimSelector selector(this);
-        if (selector.exec() == QDialog::Accepted)
-        {
-            int selectedIndex = selector.getSelectedIndex();
-        }
+    void onAbout() 
+    {
     }
-
-    void onAbout() {
-    }*/
 };

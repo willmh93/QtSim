@@ -9,18 +9,12 @@ struct Particle : public Vec2
     double vx = 0;
     double vy = 0;
 
-    Particle()
-    {}
-
-    Particle(double x, double y) : Vec2(x,y)
-    {}
+    Particle(){}
+    Particle(double x, double y) : Vec2(x,y) {}
 };
 
-struct Fluid : public Simulation
+struct FluidInstance : public SimulationInstance, public Options
 {
-    //Camera cam; // Optional camera for custom transforms
-
-    int particle_count = 300;
     double world_w = 250.0;
     double world_h = 250.0;
 
@@ -30,31 +24,26 @@ struct Fluid : public Simulation
     DelaunayTriangulation<Particle> delaunay;
     std::vector<Triangle<Particle>> triangles;
 
-    double timestep = 0.1;
+    void prepare();
+    
+    void destroy();
+    void process(DrawingContext* ctx);
+    void draw(DrawingContext* ctx);
 
-    double spring_dist = 20.0;
-    double spring_stiffness = 0.1;
-    double spring_damping = 0.001;
+    void applyLinkViscosity(Particle* a, Particle* b, double r, double strength, double dt);
+    void applyViscosityAll(double r, double strength, double dt);
 
-    double viscosity_strength = 0.5;
-    double viscosity_dist = 200.0;
+    void spring(Particle* a, Particle* b, double restLength, double k, double damping, double deltaTime);
+};
+
+struct Fluid : public Simulation
+{
+    int panel_count = 4;
 
     void prepare();
     void start();
-    void destroy();
-    void process();
-    void draw(QNanoPainter* p);
-
-    //void extractTriangleLinks(std::set<Link>& edgeSet);
-
-    void applyViscosity(double r, double strength, double dt);
-    void spring(Particle* a, Particle* b, double restLength, double k, double damping, double deltaTime);
-
-    void mouseDown(int x, int y, Qt::MouseButton btn);
-    void mouseUp(int x, int y, Qt::MouseButton btn);
-    void mouseMove(int x, int y);
-    void mouseWheel(int delta);
 };
+
 
 SIM_END
 #endif

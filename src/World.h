@@ -8,9 +8,20 @@ struct WorldObject
     double y;
 };
 
-struct Camera
+class Camera
 {
-    bool enabled = true;
+    void translate(double tx, double ty)
+    {}
+
+    void rotate(double angle)
+    {}
+
+    void scale(double scaleX, double scaleY)
+    {}
+
+public:
+
+    //bool enabled = true;
     bool panning_enabled = true;
     bool zooming_enabled = true;
 
@@ -21,6 +32,7 @@ struct Camera
     double zoom_x = 1;
     double zoom_y = 1;
     double rotation = 0;
+    bool scale_graphics = true;
 
     double viewport_w;
     double viewport_h;
@@ -32,9 +44,14 @@ struct Camera
     double pan_beg_y;
     bool panning = false;
 
-    void enable()
+    //void enable()
+    //{
+    //    enabled = true;
+    //}
+
+    void scaleGraphics(bool b)
     {
-        enabled = true;
+        scale_graphics = b;
     }
 
     void setZoom(double zoom)
@@ -43,7 +60,7 @@ struct Camera
         zoom_y = zoom;
     }
 
-    void setCamera(const Camera& rhs)
+    /*void setCamera(const Camera& rhs)
     {
         x = rhs.x;
         y = rhs.y;
@@ -61,7 +78,7 @@ struct Camera
         double camera_y,
         double camera_zoom_x,
         double camera_zoom_y,
-        double camera_rotation = 0);
+        double camera_rotation = 0);*/
 
     void cameraToViewport(
         double left,
@@ -76,6 +93,13 @@ struct Camera
         double bottom,
         bool stretch=false
     );
+
+    void cameraToWorld(const FRect &r, bool stretch = false);
+
+    void originToCenterViewport();
+
+    Vec2 toWorld(const Vec2& pt);
+    Vec2 toWorld(double x, double y);
 
     Vec2 toStage(const Vec2& pt);
     Vec2 toStage(double x, double y);
