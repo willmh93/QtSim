@@ -9,7 +9,7 @@ void MaxPractice::start()
 {
     auto& layout = setLayout(panel_count);
     for (Panel* panel : layout)
-        panel->create<MaxPracticeInstance>();
+        panel->construct<MaxPracticeInstance>();
 }
 
 void MaxPracticeInstance::prepare()

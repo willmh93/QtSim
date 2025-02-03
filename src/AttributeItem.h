@@ -37,9 +37,14 @@ class AttributeItem : public QWidget
 
     AttributeType type;
     QWidget* input;
+    QLabel* name_lbl;
     QLabel* val_lbl;
+    bool manual_refresh;
 
 public:
+
+    QString name;
+    bool touched;
 
     AttributeList* attributeList;
 
@@ -63,9 +68,9 @@ public:
     int slider_int_min = 0;
     int slider_int_max = 100;
 
-    // Pointers
+    // Pointers to change
     int* value_int_ptr;
-    double* value_float_ptr;
+    std::vector<double*> value_float_ptr;
     QString* value_string_ptr;
     bool* value_bool_ptr;
     int* value_combo_selected_ptr;
@@ -88,7 +93,11 @@ public:
 
     std::vector<std::pair<QString, std::function<void(void)>>> combo_items;
 
-    explicit AttributeItem(const QString &name, AttributeType _type, QWidget* parent = nullptr);
+    explicit AttributeItem(
+        const QString &name,
+        AttributeType _type,
+        bool manual_refresh,
+        QWidget* parent = nullptr);
 
     std::function<void(int)>    int_change;
     std::function<void(double)> float_change;
@@ -96,12 +105,38 @@ public:
 
     //void setValuePtr(int* value);
     void updateUIValue();
+    void forceRefreshPointers();
+    std::vector<void*> getValuePointers();
+    void removePointer(void* ptr);
     //AttributeItem* updateValue(int value);
 
     //AttributeItem* updateValue(int value);
     //AttributeItem* updateValue(double value);
     //AttributeItem* updateRange(int min, int max, int step=1);
     //AttributeItem* updateRange(double min, double max, double step);
+
+    struct AttributeItemSnapshot
+    {
+        QString name;
+        std::vector<void*> ptrs;
+    };
+
+    AttributeItemSnapshot snapshot;
+    void garbageTakePriorSnapshot()
+    {
+        snapshot.name = name;
+        snapshot.ptrs = getValuePointers();
+    }
+
+    void garbageRemoveUnreferencedPointers()
+    {
+        std::vector<void*> current_ptrs = getValuePointers();
+        for (void* ptr : snapshot.ptrs)
+        {
+            if (std::find(current_ptrs.begin(), current_ptrs.end(), ptr) != current_ptrs.end())
+                removePointer(ptr);
+        }
+    }
 
     AttributeItem* addComboItem(QString text, std::function<void(void)> callback = nullptr);
     void setActiveComboItem(QString text);

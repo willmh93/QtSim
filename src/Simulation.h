@@ -265,6 +265,7 @@ struct DrawingContext
     }
 };
 
+//template<typename T>
 class SimulationInstance
 {
     std::random_device rd;
@@ -317,7 +318,7 @@ struct Panel
     {}
 
     template<typename T, typename... Args>
-    T* create(Args&&... args)
+    T* construct(Args&&... args)
     {
         sim = new T(std::forward<Args>(args)...);
         sim->panel = ctx.panel;
@@ -338,11 +339,13 @@ struct Layout
 
     ~Layout()
     {
+        // Only invoked when you SWITCH simulation
         clear();
     }
 
     void clear()
     {
+        // Panels freed each time you call setLayout
         for (Panel* p : panels)
             delete p;
         panels.clear();
@@ -367,7 +370,7 @@ struct Layout
         panels.push_back(panel);
     }
 
-    Panel* at(int i)
+    Panel* operator[](int i)
     {
         return panels[i];
     }
@@ -379,35 +382,16 @@ struct Layout
     const_iterator end() const { return panels.end(); }
 };
 
-//class Options;
+
 class Simulation : public QObject
 {
     Q_OBJECT
 
-    QString name;
-
-    
-
-    // We keep the global list in a function-scope static 
-    // so it is only instantiated once.
-    using CreatorFunc = std::function<Simulation* ()>;
-    
-    Canvas2D* canvas;
-    QElapsedTimer timer;
-
-    QThread* ffmpeg_thread;
-    FFmpegWorker* ffmpeg_worker;
-
-    Layout panels;
-    int panels_x = 1;
-    int panels_y = 1;
-
 public:
 
-    Panel* active_panel = nullptr;
+    using CreatorFunc = std::function<Simulation*()>;
 
-    int frame_dt;
-
+    // Factory methods
     static std::vector<CreatorFunc>& getCreators()
     {
         static std::vector<CreatorFunc> creators;
@@ -418,113 +402,59 @@ public:
         static std::vector<QString> names;
         return names;
     }
-
-    // Type of the function that creates a new Simulation-derived object
-
-    // Allows insertion of a CreatorFunc into our factory list
+    static std::vector<Simulation*> createAll()
+    {
+        std::vector<Simulation*> result;
+        for (auto& f : getCreators())
+            result.push_back(f());
+        return result;
+    }
     static void addFactoryItem(QString name, const CreatorFunc& func)
     {
         getNames().push_back(name);
         getCreators().push_back(func);
     }
 
-    // For demonstration, a function that calls all registered creators:
-    static std::vector<Simulation*> createAll()
-    {
-        std::vector<Simulation*> result;
-        for (auto& f : getCreators()) {
-            result.push_back(f());
-        }
-        return result;
-    }
+private:
 
+    QString name;
+
+    Canvas2D* canvas;
+    QElapsedTimer dt_timer;
+
+    QThread* ffmpeg_thread;
+    FFmpegWorker* ffmpeg_worker;
+
+    Layout panels;
+    int panels_x = 1;
+    int panels_y = 1;
 
 public:
 
-    //static void addFactoryItem(std::function<Simulation* (void)> creator)
-    
-    Layout &setLayout(int _panels_x, int _panels_y)
-    {
-        panels.clear();
-        panels.panels_x = _panels_x;
-        panels.panels_y = _panels_y;
-
-        panels_x = _panels_x;
-        panels_y = _panels_y;
-
-        int count = (panels_x * panels_y);
-        double panel_w = width() / panels_x;
-        double panel_h = height() / panels_y;
-
-        //for (int i = 0; i < count; i++)
-        //    context_list.emplace_back(DrawingContext(panel_w, panel_h));
-
-        for (int y = 0; y < panels_y; y++)
-        {
-            for (int x = 0; x < panels_x; x++)
-            {
-                int i = (y * panels_x) + x;
-
-                panels.add(
-                    i,
-                    x,
-                    y,
-                    x * panel_w, 
-                    y * panel_h, 
-                    panel_w - 1, 
-                    panel_h - 1
-                );
-
-                DrawingContext& context = panels.at(i)->ctx;
-
-                context.main_cam.viewport_w = panel_w - 2;
-                context.main_cam.viewport_h = panel_h - 2;
-                context.origin_ratio_x = 0.5;
-                context.origin_ratio_y = 0.5;
-                //context.main_cam.pan_x = 0;//-context.main_cam.viewport_w * context.origin_ratio_x;
-                //context.main_cam.pan_y = 0;//-context.main_cam.viewport_h * context.origin_ratio_y;
-                //context.main_cam.cameraToViewport(0, 0, panel_w - 2, panel_h - 2);
-            }
-        }
-
-        return panels;
-    }
-   
-    Layout& setLayout(int panel_count)
-    {
-        int panels_y = sqrt(panel_count);
-        int panels_x = panel_count / panels_y;
-        return setLayout(panels_x, panels_y);
-    }
-
-    //vector<Camera*> attachedCameras;
-
-    //void setFocusedCamera(Camera *cam, bool panning = true, bool zooming = true);
-    //void configureCamera(Camera* cam);
+    Options* options;
 
     bool started;
     bool paused;
 
-    Options* options;
+    int frame_dt;
 
-    //int mouse_x;
-    //int mouse_y;
+    // Recording states
+    bool recording = false;
+    bool encoder_busy = false;
+    bool encode_next_paint = false;
+    std::vector<GLubyte> frame_buffer; // Not changed until next process
+    
+    //Simulation() {}
+    //~Simulation() {}
 
-    
-    
-    Simulation();
-    ~Simulation();
+    Layout& setLayout(int _panels_x, int _panels_y);
+    Layout& setLayout(int panel_count);
+
 
     void configure();
 
-    
-
-    virtual void mouseDown(MouseInfo mouse) {}
-    virtual void mouseUp(MouseInfo mouse) {}
-    virtual void mouseMove(MouseInfo mouse) {}
-    virtual void mouseWheel(MouseInfo mouse) {}
-
     void _destroy();
+    void _prepare();
     void _start();
     void _stop();
     void _process();
@@ -536,8 +466,10 @@ public:
     virtual void start() {}
     virtual void stop() {}
 
-    //void startRecording();
-    //void endRecording();
+    virtual void mouseDown(MouseInfo mouse) {}
+    virtual void mouseUp(MouseInfo mouse) {}
+    virtual void mouseMove(MouseInfo mouse) {}
+    virtual void mouseWheel(MouseInfo mouse) {}
 
     void _updateSimMouseInfo(int x, int y)
     {
@@ -551,7 +483,6 @@ public:
             mouse.world_y = wp.y;
         }*/
     }
-
 
     void _mouseDown(int x, int y, Qt::MouseButton btn)
     {
@@ -670,28 +601,13 @@ public:
     }
 
 
-    bool recording = false;
-    bool encoder_busy = false;
-    bool encode_next_paint = false;
-    //bool frame_ready = false;
-
-    //int record_w = 1920;
-    //int record_h = 1080;
-
-    std::vector<GLubyte> frame_buffer; // Not changed until next process
-
     void _draw(QNanoPainter* p);
     void onPainted(const std::vector<GLubyte> &frame);
 
     int width();
     int height();
 
-    
-
-    void setCanvas(Canvas2D* _canvas) { 
-        canvas = _canvas;
-        //canvas->onPainted = ;
-    }
+    void setCanvas(Canvas2D* _canvas) { canvas = _canvas; }
     void setOptions(Options* _options) { options = _options; }
     void setName(const QString& _name) { name = _name; }
 

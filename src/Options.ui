@@ -33,7 +33,7 @@
 }
 
 /* Main Window */
-QWidget:not(QScrollBar)  {
+QWidget {
     background-color: #1E1E2E;
 }
 
@@ -82,7 +82,7 @@ QCheckBox::indicator:checked {
 
 
 /* SpinBox */
-/*QSpinBox {
+QSpinBox {
     background-color: #282838;
     color: #E0E0E0;
     border: 2px solid #5A5A8E;
@@ -90,7 +90,7 @@ QCheckBox::indicator:checked {
     min-height: 22px;
     font-size: 12px;
     padding: 2px;
-}*/
+}
 
 /*QSpinBox::up-button, QSpinBox::down-button {
     border: 2px solid #5A5A8E;
@@ -585,7 +585,7 @@ QLineEdit, QTextEdit {
              <x>0</x>
              <y>0</y>
              <width>284</width>
-             <height>191</height>
+             <height>184</height>
             </rect>
            </property>
            <property name="sizePolicy">

@@ -240,10 +240,51 @@ void FFmpegWorker::doFinalize()
 }
 
 
+Layout& Simulation::setLayout(int _panels_x, int _panels_y)
+{
+    panels.clear();
+    panels.panels_x = _panels_x;
+    panels.panels_y = _panels_y;
 
+    panels_x = _panels_x;
+    panels_y = _panels_y;
 
-Simulation::Simulation() {}
-Simulation::~Simulation() {}
+    int count = (panels_x * panels_y);
+    double panel_w = width() / panels_x;
+    double panel_h = height() / panels_y;
+
+    for (int y = 0; y < panels_y; y++)
+    {
+        for (int x = 0; x < panels_x; x++)
+        {
+            int i = (y * panels_x) + x;
+
+            panels.add(
+                i, x, y,
+                x * panel_w,
+                y * panel_h,
+                panel_w - 1,
+                panel_h - 1
+            );
+
+            DrawingContext& context = panels[i]->ctx;
+
+            context.main_cam.viewport_w = panel_w - 2;
+            context.main_cam.viewport_h = panel_h - 2;
+            context.origin_ratio_x = 0.5;
+            context.origin_ratio_y = 0.5;
+        }
+    }
+
+    return panels;
+}
+
+Layout& Simulation::setLayout(int panel_count)
+{
+    int panels_y = sqrt(panel_count);
+    int panels_x = panel_count / panels_y;
+    return setLayout(panels_x, panels_y);
+}
 
 void Simulation::configure()
 {
@@ -258,8 +299,12 @@ void Simulation::configure()
 
 void Simulation::_destroy()
 {
+    //options->clearAttributeList();
+
     //attachedCameras.clear();
 }
+
+
 
 /*void Simulation::setFocusedCamera(Camera* cam, bool panning, bool zooming)
 {
@@ -284,14 +329,24 @@ void Simulation::configureCamera(Camera* cam)
 
 void Simulation::_start()
 {
+    // [Start] will remove old instances, meaning their pointers become invalid
+    // Remove just those pointers.
+
+    /// todo: Unsafe? Refreshing pointers from old simulation?
+    options->forceRefreshPointers();
+
     start();
 
+
+    options->garbageTakePriorSnapshot();
     for (Panel* panel : panels)
     {
         panel->sim->width = panel->width;
         panel->sim->height = panel->height;
+        panel->sim->main = this;
         panel->sim->prepare();
     }
+    options->garbageRemoveUnreferencedPointers();
 
     if (options->getRecordChecked())
         startRecording();
@@ -337,19 +392,13 @@ void Simulation::_process()
     if (!encoder_busy)
     {
         // Process each panel
-        timer.start();
+        dt_timer.start();
         
         int i = 0;
         for (Panel* panel : panels)
-        {
-            //active_context = context;
-            //process(context);
-
-            active_panel = panel;
-            active_panel->sim->process(&panel->ctx);
-        }
+            panel->sim->process(&panel->ctx);
         
-        frame_dt = timer.elapsed();
+        frame_dt = dt_timer.elapsed();
 
         // Prepare to encode the next frame
         encode_next_paint = true;
@@ -360,6 +409,14 @@ void Simulation::prepare()
 {
 }
 
+void Simulation::_prepare()
+{
+    prepare();
+
+    // Prepare a dummy instance to populate options
+
+}
+
 void Simulation::destroy()
 {
 }
@@ -367,10 +424,7 @@ void Simulation::destroy()
 void Simulation::postProcess()
 {
     for (Panel* panel : panels)
-    {
-        active_panel = panel;
         panel->sim->postProcess();
-    }
 }
 
 void Simulation::_draw(QNanoPainter* p)
@@ -381,8 +435,6 @@ void Simulation::_draw(QNanoPainter* p)
     int i = 0;
     for (Panel* panel : panels)
     {
-        active_panel = panel;
-
         p->setClipRect(panel->x, panel->y, panel->width, panel->height);
         panel->ctx.drawPanel(p, panel->width, panel->height);
         p->resetClipping();

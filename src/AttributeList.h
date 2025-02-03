@@ -18,8 +18,24 @@ public:
 
     explicit AttributeList(QWidget *parent=nullptr);
 
-    AttributeItem* add(const QString& name, AttributeType type);
+    AttributeItem* add(const QString& name, AttributeType type, bool manual_refresh);
     void clear();
+
+    AttributeItem *getItem(QString name)
+    {
+        for (AttributeItem* item : item_widgets)
+        {
+            if (item->name == name)
+                return item;
+        }
+        return nullptr;
+    }
+
+    void forceRefreshPointers()
+    {
+        for (auto *item : item_widgets)
+            item->forceRefreshPointers();
+    }
 
     QSize sizeHint() const override {
         return layout->sizeHint();

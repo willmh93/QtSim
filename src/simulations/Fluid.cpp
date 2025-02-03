@@ -13,22 +13,22 @@ double viscosity_spring_dist_ratio = 10.0;
 void Fluid::prepare()
 {
     options->slider("Panel Count", &panel_count, 1, 36, 2);
-    options->slider("Timestep", &timestep, 0.01, 0.1, 0.01);
+    options->realtime_slider("Timestep", &timestep, 0.01, 0.1, 0.01);
     options->slider("Particle Count", &particle_count, 10, 1000, 10);
 
-    options->slider("Spring Distance", &spring_dist, 10.0, 100.0, 10.0);
-    options->slider("Spring Stiffness", &spring_stiffness, 0.0, 1.0, 0.01);
-    options->slider("Spring Damping", &spring_damping, 0.0001, 0.1, 0.0001);
+    options->realtime_slider("Spring Distance", &spring_dist, 10.0, 100.0, 10.0);
+    options->realtime_slider("Spring Stiffness", &spring_stiffness, 0.0, 1.0, 0.01);
+    options->realtime_slider("Spring Damping", &spring_damping, 0.0001, 0.1, 0.0001);
 
-    options->slider("Viscosity Strength", &viscosity_strength, 0.0, 1.0, 0.01);
-    options->slider("Viscosity Spring Dist-Ratio", &viscosity_spring_dist_ratio, 1.0, 100.0, 0.1);
+    options->realtime_slider("Viscosity Strength", &viscosity_strength, 0.0, 1.0, 0.01);
+    options->realtime_slider("Viscosity Spring Dist-Ratio", &viscosity_spring_dist_ratio, 1.0, 100.0, 0.1);
 }
 
 void Fluid::start()
 {
     auto& layout = setLayout(panel_count);
     for (Panel* panel : layout)
-        panel->create<FluidInstance>();
+        panel->construct<FluidInstance>();
 }
 
 void FluidInstance::prepare()

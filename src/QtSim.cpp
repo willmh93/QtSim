@@ -153,7 +153,7 @@ void QtSim::setSimulation(int type)
 
     canvas->setSimulation(simulation);
 
-    simulation->prepare();
+    simulation->_prepare();
     options->updateListUI();
 }
 

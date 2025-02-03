@@ -108,11 +108,38 @@ void assign_ptr(std::variant<T, T*>& value, T*& val_ptr, T& val_placeholder)
     {
         using DecayedType = std::decay_t<decltype(v)>;
         if constexpr (std::is_pointer_v<DecayedType>)
-            val_ptr = v;
+            val_ptr = v; // If ptr passed, use the passed ptr
         else if constexpr (std::is_same_v<DecayedType, T>)
-            val_placeholder = v;
+            val_placeholder = v; // If value passed, set placeholder value to target
     }, value);
 }
+
+template<typename T>
+void assign_ptr(std::variant<T, T*>& target, std::vector<T*>& val_ptr, T& val_placeholder, bool keep_existing_value)
+{
+    // Visit possible "target" types
+    std::visit([&val_ptr, &val_placeholder, keep_existing_value](auto&& v)
+    {
+        // Check if the target is a pointer, or a hardcoded value
+        using DecayedType = std::decay_t<decltype(v)>;
+        if constexpr (std::is_pointer_v<DecayedType>)
+        {
+            // If ptr passed, addd pointer to list to update on change
+            if (!keep_existing_value)
+                val_placeholder = *v; // Set placeholder to current pointer value
+            else
+                *v = val_placeholder;
+            val_ptr.push_back(v);
+        }
+        else if constexpr (std::is_same_v<DecayedType, T>)
+        {
+            if (!keep_existing_value)
+                val_placeholder = v; // If value passed, set placeholder value to target
+        }
+    }, target);
+}
+
+
 
 AttributeItem* Options::slider(
     const QString& name, 
@@ -122,7 +149,7 @@ AttributeItem* Options::slider(
     std::variant<int, int*> step,
     std::function<void(int)> on_change)
 {
-    auto* item = attributeList->add(name, AttributeType::SLIDER_INT);// ->setRange(min, max, step);
+    auto* item = attributeList->add(name, AttributeType::SLIDER_INT, false);// ->setRange(min, max, step);
     /*std::visit([item](auto&& v)
     {
         if constexpr (std::is_pointer_v<decltype(v)>)
@@ -156,7 +183,7 @@ AttributeItem* Options::slider(
     return item;
 }
 
-AttributeItem* Options::slider(
+AttributeItem* Options::realtime_slider(
     const QString& name,
     std::variant<double, double*> target,
     std::variant<double, double*> min,
@@ -164,12 +191,46 @@ AttributeItem* Options::slider(
     std::variant<double, double*> step,
     std::function<void(double)> on_change)
 {
-    auto* item = attributeList->add(name, AttributeType::SLIDER_FLOAT);// ->setRange(min, max, step);
-    assign_ptr(target, item->value_float_ptr, item->value_float);
+    auto* item = attributeList->getItem(name);
+    bool keep_existing_value = (item != nullptr);
+    if (!item)
+        item = attributeList->add(name, AttributeType::SLIDER_FLOAT, false);
+
+    item->touched = true;
+
+    //assign_ptr(target, item->value_float_ptr, item->value_float);
+    assign_ptr(target, item->value_float_ptr, item->value_float, keep_existing_value);
+
     assign_ptr(min, item->slider_float_min_ptr, item->slider_float_min);
     assign_ptr(max, item->slider_float_max_ptr, item->slider_float_max);
     assign_ptr(step, item->slider_float_step_ptr, item->slider_float_step);
     
+    item->updateUIValue();
+    return item;
+}
+
+AttributeItem* Options::starting_slider(
+    const QString& name,
+    std::variant<double, double*> target,
+    std::variant<double, double*> min,
+    std::variant<double, double*> max,
+    std::variant<double, double*> step,
+    std::function<void(double)> on_change)
+{
+    auto* item = attributeList->getItem(name);
+    bool keep_existing_value = (item != nullptr);
+    if (!item)
+        item = attributeList->add(name, AttributeType::SLIDER_FLOAT, true);
+    
+    item->touched = true;
+
+    //assign_ptr(target, item->value_float_ptr, item->value_float);
+    assign_ptr(target, item->value_float_ptr, item->value_float, keep_existing_value);
+
+    assign_ptr(min, item->slider_float_min_ptr, item->slider_float_min);
+    assign_ptr(max, item->slider_float_max_ptr, item->slider_float_max);
+    assign_ptr(step, item->slider_float_step_ptr, item->slider_float_step);
+
     item->updateUIValue();
     return item;
 }
@@ -179,7 +240,7 @@ AttributeItem* Options::checkbox(
     std::variant<bool, bool*> target,
     std::function<void(bool)> on_change)
 {
-    auto* item = attributeList->add(name, AttributeType::CHECKBOX);// ->setRange(min, max, step);
+    auto* item = attributeList->add(name, AttributeType::CHECKBOX, false);// ->setRange(min, max, step);
     item->bool_change = on_change;
     assign_ptr(target, item->value_bool_ptr, item->value_bool);
 
@@ -203,7 +264,7 @@ AttributeItem* Options::number(const QString& name, double min, double max, doub
 
 AttributeItem* Options::combo(const QString& name, const std::vector<QString>& items, std::function<void(int)> on_change)
 {
-    auto* combo = attributeList->add(name, AttributeType::COMBOBOX);
+    auto* combo = attributeList->add(name, AttributeType::COMBOBOX, false);
     for (auto& item : items)
         combo->addComboItem(item);
     combo->int_change = on_change;

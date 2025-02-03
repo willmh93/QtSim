@@ -16,18 +16,24 @@ int getDecimalPlaces(double step)
 }
 
 
-AttributeItem::AttributeItem(const QString& name, AttributeType _type, QWidget* parent)
+AttributeItem::AttributeItem(
+    const QString& _name,
+    AttributeType _type,
+    bool _manual_refresh,
+    QWidget* parent)
 {
+    name = _name;
     type = _type;
+    manual_refresh = _manual_refresh;
 
     label_value = [this](double v)
     {
-        return QString::number(*value_float_ptr, 'f', slider_float_decimals);
+        return QString::number(value_float/* *value_float_ptr*/, 'f', slider_float_decimals);
     };
 
     // Default values
     value_int_ptr = &value_int;
-    value_float_ptr = &value_float;
+    //value_float_ptr.push_back(&value_float);
     value_string_ptr = &value_string;
     value_bool_ptr = &value_bool;
     value_combo_selected_ptr = &value_combo_selected;
@@ -58,9 +64,9 @@ AttributeItem::AttributeItem(const QString& name, AttributeType _type, QWidget* 
     QVBoxLayout* frameLayout = new QVBoxLayout(frame);
     frameLayout->setContentsMargins(5,5,5,5);
 
-    QLabel* lbl = new QLabel(this);
-    lbl->setText(name);
-    frameLayout->addWidget(lbl);
+    name_lbl = new QLabel(this);
+    name_lbl->setText(name);
+    frameLayout->addWidget(name_lbl);
     frameLayout->setContentsMargins(5,5,5,5);
     //frameLayout->addSpacing(1);
 
@@ -118,7 +124,10 @@ AttributeItem::AttributeItem(const QString& name, AttributeType _type, QWidget* 
 
             // Set input / value label text
 
-            slider->setValue(*value_float_ptr / *slider_float_step_ptr);
+            slider->setValue(value_float / *slider_float_step_ptr);
+            //slider->setValue(*value_float_ptr / *slider_float_step_ptr);
+
+
             //val_lbl->setText(QString::number(value_int));
 
             // Handle change
@@ -128,7 +137,16 @@ AttributeItem::AttributeItem(const QString& name, AttributeType _type, QWidget* 
 
                 // Update value
 
-                *value_float_ptr = f;
+
+                //*value_float_ptr = f;
+                value_float = f;
+                if (!manual_refresh)
+                {
+                    for (double*& ptr : value_float_ptr)
+                        *ptr = f;
+                }
+
+
                 //val_lbl->setText(QString::number(f, 'f', float_decimals));
 
                 // Invoke callback
@@ -251,6 +269,101 @@ AttributeItem::AttributeItem(const QString& name, AttributeType _type, QWidget* 
     //setLayout(layout);
 }
 
+void AttributeItem::forceRefreshPointers()
+{
+    switch (type)
+    {
+    case AttributeType::SLIDER_INT:
+    {
+    }
+    break;
+    case AttributeType::INPUT_INT:
+    {
+    }
+    break;
+
+    case AttributeType::SLIDER_FLOAT:
+    {
+        for (double*& ptr : value_float_ptr)
+            *ptr = value_float;
+    }
+    break;
+
+    case AttributeType::INPUT_FLOAT:
+    {
+    }
+    break;
+
+    case AttributeType::CHECKBOX:
+    {
+    }
+    break;
+    }
+}
+
+std::vector<void*> AttributeItem::getValuePointers()
+{
+    switch (type)
+    {
+        case AttributeType::SLIDER_INT:
+        {
+        }
+        break;
+        case AttributeType::INPUT_INT:
+        {
+        }
+        break;
+
+        case AttributeType::SLIDER_FLOAT:
+        {
+            return std::vector<void*>(value_float_ptr.begin(), value_float_ptr.end());
+        }
+        break;
+
+        case AttributeType::INPUT_FLOAT:
+        {
+        }
+        break;
+
+        case AttributeType::CHECKBOX:
+        {
+        }
+        break;
+    }
+    return {};
+}
+
+void AttributeItem::removePointer(void* ptr)
+{
+    switch (type)
+    {
+    case AttributeType::SLIDER_INT:
+    {
+    }
+    break;
+    case AttributeType::INPUT_INT:
+    {
+    }
+    break;
+
+    case AttributeType::SLIDER_FLOAT:
+    {
+        value_float_ptr.erase(std::find(value_float_ptr.begin(), value_float_ptr.end(), ptr));
+    }
+    break;
+
+    case AttributeType::INPUT_FLOAT:
+    {
+    }
+    break;
+
+    case AttributeType::CHECKBOX:
+    {
+    }
+    break;
+    }
+}
+
 void AttributeItem::updateUIValue()
 {
     switch (type)
@@ -294,16 +407,25 @@ void AttributeItem::updateUIValue()
         );
         slider->blockSignals(false);
 
-        slider->setValue(*value_float_ptr / *slider_float_step_ptr);
+
+        //slider->setValue(*value_float_ptr / *slider_float_step_ptr);
+        slider->setValue(value_float / *slider_float_step_ptr);
+
 
         slider_float_decimals = getDecimalPlaces(*slider_float_step_ptr);
-        val_lbl->setText(label_value(*value_float_ptr));
+
+        QString users_txt = QString(" (%1 users)").arg(value_float_ptr.size());
+        name_lbl->setText(name + users_txt);
+
+        //val_lbl->setText(label_value(*value_float_ptr));
+        val_lbl->setText(label_value(value_float));
     }
     break;
     case AttributeType::INPUT_FLOAT:
     {
         QSpinBox* spinBox = (QSpinBox*)input;
-        spinBox->setValue(*value_float_ptr);
+        //spinBox->setValue(*value_float_ptr);
+        spinBox->setValue(value_float);
     }
     break;
     case AttributeType::CHECKBOX:
@@ -314,6 +436,8 @@ void AttributeItem::updateUIValue()
     break;
     }
 }
+
+
 
 /*AttributeItem* AttributeItem::updateValue()
 {

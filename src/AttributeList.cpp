@@ -10,9 +10,15 @@ AttributeList::AttributeList(QWidget* parent)
     setLayout(layout);
 }
 
-AttributeItem* AttributeList::add(const QString& name, AttributeType type)
+AttributeItem* AttributeList::add(const QString& name, AttributeType type, bool manual_refresh)
 {
-    AttributeItem* item = new AttributeItem(name, type);
+    for (AttributeItem* item : item_widgets)
+    {
+        if (item->name == name)
+            return item;
+    }
+
+    AttributeItem* item = new AttributeItem(name, type, manual_refresh);
     item->attributeList = this;
     layout->addWidget(item);
     item_widgets.push_back(item);
