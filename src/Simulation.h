@@ -115,7 +115,7 @@ using namespace std;
 #define SIM_END }
 
 class Canvas2D;
-class Simulation;
+//class Simulation;
 struct Panel;
 
 using LineCap = QNanoPainter::LineCap;
@@ -274,7 +274,7 @@ class SimulationInstance
 public:
 
 
-    Simulation* main;
+    //Simulation* main;
     Panel* panel;
     Camera* camera;
 
@@ -286,13 +286,17 @@ public:
     SimulationInstance() : gen(rd())
     {}
 
-    virtual void prepare() {}
+    //virtual void prepare() {}
     virtual void start() {}
     virtual void stop() {}
     virtual void destroy() {}
     virtual void process(DrawingContext* ctx) {}
     virtual void draw(DrawingContext* ctx) {}
-    virtual void postProcess();
+    virtual void postProcess()
+    {
+        // Keep delta until entire frame processed and drawn
+        mouse.scroll_delta = 0;
+    }
 
     double random(double min = 0, double max = 1)
     {
@@ -325,6 +329,7 @@ struct Panel
         sim->camera = &ctx.main_cam;
         return dynamic_cast<T*>(sim);
     }
+
 };
 
 struct Layout
@@ -370,6 +375,14 @@ struct Layout
         panels.push_back(panel);
     }
 
+    template<typename T, typename... Args>
+    Layout *constructAll(Args&&... args)
+    {
+        for (Panel* panel : panels)
+            panel->construct<T>(std::forward<Args>(args)...);
+        return this;
+    }
+
     Panel* operator[](int i)
     {
         return panels[i];
@@ -382,14 +395,13 @@ struct Layout
     const_iterator end() const { return panels.end(); }
 };
 
-
-class Simulation : public QObject
+class SimulationBase : public QObject
 {
     Q_OBJECT
 
 public:
 
-    using CreatorFunc = std::function<Simulation*()>;
+    using CreatorFunc = std::function<SimulationBase* ()>;
 
     // Factory methods
     static std::vector<CreatorFunc>& getCreators()
@@ -402,9 +414,9 @@ public:
         static std::vector<QString> names;
         return names;
     }
-    static std::vector<Simulation*> createAll()
+    static std::vector<SimulationBase*> createAll()
     {
-        std::vector<Simulation*> result;
+        std::vector<SimulationBase*> result;
         for (auto& f : getCreators())
             result.push_back(f());
         return result;
@@ -415,7 +427,7 @@ public:
         getCreators().push_back(func);
     }
 
-private:
+protected:
 
     QString name;
 
@@ -453,14 +465,20 @@ public:
 
     void configure();
 
+    int width();
+    int height();
+
     void _destroy();
-    void _prepare();
+    virtual void _prepare() {}
     void _start();
     void _stop();
     void _process();
 
+    
+
     virtual void prepare();
     virtual void destroy();
+
     virtual void postProcess();
 
     virtual void start() {}
@@ -602,10 +620,7 @@ public:
 
 
     void _draw(QNanoPainter* p);
-    void onPainted(const std::vector<GLubyte> &frame);
-
-    int width();
-    int height();
+    void onPainted(const std::vector<GLubyte>& frame);
 
     void setCanvas(Canvas2D* _canvas) { canvas = _canvas; }
     void setOptions(Options* _options) { options = _options; }
@@ -615,41 +630,33 @@ public:
     bool encodeFrame(uint8_t* data);
     void finalizeRecording();
 
-    /*
-void updateTransform()
-{
-    painter->translate(
-        (main_cam.pan_x * main_cam.zoom_x),
-        (main_cam.pan_y * main_cam.zoom_y)
-    );
-
-    painter->rotate(main_cam.rotation);
-    painter->translate(
-        -main_cam.x * main_cam.zoom_x,
-        -main_cam.y * main_cam.zoom_y
-    );
-    if (main_cam.scale_graphics)
-    {
-        painter->scale(main_cam.zoom_x, main_cam.zoom_y);
-    }
-}
-*/
-
-    /*void save() { active_context->save(); }
-    void restore() { active_context->restore(); }
-    void scaleGraphics(bool b, bool force = false) { active_context->scaleGraphics(b, force); }
-    void beginPath() { active_context->beginPath(); }
-    void setFillStyle(int r, int g, int b, int a = 255) { active_context->setFillStyle(r,g,b,a); }
-    void setStrokeStyle(int r, int g, int b, int a = 255) { active_context->setStrokeStyle(r,g,b,a); }
-    void fill() { active_context->fill(); }
-    void stroke() { active_context->stroke(); }
-    void circle(double cx, double cy, double r) { active_context->circle(cx, cy, r); }*/
-
 signals:
 
     void workerReady();
     void frameReady(uint8_t* data);
     void endRecording();
+};
+
+template<typename T>
+class Simulation : public SimulationBase //: public QObject
+{
+public:
+
+    virtual void attributes(T* instance) {}
+
+    //T dummy;
+    void _prepare() override
+    {
+        prepare();
+
+        options->garbageTakePriorSnapshot();
+
+        // Prepare a dummy instance to populate options
+        for (Panel *panel : this->panels)
+            attributes(dynamic_cast<T*>(panel->sim));
+
+        options->garbageRemoveUnreferencedPointers();
+    }
 };
 
 template <typename T>
@@ -659,8 +666,8 @@ struct AutoRegisterSimulation
     {
         // Here, we push a lambda that creates a new T()
         // (which is a subclass of Simulation).
-        Simulation::addFactoryItem(name, []() -> Simulation* {
-            return new T();
+        SimulationBase::addFactoryItem(name, []() -> SimulationBase* {
+            return (SimulationBase*)(new T());
         });
     }
 };

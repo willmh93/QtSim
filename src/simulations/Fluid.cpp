@@ -2,36 +2,35 @@
 SIM_DECLARE(Fluid, "Fluid")
 
 // Shared variables (available to all instances)
-double timestep = 0.1;
-int particle_count = 200;
-double spring_dist = 20.0;
-double spring_stiffness = 1;
-double spring_damping = 0.01;
-double viscosity_strength = 1;
-double viscosity_spring_dist_ratio = 10.0;
+
+
+void Fluid::attributes(FluidInstance *sim)
+{
+    // Project settings
+    options->slider("Panel Count", &panel_count, 1, 36, 2);
+
+    // Instance Settings
+    options->realtime_slider("Timestep", &sim->timestep, 0.01, 0.1, 0.01);
+    options->slider("Particle Count", &sim->particle_count, 10, 1000, 10);
+
+    options->realtime_slider("Spring Distance", &sim->spring_dist, 10.0, 100.0, 10.0);
+    options->realtime_slider("Spring Stiffness", &sim->spring_stiffness, 0.0, 1.0, 0.01);
+    options->realtime_slider("Spring Damping", &sim->spring_damping, 0.0001, 0.1, 0.0001);
+
+    options->realtime_slider("Viscosity Strength", &sim->viscosity_strength, 0.0, 1.0, 0.01);
+    options->realtime_slider("Viscosity Spring Dist-Ratio", &sim->viscosity_spring_dist_ratio, 1.0, 100.0, 0.1);
+}
 
 void Fluid::prepare()
 {
-    options->slider("Panel Count", &panel_count, 1, 36, 2);
-    options->realtime_slider("Timestep", &timestep, 0.01, 0.1, 0.01);
-    options->slider("Particle Count", &particle_count, 10, 1000, 10);
-
-    options->realtime_slider("Spring Distance", &spring_dist, 10.0, 100.0, 10.0);
-    options->realtime_slider("Spring Stiffness", &spring_stiffness, 0.0, 1.0, 0.01);
-    options->realtime_slider("Spring Damping", &spring_damping, 0.0001, 0.1, 0.0001);
-
-    options->realtime_slider("Viscosity Strength", &viscosity_strength, 0.0, 1.0, 0.01);
-    options->realtime_slider("Viscosity Spring Dist-Ratio", &viscosity_spring_dist_ratio, 1.0, 100.0, 0.1);
-}
-
-void Fluid::start()
-{
     auto& layout = setLayout(panel_count);
     for (Panel* panel : layout)
+    {
         panel->construct<FluidInstance>();
+    }
 }
 
-void FluidInstance::prepare()
+void FluidInstance::start()
 {
     particles.clear();
     for (int i = 0; i < particle_count; i++)

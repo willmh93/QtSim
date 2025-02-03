@@ -12,7 +12,7 @@ void MaxPractice::start()
         panel->construct<MaxPracticeInstance>();
 }
 
-void MaxPracticeInstance::prepare()
+void MaxPracticeInstance::start()
 {
     for (int i = 0; i < 100000; ++i)
     {

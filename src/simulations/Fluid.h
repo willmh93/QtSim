@@ -24,7 +24,15 @@ struct FluidInstance : public SimulationInstance
     DelaunayTriangulation<Particle> delaunay;
     std::vector<Triangle<Particle>> triangles;
 
-    void prepare();
+    double timestep = 0.1;
+    int particle_count = 200;
+    double spring_dist = 20.0;
+    double spring_stiffness = 1;
+    double spring_damping = 0.01;
+    double viscosity_strength = 1;
+    double viscosity_spring_dist_ratio = 10.0;
+
+    void start();
     
     void destroy();
     void process(DrawingContext* ctx);
@@ -36,12 +44,13 @@ struct FluidInstance : public SimulationInstance
     void spring(Particle* a, Particle* b, double restLength, double k, double damping, double deltaTime);
 };
 
-struct Fluid : public Simulation
+struct Fluid : public Simulation<FluidInstance>
 {
     int panel_count = 4;
 
     void prepare();
-    void start();
+    //void start();
+    void attributes(FluidInstance* instance) override;
 };
 
 

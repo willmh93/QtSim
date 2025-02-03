@@ -20,14 +20,14 @@ struct MaxPracticeInstance : public SimulationInstance
 
     vector<Ball> balls;
 
-    void prepare();
+    void start();
     void destroy();
     void process(DrawingContext* ctx);
     void draw(DrawingContext* ctx);
 
 };
 
-struct MaxPractice : public Simulation
+struct MaxPractice : public Simulation<MaxPracticeInstance>
 {
     int panel_count = 1;
 

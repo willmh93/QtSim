@@ -35,7 +35,7 @@ private:
     Options* options = nullptr;
     Canvas2D* canvas = nullptr;
 
-    Simulation* simulation;
+    SimulationBase* simulation;
     int simulation_type;
 
     void setSimulation(int type);

@@ -239,8 +239,7 @@ void FFmpegWorker::doFinalize()
     avformat_free_context(format_context);
 }
 
-
-Layout& Simulation::setLayout(int _panels_x, int _panels_y)
+Layout& SimulationBase::setLayout(int _panels_x, int _panels_y)
 {
     panels.clear();
     panels.panels_x = _panels_x;
@@ -279,14 +278,14 @@ Layout& Simulation::setLayout(int _panels_x, int _panels_y)
     return panels;
 }
 
-Layout& Simulation::setLayout(int panel_count)
+Layout& SimulationBase::setLayout(int panel_count)
 {
     int panels_y = sqrt(panel_count);
     int panels_x = panel_count / panels_y;
     return setLayout(panels_x, panels_y);
 }
 
-void Simulation::configure()
+void SimulationBase::configure()
 {
     started = false;
     paused = false;
@@ -297,7 +296,7 @@ void Simulation::configure()
 
 }
 
-void Simulation::_destroy()
+void SimulationBase::_destroy()
 {
     //options->clearAttributeList();
 
@@ -326,8 +325,7 @@ void Simulation::configureCamera(Camera* cam)
     cam->viewport_w = width();
     cam->viewport_h = height();
 }*/
-
-void Simulation::_start()
+void SimulationBase::_start()
 {
     // [Start] will remove old instances, meaning their pointers become invalid
     // Remove just those pointers.
@@ -335,18 +333,19 @@ void Simulation::_start()
     /// todo: Unsafe? Refreshing pointers from old simulation?
     options->forceRefreshPointers();
 
+    _prepare();
     start();
 
 
-    options->garbageTakePriorSnapshot();
+    //
     for (Panel* panel : panels)
     {
         panel->sim->width = panel->width;
         panel->sim->height = panel->height;
-        panel->sim->main = this;
-        panel->sim->prepare();
+        //panel->sim->main = this;
+        panel->sim->start();
     }
-    options->garbageRemoveUnreferencedPointers();
+    //
 
     if (options->getRecordChecked())
         startRecording();
@@ -357,7 +356,7 @@ void Simulation::_start()
     canvas->offscreen_h = record_h;*/
 }
 
-void Simulation::_stop()
+void SimulationBase::_stop()
 {
     stop();
 
@@ -365,7 +364,7 @@ void Simulation::_stop()
         finalizeRecording();
 }
 
-void Simulation::_process()
+void SimulationBase::_process()
 {
     /*for (Camera* cam : attachedCameras)
     {
@@ -405,29 +404,21 @@ void Simulation::_process()
     }
 }
 
-void Simulation::prepare()
+void SimulationBase::prepare()
 {
 }
 
-void Simulation::_prepare()
-{
-    prepare();
-
-    // Prepare a dummy instance to populate options
-
-}
-
-void Simulation::destroy()
+void SimulationBase::destroy()
 {
 }
 
-void Simulation::postProcess()
+void SimulationBase::postProcess()
 {
     for (Panel* panel : panels)
         panel->sim->postProcess();
 }
 
-void Simulation::_draw(QNanoPainter* p)
+void SimulationBase::_draw(QNanoPainter* p)
 {
     p->setFillStyle({ 255,255,255 });
     p->setStrokeStyle({ 255,255,255 });
@@ -466,7 +457,7 @@ void Simulation::_draw(QNanoPainter* p)
     }
 }
 
-void Simulation::onPainted(const std::vector<GLubyte> &frame)
+void SimulationBase::onPainted(const std::vector<GLubyte> &frame)
 {
     if (!recording)
         return;
@@ -479,13 +470,7 @@ void Simulation::onPainted(const std::vector<GLubyte> &frame)
     }
 }
 
-void SimulationInstance::postProcess()
-{
-    // Keep delta until entire frame processed and drawn
-    mouse.scroll_delta = 0;
-}
-
-bool Simulation::startRecording()
+bool SimulationBase::startRecording()
 {
     canvas->render_to_offscreen = true;
 
@@ -503,7 +488,7 @@ bool Simulation::startRecording()
     connect(ffmpeg_thread, &QThread::started, ffmpeg_worker,
         &FFmpegWorker::startRecording);
 
-    connect(this, &Simulation::frameReady, ffmpeg_worker,
+    connect(this, &SimulationBase::frameReady, ffmpeg_worker,
         &FFmpegWorker::encodeFrame);
 
     connect(ffmpeg_worker, &FFmpegWorker::frameFlushed, ffmpeg_worker, [this]()
@@ -511,7 +496,7 @@ bool Simulation::startRecording()
         encoder_busy = false;
     });
 
-    connect(this, &Simulation::endRecording, ffmpeg_worker,
+    connect(this, &SimulationBase::endRecording, ffmpeg_worker,
         &FFmpegWorker::finalizeRecording);
 
     //connect(ffmpeg_thread, &QThread::finished, thread, &QThread::deleteLater);
@@ -522,14 +507,14 @@ bool Simulation::startRecording()
     return true;
 }
 
-bool Simulation::encodeFrame(uint8_t* data)
+bool SimulationBase::encodeFrame(uint8_t* data)
 {
     encoder_busy = true;
     emit frameReady(data);
     return true;
 }
 
-void Simulation::finalizeRecording()
+void SimulationBase::finalizeRecording()
 {
     recording = false;
     canvas->render_to_offscreen = false;
@@ -537,13 +522,12 @@ void Simulation::finalizeRecording()
     emit endRecording();
 }
 
-
-int Simulation::width()
+int SimulationBase::width()
 {
     return canvas->width();
 }
 
-int Simulation::height()
+int SimulationBase::height()
 {
     return canvas->height();
 }

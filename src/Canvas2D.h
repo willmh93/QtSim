@@ -8,7 +8,7 @@
 
 
 
-class Simulation;
+class SimulationBase;
 
 class Canvas2D : public QNanoWidget, protected QOpenGLFunctions
 {
@@ -18,7 +18,7 @@ class Canvas2D : public QNanoWidget, protected QOpenGLFunctions
 public:
 
     // Todo: Completely remove Simulation from Canvas
-    Simulation* sim = nullptr;
+    SimulationBase* sim = nullptr;
     int offscreen_w;
     int offscreen_h;
 
@@ -31,7 +31,7 @@ public:
 
     void initializeGL() override;
 
-    void setSimulation(Simulation* _sim)
+    void setSimulation(SimulationBase* _sim)
     {
         sim = _sim;
     }

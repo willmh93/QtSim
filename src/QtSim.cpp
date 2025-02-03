@@ -61,7 +61,7 @@ QtSim::QtSim(QWidget *parent)
     options = new Options(this);
     canvas = new Canvas2D(this);
 
-    auto& simulationNames = Simulation::getNames();
+    auto& simulationNames = SimulationBase::getNames();
     for (auto name : simulationNames)
     {
         options->addSimListEntry(name);
@@ -146,7 +146,7 @@ void QtSim::setSimulation(int type)
     simulation_type = type;
 
     //simulation = SimulationFactory(simulation_type);
-    simulation = Simulation::getCreators()[simulation_type]();
+    simulation = SimulationBase::getCreators()[simulation_type]();
     simulation->setCanvas(canvas);
     simulation->setOptions(options);
     simulation->configure();
