@@ -9,43 +9,47 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # sets default startup project in Visual Studio
-    set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT QtSim)
+set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT QtSim)
 
 # packages
-    find_package(QT NAMES Qt6 Qt5 REQUIRED)
-    find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Gui Widgets Quick Xml OpenGL OpenGLWidgets)
+find_package(QT NAMES Qt6 Qt5 REQUIRED)
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Gui Widgets Quick Xml OpenGL OpenGLWidgets)
 
-    # Linux Locate ffmpeg
-    if(UNIX)
-        find_package(PkgConfig REQUIRED)
-        pkg_check_modules(FFMPEG REQUIRED libavcodec libavformat libavutil libswscale)
-    endif()
+# Linux Locate ffmpeg
+if(UNIX)
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(FFMPEG REQUIRED libavcodec libavformat libavutil libswscale)
+endif()
+
+# Define an external directory for caching LLVM
+#set(LLVM_CACHE_DIR "${CMAKE_SOURCE_DIR}/_deps/llvm")
+
 
 # Manage Source Files
-    message(STATUS "Auto-generating simulations")
-        # Collect all simulation header files
-        file(GLOB SIMULATION_HEADERS CONFIGURE_DEPENDS "$${CMAKE_CURRENT_SOURCE_DIR}/src/simulations/*.h")
-        file(GLOB SIMULATION_SOURCES CONFIGURE_DEPENDS "$${CMAKE_CURRENT_SOURCE_DIR}/src/simulations/*.cpp")
-        file(GLOB PROJECT_SOURCES CONFIGURE_DEPENDS
-            "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp"
-            "${CMAKE_CURRENT_SOURCE_DIR}/src/*.h"
-            "${CMAKE_CURRENT_SOURCE_DIR}/src/simulations/*.cpp"
-            "${CMAKE_CURRENT_SOURCE_DIR}/src/simulations/*.h"
-            "${CMAKE_CURRENT_SOURCE_DIR}/src/*.ui"
-            "resources.qrc"
-        )
+message(STATUS "Auto-generating simulations")
+    # Collect all simulation header files
+    file(GLOB SIMULATION_HEADERS CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/simulations/*.h")
+    file(GLOB SIMULATION_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/simulations/*.cpp")
+    file(GLOB PROJECT_SOURCES CONFIGURE_DEPENDS
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/*.h"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/simulations/*.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/simulations/*.h"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/*.ui"
+        "resources.qrc"
+    )
 
-        file(GLOB CORE_SOURCES CONFIGURE_DEPENDS
-            "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp"
-            "${CMAKE_CURRENT_SOURCE_DIR}/src/*.h"
-        )
+    file(GLOB CORE_SOURCES CONFIGURE_DEPENDS
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/*.h"
+    )
 
-        file(GLOB UI_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/*.ui")
+    file(GLOB UI_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/*.ui")
 
-    message(STATUS "Setting Source Filters")
-        source_group("Project" FILES ${CORE_SOURCES})
-        source_group("Simulations" FILES ${SIMULATION_HEADERS} ${SIMULATION_SOURCES})
-        source_group("UI" FILES ${UI_SOURCES})
+message(STATUS "Setting Source Filters")
+    source_group("Project" FILES ${CORE_SOURCES})
+    source_group("Simulations" FILES ${SIMULATION_HEADERS} ${SIMULATION_SOURCES})
+    source_group("UI" FILES ${UI_SOURCES})
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
     qt_add_executable(QtSim MANUAL_FINALIZATION ${PROJECT_SOURCES})
@@ -67,25 +71,25 @@ target_include_directories(QtSim PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_include_directories(QtSim PRIVATE ${CMAKE_BINARY_DIR})
 
 # Link Qt libraries
-    target_link_libraries(QtSim PRIVATE
-        Qt${QT_VERSION_MAJOR}::Core
-        Qt${QT_VERSION_MAJOR}::Gui
-        Qt${QT_VERSION_MAJOR}::Widgets
-        Qt${QT_VERSION_MAJOR}::Quick
-        Qt${QT_VERSION_MAJOR}::Xml
-        Qt${QT_VERSION_MAJOR}::OpenGL
-        Qt${QT_VERSION_MAJOR}::OpenGLWidgets
-    )
+target_link_libraries(QtSim PRIVATE
+    Qt${QT_VERSION_MAJOR}::Core
+    Qt${QT_VERSION_MAJOR}::Gui
+    Qt${QT_VERSION_MAJOR}::Widgets
+    Qt${QT_VERSION_MAJOR}::Quick
+    Qt${QT_VERSION_MAJOR}::Xml
+    Qt${QT_VERSION_MAJOR}::OpenGL
+    Qt${QT_VERSION_MAJOR}::OpenGLWidgets
+)
 
 # QNanoPainter
-function(add_qnanopainter)
-    set(QNANOPAINTER_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/dependencies/QNanoPainter/install/include")
-    set(QNANOPAINTER_LIB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/dependencies/QNanoPainter/install/lib")
+function(add_prebuilt_dependencies)
+    set(QNANOPAINTER_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/dependencies/install/QNanoPainter/include")
+    set(QNANOPAINTER_LIB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/dependencies/install/QNanoPainter/lib")
 
     target_include_directories(QtSim PRIVATE ${QNANOPAINTER_INCLUDE_DIR})
     target_link_libraries(QtSim PRIVATE ${QNANOPAINTER_LIB_DIR}/qnanopainter.lib)
 
-    # Match compile definitions (unincludes GLES/gl2.h)
+    # Match compiled definitions (removes GLES/gl2.h from included files)
     target_compile_definitions(QtSim PRIVATE QNANO_QT_GL_INCLUDE)
 endfunction()
 
@@ -137,8 +141,8 @@ function(add_ffmpeg)
 endfunction()
 
 # Setup libraries
-    add_qnanopainter()
-    add_ffmpeg()
+add_prebuilt_dependencies()
+add_ffmpeg()
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.
 # If you are developing for iOS or macOS you should consider setting an
