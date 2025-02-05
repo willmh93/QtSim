@@ -6,6 +6,8 @@ include(FetchContent)
 set(FETCHCONTENT_BASE_DIR "${CMAKE_SOURCE_DIR}/build")
 set(CMAKE_INSTALL_PREFIX "${CMAKE_SOURCE_DIR}/install")  # Install dependencies here
 
+
+
 FetchContent_Declare(
     qnanopainter
     GIT_REPOSITORY https://github.com/willmh93/qnanopainter
@@ -15,6 +17,8 @@ FetchContent_Declare(
 )
 
 FetchContent_Populate(qnanopainter)
+
+message(STATUS "HERE")
 
 # Build & install QNanoPainter
 

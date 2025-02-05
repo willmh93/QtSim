@@ -3,7 +3,7 @@
 
 //#include "simulation_types.h"
 //#include "simulations/simulations.h"
-#include "generated_simulations.h"
+//#include "generated_simulations.h"
 
 QtSim::QtSim(QWidget *parent)
     : QMainWindow(parent)

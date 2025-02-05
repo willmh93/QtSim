@@ -4,13 +4,16 @@
 
 SIM_BEG(MaxPractice)
 
+
 struct Ball
 {
     double x;
     double y;
-    double r;
+    double rad;
     double vx;
     double vy;
+    
+    int r, g, b;
 };
 
 
@@ -19,6 +22,11 @@ struct MaxPracticeInstance : public SimulationInstance
     //Ball ball;
 
     vector<Ball> balls;
+    int particle_count = 100;
+    double max_speed = 5;
+    double world_size = 500;
+
+    void instanceAttributes() override;
 
     void start();
     void destroy();
@@ -26,6 +34,8 @@ struct MaxPracticeInstance : public SimulationInstance
     void draw(DrawingContext* ctx);
 
 };
+
+
 
 struct MaxPractice : public Simulation<MaxPracticeInstance>
 {
