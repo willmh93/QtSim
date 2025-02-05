@@ -10,14 +10,16 @@ AttributeList::AttributeList(QWidget* parent)
     setLayout(layout);
 }
 
-AttributeItem* AttributeList::add(const QString& name, AttributeType type, bool manual_refresh)
+AttributeItem* AttributeList::addItem(const QString& name, AttributeType type, bool manual_refresh)
 {
+    // If an item with this name already exists, return it
     for (AttributeItem* item : item_widgets)
     {
         if (item->name == name)
             return item;
     }
 
+    // New item
     AttributeItem* item = new AttributeItem(name, type, manual_refresh);
     item->attributeList = this;
     layout->addWidget(item);
@@ -25,7 +27,17 @@ AttributeItem* AttributeList::add(const QString& name, AttributeType type, bool 
     return item;
 }
 
-void AttributeList::clear()
+AttributeItem* AttributeList::getItem(QString name)
+{
+    for (AttributeItem* item : item_widgets)
+    {
+        if (item->name == name)
+            return item;
+    }
+    return nullptr;
+}
+
+void AttributeList::clearItems()
 {
     for (auto* w : item_widgets)
     {

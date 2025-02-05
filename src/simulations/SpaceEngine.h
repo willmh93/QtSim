@@ -112,11 +112,11 @@ struct ParticleGrid : public std::unordered_map<CellCoord, CellData, CellCoordHa
     double cell_size;
     bool is_gravity;
 
-    void draw(QNanoPainter* p, Camera &cam, const char *color)
+    void draw(DrawingContext* ctx, Camera &cam, const char *color)
     {
-        p->setStrokeStyle(color);
-        p->setFillStyle({ 0,0,255 });
-        p->setLineWidth(1);
+        ctx->setStrokeStyle(color);
+        ctx->setFillStyle({ 0,0,255 });
+        ctx->setLineWidth(1);
 
         double cell_r = cell_size / 2;
         //for (auto& item : this)
@@ -131,24 +131,24 @@ struct ParticleGrid : public std::unordered_map<CellCoord, CellData, CellCoordHa
             double cell_y1 = cell_cy + cell_r;
             Vec2 p0 = cam.toStage(cell_x0, cell_y0);
             Vec2 p1 = cam.toStage(cell_x1, cell_y1);
-            p->strokeRect(p0.x, p0.y, p1.x - p0.x, p1.y - p0.y);
+            ctx->strokeRect(p0.x, p0.y, p1.x - p0.x, p1.y - p0.y);
        
             if (is_gravity)
             {
-                p->beginPath();
+                ctx->beginPath();
                 Vec2 com_p = cam.toStage(cellData.com_x, cellData.com_y);
                 Vec2 com_s = cam.toStageSize(cell_size / 30.0, 0);
-                p->circle(com_p.x, com_p.y, com_s.x);
-                p->fill();
+                ctx->circle(com_p.x, com_p.y, com_s.x);
+                ctx->fill();
             }
         }
 
     }
 };
 
-struct SpaceEngine : public Simulation
+struct SpaceEngineInstance : public SimulationInstance
 {
-    Camera cam;
+    //Camera cam;
 
     // Constants
     const double G = 6.67430e-11;
@@ -216,11 +216,11 @@ struct SpaceEngine : public Simulation
     bool optimize_gravity = true;
     bool optimize_collisions = true;
 
-    void prepare();
+    void instanceAttributes();
     void start();
     void destroy();
-    void process();
-    void draw(QNanoPainter* p);
+    void process(DrawingContext* ctx);
+    void draw(DrawingContext* ctx);
 
     
 
@@ -505,6 +505,12 @@ struct SpaceEngine : public Simulation
         return sum;
     }
 
+};
+
+struct SpaceEngine : public Simulation<SpaceEngineInstance>
+{
+    void projectAttributes() {}
+    void prepare();
 };
 
 SIM_END

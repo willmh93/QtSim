@@ -1,51 +1,53 @@
 #include "CurvedSpace.h"
+#include "Fluid.h"
 SIM_DECLARE(CurvedSpace, "Curved Space")
 
 
-
-
-void CurvedSpace::attributes(Instance *sim)
+void CurvedSpace::projectAttributes()
 {
-    options->slider("Panel Count", &panel_count, 1, 36, 1);
+    options->realtime_slider("Panel Count", &panel_count, 1, 36, 1);
     options->realtime_slider("Start Radius Mult", &radius_mult, 0.1, 2.0, 0.1); // Never add same pointer twice
-    options->realtime_slider("Gravity", &sim->gravity, 0.0, 1.0, 0.1);
 }
 
 void CurvedSpace::prepare()
 {
-    setLayout(panel_count).constructAll<Instance>(radius_mult * 10);
+    setLayout(panel_count).constructAll<CurvedSpaceInstance>(radius_mult, 10);
 
-    //for (Panel* panel : panels)
-    //{
-    //    panel->construct<Instance>(radius_mult * 10);
-    //}
 
-    //panels[0]->construct<Instance>(radius_mult * 10);
-    //panels[1]->construct<Instance>(radius_mult * 20);
-    //panels[2]->construct<Instance>(radius_mult * 30);
-    //panels[3]->construct<Instance>(radius_mult * 40);
+    //setLayout(2);
+    //panels[0]->construct<CurvedSpaceInstance>(radius_mult, 10);
+    //panels[1]->construct<CurvedSpaceInstance>(radius_mult, 20);
+    //panels[2]->construct<CurvedSpaceInstance>(radius_mult, 30);
+    //panels[3]->construct<CurvedSpaceInstance>(radius_mult, 40);
+
+    //panels[1]->construct<NS_Fluid::FluidInstance>();
 }
 
-void CurvedSpace::start()
-{
 
+
+void CurvedSpaceInstance::instanceAttributes()
+{
+    options->realtime_slider("Gravity", &gravity, 0.0, 1.0, 0.1);
+    options->starting_checkbox("Custom Color", &custom_color);
 }
 
 
 /// Simulation Instance Logic
 
-void Instance::start()
+void CurvedSpaceInstance::start()
 {
     //main->options->realtime_slider("Gravity", &gravity, 0.0, 1.0, 0.1);
-
+    radius = radius_mult * radius;
     particles = allocDelaunayTriangleMesh<Particle>(0, 0, width, height, 20);
+    //qDebug() << "Instance Constructed: " << panel->panel_index;
 }
 
-void Instance::destroy()
+void CurvedSpaceInstance::destroy()
 {
+    //qDebug() << "Instance Destroyed: " << panel->panel_index;
 }
 
-void Instance::process(DrawingContext* ctx)
+void CurvedSpaceInstance::process(DrawingContext* ctx)
 {
     //instances[ctx.panel_index].process(ctx);
     //cam.setCamera(main_cam);
@@ -53,9 +55,14 @@ void Instance::process(DrawingContext* ctx)
     camera->rotation += (gravity / 180.0 * M_PI);
 }
 
-void Instance::draw(DrawingContext* ctx)
+void CurvedSpaceInstance::draw(DrawingContext* ctx)
 {
     srand(0);
+
+    if (custom_color)
+    {
+        ctx->setFillStyle(255, 0, 0);
+    }
 
     for (const auto& n : particles)
     {
@@ -72,7 +79,7 @@ void Instance::draw(DrawingContext* ctx)
 }
 
 
-void Instance::mouseDown(MouseInfo mouse)
+void CurvedSpaceInstance::mouseDown(MouseInfo mouse)
 {
     gravitateSpace(mouse.world_x, mouse.world_y, 1000000);
 }

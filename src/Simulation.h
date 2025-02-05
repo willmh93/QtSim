@@ -115,7 +115,7 @@ using namespace std;
 #define SIM_END }
 
 class Canvas2D;
-//class Simulation;
+class SimulationBase;
 struct Panel;
 
 using LineCap = QNanoPainter::LineCap;
@@ -254,6 +254,32 @@ struct DrawingContext
         painter->lineTo(pt.x, pt.y);
     }
 
+    void strokeRect(double x1, double y1, double x2, double y2)
+    {
+        QRectF qr(
+            PT(x1, y1),
+            PT(x2, y2)
+        );
+
+        painter->strokeRect(qr);
+    }
+
+    void strokeRect(const FRect &r)
+    {
+        QRectF qr(
+            PT(r.x1, r.y1),
+            PT(r.x2, r.y2)
+        );
+
+        painter->strokeRect(qr);
+    }
+
+    void fillText(const QString &txt, double px, double py)
+    {
+        Vec2 pt = PT(px, py);
+        painter->fillText(txt, pt.x, pt.y);
+    }
+
     void setTextAlign(TextAlign align)
     {
         painter->setTextAlign(align);
@@ -274,7 +300,9 @@ class SimulationInstance
 public:
 
 
-    //Simulation* main;
+    SimulationBase* main;
+    Options* options;
+
     Panel* panel;
     Camera* camera;
 
@@ -285,6 +313,8 @@ public:
 
     SimulationInstance() : gen(rd())
     {}
+
+    virtual void instanceAttributes() {}
 
     //virtual void prepare() {}
     virtual void start() {}
@@ -298,6 +328,12 @@ public:
         mouse.scroll_delta = 0;
     }
 
+    void _destroy()
+    {
+        // Destroying instance, remove invalid pointers from options?
+        //panel->options->clearAllPointers();
+    }
+
     double random(double min = 0, double max = 1)
     {
         std::uniform_real_distribution<> dist(min, max);
@@ -309,6 +345,8 @@ struct Panel
 {
     DrawingContext ctx;
     SimulationInstance* sim;
+    SimulationBase* main;
+    Options* options;
 
     int panel_index;
     int panel_x;
@@ -319,12 +357,28 @@ struct Panel
     double height;
 
     Panel()
-    {}
+    {
+        
+    }
+
+    ~Panel()
+    {
+        qDebug() << "Panel destroyed: " << panel_index;
+        if (sim)
+        {
+            sim->_destroy();
+            delete sim;
+        }
+    }
 
     template<typename T, typename... Args>
     T* construct(Args&&... args)
     {
+        qDebug() << "Panel constructed: " << panel_index;
+
         sim = new T(std::forward<Args>(args)...);
+        sim->main = main;
+        sim->options = options;
         sim->panel = ctx.panel;
         sim->camera = &ctx.main_cam;
         return dynamic_cast<T*>(sim);
@@ -334,6 +388,8 @@ struct Panel
 
 struct Layout
 {
+    SimulationBase* main;
+    Options* options;
     std::vector<Panel*> panels;
     int panels_x;
     int panels_y;
@@ -365,6 +421,8 @@ struct Layout
     {
         Panel* panel = new Panel();
         panel->ctx.panel = panel;
+        panel->main = main;
+        panel->options = options;
         panel->panel_index = _panel_index;
         panel->panel_x = _panel_x;
         panel->panel_y = _panel_y;
@@ -468,16 +526,18 @@ public:
     int width();
     int height();
 
-    void _destroy();
     virtual void _prepare() {}
+    virtual void _prepareProject() = 0;
+    virtual void _prepareInstances() = 0;
+
+    void _destroy();
     void _start();
     void _stop();
     void _process();
 
     
-
-    virtual void prepare();
-    virtual void destroy();
+    virtual void prepare() {}
+    virtual void destroy() {}
 
     virtual void postProcess();
 
@@ -642,20 +702,47 @@ class Simulation : public SimulationBase //: public QObject
 {
 public:
 
-    virtual void attributes(T* instance) {}
+    virtual void projectAttributes() {}
+    
 
-    //T dummy;
     void _prepare() override
     {
+        _prepareProject();
+        _prepareInstances();
+    }
+
+    void _prepareProject() override
+    {
+        panels.clear();
+
+        options->clearAllPointers();
+        //options->forceRefreshPointers(); // todo: Refresh only project 
+
+        // Take options snapshot
+        //options->garbageTakePriorSnapshot();
+        projectAttributes();
+
+        // Prepare project and create layout
+        // Note: This is where old panels get replaced
         prepare();
 
-        options->garbageTakePriorSnapshot();
+        // Remove old options which weren't just added
+        //options->garbageRemoveUnreferencedPointers();
+    }
 
-        // Prepare a dummy instance to populate options
-        for (Panel *panel : this->panels)
-            attributes(dynamic_cast<T*>(panel->sim));
+    void _prepareInstances() override
+    {
+        //options->forceRefreshPointers();
 
-        options->garbageRemoveUnreferencedPointers();
+        // Take options snapshot
+        //options->garbageTakePriorSnapshot();
+
+        for (Panel* panel : this->panels)
+            panel->sim->instanceAttributes();
+            //instanceAttributes(dynamic_cast<T*>(panel->sim));
+
+        // Remove old options which weren't just added
+        //options->garbageRemoveUnreferencedPointers();
     }
 };
 

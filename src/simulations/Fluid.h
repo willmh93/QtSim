@@ -31,6 +31,8 @@ struct FluidInstance : public SimulationInstance
     double spring_damping = 0.01;
     double viscosity_strength = 1;
     double viscosity_spring_dist_ratio = 10.0;
+    
+    void instanceAttributes() override;
 
     void start();
     
@@ -50,7 +52,8 @@ struct Fluid : public Simulation<FluidInstance>
 
     void prepare();
     //void start();
-    void attributes(FluidInstance* instance) override;
+    void projectAttributes() override;
+    
 };
 
 

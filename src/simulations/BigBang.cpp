@@ -4,6 +4,11 @@ SIM_DECLARE(BigBang, "Big Bang")
 
 void BigBang::prepare()
 {
+    setLayout(1).constructAll<BigBangInstance>();
+}
+
+/*void BigBangInstance::prepare()
+{
 
     world_size_min = 100;
     world_size_max = 10000;
@@ -21,15 +26,31 @@ void BigBang::prepare()
     step_seconds_min = 0;// step_seconds * 0.5;
     step_seconds_max = step_seconds * 10;
 
-    SpaceEngine::prepare();
+    SpaceEngineInstance::prepare();
 
     
 
-}
+}*/
 
-void BigBang::start()
+void BigBangInstance::start()
 {
-    SpaceEngine::start();
+    world_size_min = 100;
+    world_size_max = 10000;
+    steps_per_frame = 1;
+    step_seconds = 0.001;
+    particle_count = 50;// 5000;
+    collision_substeps = 10;
+    gravity_cell_near_ratio = 0.01;
+    //start_particle_radius = 0.05;
+    gravity = 0.03;
+
+    start_world_size = 5000;
+
+    step_seconds_step = step_seconds * 0.1;
+    step_seconds_min = 0;// step_seconds * 0.5;
+    step_seconds_max = step_seconds * 10;
+
+    SpaceEngineInstance::start();
 
     auto universe_particles = newPlanetFromParticleCount(0, 0, 50, start_world_size, particle_count);
 
@@ -83,9 +104,9 @@ void BigBang::start()
     
 }
 
-void BigBang::process()
+void BigBangInstance::process(DrawingContext *ctx)
 {
-    SpaceEngine::process();
+    SpaceEngineInstance::process(ctx);
 
     double x1 = std::numeric_limits<double>::max();
     double x2 = std::numeric_limits<double>::lowest();
@@ -100,7 +121,7 @@ void BigBang::process()
         if (p.y > y2) y2 = p.y;
     }
 
-    if (!focus_rect_initialized)
+    /*if (!focus_rect_initialized)
     {
         focus_rect_initialized = true;
         focus_rect.set(x1, y1, x2, y2);
@@ -110,16 +131,16 @@ void BigBang::process()
         focus_rect = lerpRect(focus_rect, FRect(x1, y1, x2, y2), 0.1);
     }
 
-    cam.cameraToWorld(focus_rect);
+    ctx->main_cam.cameraToWorld(focus_rect);*/
 }
 
-void BigBang::draw(QNanoPainter* p)
+void BigBangInstance::draw(DrawingContext* ctx)
 {
-    SpaceEngine::draw(p);
-    FRect r = cam.toStageRect(-world_size / 2, -world_size / 2, world_size / 2, world_size / 2);
+    SpaceEngineInstance::draw(ctx);
+    FRect r = ctx->main_cam.toStageRect(-world_size / 2, -world_size / 2, world_size / 2, world_size / 2);
 
-    p->setStrokeStyle({ 255,255,255 });
-    p->strokeRect(r);
+    ctx->setStrokeStyle(255,255,255);
+    ctx->strokeRect(r);
 }
 
 SIM_END

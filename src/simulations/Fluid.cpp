@@ -4,21 +4,10 @@ SIM_DECLARE(Fluid, "Fluid")
 // Shared variables (available to all instances)
 
 
-void Fluid::attributes(FluidInstance *sim)
+void Fluid::projectAttributes()
 {
     // Project settings
-    options->slider("Panel Count", &panel_count, 1, 36, 2);
-
-    // Instance Settings
-    options->realtime_slider("Timestep", &sim->timestep, 0.01, 0.1, 0.01);
-    options->slider("Particle Count", &sim->particle_count, 10, 1000, 10);
-
-    options->realtime_slider("Spring Distance", &sim->spring_dist, 10.0, 100.0, 10.0);
-    options->realtime_slider("Spring Stiffness", &sim->spring_stiffness, 0.0, 1.0, 0.01);
-    options->realtime_slider("Spring Damping", &sim->spring_damping, 0.0001, 0.1, 0.0001);
-
-    options->realtime_slider("Viscosity Strength", &sim->viscosity_strength, 0.0, 1.0, 0.01);
-    options->realtime_slider("Viscosity Spring Dist-Ratio", &sim->viscosity_spring_dist_ratio, 1.0, 100.0, 0.1);
+    options->realtime_slider("Panel Count", &panel_count, 1, 36, 1);
 }
 
 void Fluid::prepare()
@@ -29,6 +18,20 @@ void Fluid::prepare()
         panel->construct<FluidInstance>();
     }
 }
+
+void FluidInstance::instanceAttributes()
+{
+    // Instance Settings
+    options->realtime_slider("Timestep", &timestep, 0.01, 0.1, 0.01);
+    options->realtime_slider("Particle Count", &particle_count, 10, 1000, 10);
+    options->realtime_slider("Spring Distance", &spring_dist, 10.0, 100.0, 10.0);
+    options->realtime_slider("Spring Stiffness", &spring_stiffness, 0.0, 1.0, 0.01);
+    options->realtime_slider("Spring Damping", &spring_damping, 0.0001, 0.1, 0.0001);
+    options->realtime_slider("Viscosity Strength", &viscosity_strength, 0.0, 1.0, 0.01);
+    options->realtime_slider("Viscosity Spring Dist-Ratio", &viscosity_spring_dist_ratio, 1.0, 100.0, 0.1);
+}
+
+
 
 void FluidInstance::start()
 {
@@ -46,6 +49,9 @@ void FluidInstance::start()
 
 void FluidInstance::destroy()
 {
+    for (Particle *p : particles)
+        delete p;
+    particles.clear();
 }
 
 void FluidInstance::process(DrawingContext* ctx)

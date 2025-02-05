@@ -241,6 +241,9 @@ void FFmpegWorker::doFinalize()
 
 Layout& SimulationBase::setLayout(int _panels_x, int _panels_y)
 {
+    panels.main = this;
+    panels.options = options;
+
     panels.clear();
     panels.panels_x = _panels_x;
     panels.panels_y = _panels_y;
@@ -289,55 +292,26 @@ void SimulationBase::configure()
 {
     started = false;
     paused = false;
-
-    //main_cam.enabled = true;
-
-    
-
 }
 
 void SimulationBase::_destroy()
 {
-    //options->clearAttributeList();
-
-    //attachedCameras.clear();
+    destroy();
 }
 
-
-
-/*void Simulation::setFocusedCamera(Camera* cam, bool panning, bool zooming)
-{
-    configureCamera(cam);
-
-    focused_cam = cam;
-    cam->panning_enabled = panning;
-    cam->zooming_enabled = zooming;
-
-    if (std::find(attachedCameras.begin(), attachedCameras.end(), cam) == attachedCameras.end())
-        attachedCameras.push_back(cam);
-
-    //configureCamera(cam, panning, zooming);
-    //attachedCameras.push_back(cam);
-}
-
-void Simulation::configureCamera(Camera* cam)
-{
-    cam->viewport_w = width();
-    cam->viewport_h = height();
-}*/
 void SimulationBase::_start()
 {
     // [Start] will remove old instances, meaning their pointers become invalid
     // Remove just those pointers.
 
     /// todo: Unsafe? Refreshing pointers from old simulation?
-    options->forceRefreshPointers();
+    
 
     _prepare();
+
     start();
 
-
-    //
+    // Start simulation instances
     for (Panel* panel : panels)
     {
         panel->sim->width = panel->width;
@@ -345,7 +319,6 @@ void SimulationBase::_start()
         //panel->sim->main = this;
         panel->sim->start();
     }
-    //
 
     if (options->getRecordChecked())
         startRecording();
@@ -385,7 +358,6 @@ void SimulationBase::_process()
         panel->height = panel_height - 1;
         panel->ctx.main_cam.viewport_w = panel_width - 1;
         panel->ctx.main_cam.viewport_h = panel_height - 1;
-        //context.main_cam.cameraToViewport(0, 0, panel_width, panel_height);
     }
 
     if (!encoder_busy)
@@ -402,14 +374,6 @@ void SimulationBase::_process()
         // Prepare to encode the next frame
         encode_next_paint = true;
     }
-}
-
-void SimulationBase::prepare()
-{
-}
-
-void SimulationBase::destroy()
-{
 }
 
 void SimulationBase::postProcess()
@@ -518,7 +482,6 @@ void SimulationBase::finalizeRecording()
 {
     recording = false;
     canvas->render_to_offscreen = false;
-
     emit endRecording();
 }
 

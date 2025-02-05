@@ -13,17 +13,17 @@ struct Particle : public Vec2
     {}
 };
 
-struct Instance : public SimulationInstance
+struct CurvedSpaceInstance : public SimulationInstance
 {
     vector<unique_ptr<Particle>> particles;
     double gravity = 0.5;
+    double &radius_mult;
     double radius;
+    bool custom_color = false;
 
-    Instance(double radius) :
+    CurvedSpaceInstance(double &radius_mult, double radius) :
+        radius_mult(radius_mult),
         radius(radius)
-    {}
-
-    Instance()
     {}
 
     void gravitateSpace(double x, double y, double mass)
@@ -49,6 +49,8 @@ struct Instance : public SimulationInstance
         }
     }
 
+    void instanceAttributes() override;
+
     //void prepare();
     void start();
     void destroy();
@@ -58,14 +60,14 @@ struct Instance : public SimulationInstance
     void mouseDown(MouseInfo mouse);
 };
 
-struct CurvedSpace : public Simulation<Instance>
+struct CurvedSpace : public Simulation<CurvedSpaceInstance>
 {
     int panel_count = 4;
     double radius_mult = 1;
 
     void prepare();
-    void start();
-    void attributes(Instance* instance) override;
+    void projectAttributes() override;
+    
 };
 
 SIM_END

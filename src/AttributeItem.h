@@ -44,7 +44,7 @@ class AttributeItem : public QWidget
 public:
 
     QString name;
-    bool touched;
+    //bool touched;
 
     AttributeList* attributeList;
 
@@ -69,10 +69,10 @@ public:
     int slider_int_max = 100;
 
     // Pointers to change
-    int* value_int_ptr;
-    std::vector<double*> value_float_ptr;
+    std::vector<int*> int_ptrs;
+    std::vector<double*> float_ptrs;
+    std::vector<bool*> bool_ptrs;
     QString* value_string_ptr;
-    bool* value_bool_ptr;
     int* value_combo_selected_ptr;
 
     double* slider_float_step_ptr;
@@ -105,9 +105,11 @@ public:
 
     //void setValuePtr(int* value);
     void updateUIValue();
-    void forceRefreshPointers();
+    //void forceRefreshPointers();
+
     std::vector<void*> getValuePointers();
     void removePointer(void* ptr);
+    void removeAllPointers();
     //AttributeItem* updateValue(int value);
 
     //AttributeItem* updateValue(int value);
@@ -115,7 +117,7 @@ public:
     //AttributeItem* updateRange(int min, int max, int step=1);
     //AttributeItem* updateRange(double min, double max, double step);
 
-    struct AttributeItemSnapshot
+    /*struct AttributeItemSnapshot
     {
         QString name;
         std::vector<void*> ptrs;
@@ -136,7 +138,7 @@ public:
             if (std::find(current_ptrs.begin(), current_ptrs.end(), ptr) != current_ptrs.end())
                 removePointer(ptr);
         }
-    }
+    }*/
 
     AttributeItem* addComboItem(QString text, std::function<void(void)> callback = nullptr);
     void setActiveComboItem(QString text);

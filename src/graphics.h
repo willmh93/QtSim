@@ -5,6 +5,8 @@
 #include "qnanopainter.h"
 #include "types.h"
 
+struct DrawingContext;
+
 class Bitmap
 {
     std::vector<uchar> data;
@@ -40,17 +42,9 @@ public:
         nano_img = QNanoImage(img, id, smoothing ? QNanoImage::ImageFlag(0) : QNanoImage::ImageFlag::NEAREST);
     }
 
-    void draw(QNanoPainter* p, double x, double y, double w, double h)
-    {
-        img.loadFromData(data.data());
-        nano_img.updateFrameBuffer(p);
-        p->drawImage(nano_img, x, y, w, h);
-    }
+    void draw(DrawingContext* ctx, double x, double y, double w, double h);
 
-    void draw(QNanoPainter* p, const Vec2 &pt, const Vec2 &size)
-    {
-        draw(p, pt.x, pt.y, size.x, size.y);
-    }
+    void draw(DrawingContext* ctx, const Vec2 &pt, const Vec2 &size);
 
     void setPixel(int x, int y, uchar r, uchar g, uchar b, uchar a)
     {
@@ -106,5 +100,5 @@ public:
 
 namespace Draw
 {
-    void arrow(QNanoPainter* p, Vec2 &a, Vec2 &b, QColor color = QColor({ 255,255,255 }), double arrow_size=-1.0);
+    void arrow(DrawingContext* ctx, Vec2 &a, Vec2 &b, QColor color = QColor({ 255,255,255 }), double arrow_size=-1.0);
 }

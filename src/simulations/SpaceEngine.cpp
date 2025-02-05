@@ -4,9 +4,14 @@ SIM_BEG(SpaceEngine)
 
 void SpaceEngine::prepare()
 {
+    setLayout(1).constructAll<SpaceEngineInstance>();
+}
+
+void SpaceEngineInstance::instanceAttributes()
+{
     //camera.enable();
 
-    setFocusedCamera(&cam);
+    //setFocusedCamera(&cam);
 
     //n.x = random(-world_size / 2, world_size / 2);
      //n.y = random(-world_size / 2, world_size / 2);
@@ -23,16 +28,16 @@ void SpaceEngine::prepare()
 
     //options->slider("Particles", &particle_count, 10, 20000);
 
-    options->checkbox("Optimize Gravity", &optimize_gravity);
-    options->checkbox("Optimize Collisions", &optimize_collisions);
+    options->realtime_checkbox("Optimize Gravity", &optimize_gravity);
+    options->realtime_checkbox("Optimize Collisions", &optimize_collisions);
 
-    options->checkbox("Draw Gravity Grid", &draw_gravity_grid);
-    options->checkbox("Draw Collision Grid", &draw_collision_grid);
+    options->realtime_checkbox("Draw Gravity Grid", &draw_gravity_grid);
+    options->realtime_checkbox("Draw Collision Grid", &draw_collision_grid);
 
 
-    options->slider("Steps Per Frame", &steps_per_frame, 1, 100, 1);
+    options->realtime_slider("Steps Per Frame", &steps_per_frame, 1, 100, 1);
     
-    AttributeItem* timestep_slider = options->slider("Time step (seconds)",
+    AttributeItem* timestep_slider = options->realtime_slider("Time step (seconds)",
         &step_seconds, 
         &step_seconds_min, 
         &step_seconds_max, 
@@ -41,15 +46,15 @@ void SpaceEngine::prepare()
     timestep_slider->label_value = [this](double seconds)
     {
         double seconds_processed_by_second = seconds * 60;
-        return normalizeSeconds(seconds_processed_by_second) + "/ second";
+        return normalizeSeconds(seconds_processed_by_second) + " / second";
     };
 
 
-    options->slider("Collision Substeps", &collision_substeps, 1, 20, 1);
+    options->realtime_slider("Collision Substeps", &collision_substeps, 1, 20, 1);
 
 
-    options->slider("Gravity Cell Ratio", &gravity_cell_near_ratio, 0.001, 0.1, 0.001);
-    options->slider("Gravity Near-Distance Cells", &gravity_cell_near_grid_radius, 1, 10, 1);
+    options->realtime_slider("Gravity Cell Ratio", &gravity_cell_near_ratio, 0.001, 0.1, 0.001);
+    options->realtime_slider("Gravity Near-Distance Cells", &gravity_cell_near_grid_radius, 1, 10, 1);
 
     //options->slider("Gravity Cell Far-Ratio", &gravity_cell_far_ratio, 0.01, 0.5, 0.01);
     //options->slider("Collision Cell Size", &collision_cell_size, &collision_cell_size_min, &collision_cell_size_max, &collision_cell_size_step);
@@ -58,17 +63,17 @@ void SpaceEngine::prepare()
 
     ///
 
-    options->slider("World Size (gm) ", &start_world_size, &world_size_min, &world_size_max, &world_size_step);
+    options->realtime_slider("World Size (gm) ", &start_world_size, &world_size_min, &world_size_max, &world_size_step);
 }
 
 
-void SpaceEngine::start()
+void SpaceEngineInstance::start()
 {
     world_size = start_world_size;
     bmp_scale = world_size / density_bmp_size;
     time_elapsed = 0;
 
-    cam.setZoom(((double)height()) / world_size);
+    //cam.setZoom(((double)height()) / world_size);
 
     density_bmp.create(density_bmp_size, density_bmp_size, true);
     
@@ -76,7 +81,7 @@ void SpaceEngine::start()
     //particles = start_particles;
 }
 
-void SpaceEngine::destroy()
+void SpaceEngineInstance::destroy()
 {
     particles.clear();
 }
@@ -133,7 +138,7 @@ void SpaceEngine::destroy()
     }
 }*/
 
-void SpaceEngine::process()
+void SpaceEngineInstance::process(DrawingContext* ctx)
 {
     for (int i = 0; i < steps_per_frame; i++)
     {
@@ -201,7 +206,7 @@ void SpaceEngine::process()
     }
 }
 
-void SpaceEngine::buildUniformGrid(double cellSize, ParticleGrid& grid)
+void SpaceEngineInstance::buildUniformGrid(double cellSize, ParticleGrid& grid)
 {
     grid.clear();
     grid.reserve(particles.size());
@@ -225,7 +230,7 @@ void SpaceEngine::buildUniformGrid(double cellSize, ParticleGrid& grid)
     }
 }
 
-void SpaceEngine::processParticlePairGravity(Particle* n0, Particle* n1)
+void SpaceEngineInstance::processParticlePairGravity(Particle* n0, Particle* n1)
 {
     double dx = n1->x - n0->x;
     double dy = n1->y - n0->y;
@@ -272,7 +277,7 @@ inline float fastSqrt(float number) {
     return number * y; // Since y is approximately 1/sqrt(number), multiply to get sqrt(number)
 }
 
-void SpaceEngine::processCellPairGravity(CellData& c0, CellData& c1)
+void SpaceEngineInstance::processCellPairGravity(CellData& c0, CellData& c1)
 {
     //double dx = c1.cx - c0.cx;
     //double dy = c1.cy - c0.cy;
@@ -352,7 +357,7 @@ void SpaceEngine::processCellPairGravity(CellData& c0, CellData& c1)
 }
 
 
-void SpaceEngine::processGravity()
+void SpaceEngineInstance::processGravity()
 {
     int len = particles.size();
 
@@ -518,7 +523,7 @@ void SpaceEngine::processGravity()
 }
 
 // Return true if a collision was resolved, false if not
-bool SpaceEngine::checkAndResolveCollision(Particle* n0, Particle* n1)
+bool SpaceEngineInstance::checkAndResolveCollision(Particle* n0, Particle* n1)
 {
     double dx = n1->x - n0->x;
     double dy = n1->y - n0->y;
@@ -583,7 +588,7 @@ bool SpaceEngine::checkAndResolveCollision(Particle* n0, Particle* n1)
     return true;
 }
 
-void SpaceEngine::processCollisions()
+void SpaceEngineInstance::processCollisions()
 {
     int len = particles.size();
 
@@ -638,20 +643,25 @@ void SpaceEngine::processCollisions()
     }
 }
 
-void SpaceEngine::draw(QNanoPainter* p)
+void SpaceEngineInstance::draw(DrawingContext *ctx)
 {
     double left = -world_size / 2;
     double top = -world_size / 2;
     double right = world_size / 2;
     double bottom = world_size / 2;
 
-    density_bmp.draw(p, 
-        cam.toStage(left, top), 
-        cam.toStageSize(world_size, world_size)
+    density_bmp.draw(ctx,
+        left, top,
+        world_size, world_size
     );
 
-    p->setFillStyle("#00ffff");
-    p->setTextAlign(QNanoPainter::TextAlign::ALIGN_CENTER);
+    //density_bmp.draw(p, 
+    //    cam.toStage(left, top), 
+    //    cam.toStageSize(world_size, world_size)
+    //);
+
+    ctx->setFillStyle("#00ffff");
+    ctx->setTextAlign(TextAlign::ALIGN_CENTER);
 
     int len = particles.size();
     
@@ -675,39 +685,36 @@ void SpaceEngine::draw(QNanoPainter* p)
 
         //int pressure_heat = (n.pressure / max_pressure) * 255;
 
-        p->setFillStyle({255,255,255});
-        p->beginPath();
-        //p->moveTo(x0, y0);
-        //p->lineTo(x1, y1);
-        p->circle(cam.toStage(n.x, n.y), n.r * cam.zoom_x);
-        p->fill();
+        ctx->setFillStyle(255,255,255);
+        ctx->beginPath();
+        //ctx->moveTo(x0, y0);
+        //ctx->lineTo(x1, y1);
+        //ctx->circle(cam.toStage(n.x, n.y), n.r * cam.zoom_x);
+        ctx->circle(n.x, n.y, n.r/* * ctx->main_cam.zoom_x*/);
+        ctx->fill();
 
         
     }
 
-    if (draw_gravity_grid)
-        gravity_grid_near.draw(p, cam, "#7f0000");
+    /*if (draw_gravity_grid)
+        gravity_grid_near.draw(ctx, ctx->main_cam, "#7f0000");
     if (draw_collision_grid)
-    collision_grid.draw(p, cam, "#007f00");
+    collision_grid.draw(ctx, ctx->main_cam, "#007f00");
 
-    p->beginPath();
-    p->setLineWidth(10);
-    p->setStrokeStyle({ 0,255,0,50 });
-    forEachCellAndNeighbors(gravity_grid_near, [this, p](CellData& a, CellData& b)
+    ctx->beginPath();
+    ctx->setLineWidth(10);
+    ctx->setStrokeStyle({ 0,255,0,50 });
+    forEachCellAndNeighbors(gravity_grid_near, [this, ctx](CellData& a, CellData& b)
     {
-        Vec2 pt1 = cam.toStage(a.cx, a.cy);
-        Vec2 pt2 = cam.toStage(b.cx, b.cy);
-        Draw::arrow(p, pt1, pt2, { 0,255,0,50 });
-
-        //p->moveTo(pt1);
-        //p->lineTo(pt2);
-
-        
+        Vec2 pt1 = ctx->main_cam.toStage(a.cx, a.cy);
+        Vec2 pt2 = ctx->main_cam.toStage(b.cx, b.cy);
+        Draw::arrow(ctx, pt1, pt2, { 0,255,0,50 });
     }, gravity_cell_near_grid_radius);
-    p->stroke();
 
-    p->beginPath();
-    p->setStrokeStyle({ 0,0,255,50 });
+    ctx->stroke();
+
+    ctx->beginPath();
+    ctx->setStrokeStyle({ 0,0,255,50 });
     int r = gravity_cell_near_grid_radius;
     for (auto it1 = gravity_grid_near.begin(); it1 != gravity_grid_near.end(); ++it1)
     {
@@ -727,13 +734,16 @@ void SpaceEngine::draw(QNanoPainter* p)
             if (dx <= r && dy <= r)
                 continue;
 
-            Vec2 pt1 = cam.toStage(a.cx, a.cy);
-            Vec2 pt2 = cam.toStage(b.cx, b.cy);
-            p->moveTo(pt1);
-            p->lineTo(pt2);
+            ctx->moveTo(a.cx, a.cy);
+            ctx->lineTo(b.cx, b.cy);
+
+            //Vec2 pt1 = cam.toStage(a.cx, a.cy);
+            //Vec2 pt2 = cam.toStage(b.cx, b.cy);
+            //p->moveTo(pt1);
+            //p->lineTo(pt2);
         }
     }
-    p->stroke();
+    ctx->stroke();*/
     
 
     /*p->setStrokeStyle({255,255,255,100});
@@ -764,17 +774,17 @@ void SpaceEngine::draw(QNanoPainter* p)
     int ty = 5;
     int row_h = 18;
 
-    p->setTextAlign(QNanoPainter::TextAlign::ALIGN_LEFT);
-    p->setTextBaseline(QNanoPainter::TextBaseline::BASELINE_TOP);
-    p->setFillStyle("#ffffff");
+    ctx->setTextAlign(TextAlign::ALIGN_LEFT);
+    ctx->setTextBaseline(TextBaseline::BASELINE_TOP);
+    ctx->setFillStyle("#ffffff");
 
-    p->fillText("Time elapsed: " + normalizeSeconds(time_elapsed), 5, ty);
+    ctx->fillText("Time elapsed: " + normalizeSeconds(time_elapsed), 5, ty);
     ty += row_h;
 
-    p->fillText(QString("Particles: %1").arg(particles.size()), 5, ty);
+    ctx->fillText(QString("Particles: %1").arg(particles.size()), 5, ty);
 
-    ty += row_h;
-    p->fillText(QString("Frame dt: %1").arg(frame_dt), 5, ty);
+    //ty += row_h;
+    //ctx->fillText(QString("Frame dt: %1").arg(frame_dt), 5, ty);
 }
 
 

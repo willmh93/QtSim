@@ -1,4 +1,5 @@
 #include "graphics.h"
+#include "Simulation.h"
 
 #include "qnanopainter.h"
 #include <QOpenGLFunctions>
@@ -109,8 +110,10 @@ QImage OffscreenNanoPainter::toImage() const
     return m_fbo->toImage();
 }
 
-void Draw::arrow(QNanoPainter* p, Vec2& a, Vec2& b, QColor color, double arrow_size)
+void Draw::arrow(DrawingContext* ctx, Vec2& a, Vec2& b, QColor color, double arrow_size)
 {
+    QNanoPainter* p = ctx->painter;
+
     double dx = b.x - a.x;
     double dy = b.y - a.y;
     double len = sqrt(dx * dx + dy * dy);
@@ -140,4 +143,16 @@ void Draw::arrow(QNanoPainter* p, Vec2& a, Vec2& b, QColor color, double arrow_s
     p->lineTo(rx2, ry2);
     p->closePath();
     p->fill();
+}
+
+void Bitmap::draw(DrawingContext* ctx, double x, double y, double w, double h)
+{
+    img.loadFromData(data.data());
+    nano_img.updateFrameBuffer(ctx->painter);
+    ctx->painter->drawImage(nano_img, x, y, w, h);
+}
+
+void Bitmap::draw(DrawingContext* ctx, const Vec2& pt, const Vec2& size)
+{
+    draw(ctx, pt.x, pt.y, size.x, size.y);
 }

@@ -19,49 +19,43 @@ public:
     Options(QWidget *parent = nullptr);
     ~Options();
 
-    //AttributeItem* add(const QString& name, AttributeType type);
-    AttributeItem* slider(
-        const QString& name, 
-        std::variant<int,int*> target, 
-        std::variant<int, int*> min, 
-        std::variant<int, int*> max, 
-        std::variant<int, int*> step=1, 
-        std::function<void(int)> on_change=nullptr);
+    using IntVar    = std::variant<int, int*>;
+    using DoubleVar = std::variant<double, double*>;
+    using BoolVar   = std::variant<bool, bool*>;
+
+    using IntCallback    = std::function<void(int)>;
+    using DoubleCallback = std::function<void(double)>;
+    using BoolCallback   = std::function<void(bool)>;
+
+
+    AttributeItem* realtime_slider(QString name, IntVar target, IntVar min, IntVar max, IntVar step=1, IntCallback changed=nullptr);
+    AttributeItem* starting_slider(QString name, IntVar target, IntVar min, IntVar max, IntVar step=1, IntCallback changed=nullptr);
     
     ///
 
-    AttributeItem* realtime_slider(
-        const QString& name,
-        std::variant<double, double*> target,
-        std::variant<double, double*> min,
-        std::variant<double, double*> max,
-        std::variant<double, double*> step,
-        std::function<void(double)> on_change = nullptr);
-
-    AttributeItem* starting_slider(
-        const QString& name,
-        std::variant<double, double*> target,
-        std::variant<double, double*> min,
-        std::variant<double, double*> max,
-        std::variant<double, double*> step,
-        std::function<void(double)> on_change = nullptr);
+    AttributeItem* realtime_slider(QString name, DoubleVar target, DoubleVar min, DoubleVar max, DoubleVar step, DoubleCallback changed=nullptr);
+    AttributeItem* starting_slider(QString name, DoubleVar target, DoubleVar min, DoubleVar max, DoubleVar step, DoubleCallback changed=nullptr);
 
     ///
 
-    AttributeItem* checkbox(
-        const QString& name,
-        std::variant<bool, bool*> target,
-        std::function<void(bool)> on_change = nullptr);
+    AttributeItem* realtime_checkbox(QString name, BoolVar target, BoolCallback changed = nullptr);
+    AttributeItem* starting_checkbox(QString name, BoolVar target, BoolCallback changed = nullptr);
 
     ///
 
-    void forceRefreshPointers()
+    void clearAllPointers()
     {
-        attributeList->forceRefreshPointers();
+        for (AttributeItem* item : attributeList->item_widgets)
+            item->removeAllPointers();
     }
 
+    //void forceRefreshPointers()
+    //{
+    //    attributeList->forceRefreshPointers();
+    //}
 
-    void garbageTakePriorSnapshot()
+
+    /*void garbageTakePriorSnapshot()
     {
         for (AttributeItem* item : attributeList->item_widgets)
         {
@@ -83,7 +77,7 @@ public:
             }
         }
         updateListUI();
-    }
+    }*/
 
     //AttributeItem* slider(const QString& name, double *target, double min, double max, double step=0.1, std::function<void(double)> on_change = nullptr);
     //AttributeItem* number(const QString& name, int min, int max, int step, std::function<void(int)> on_change = nullptr);
