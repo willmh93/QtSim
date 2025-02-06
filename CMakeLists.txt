@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 project(QtSim VERSION 0.1 LANGUAGES CXX)
 include(FetchContent)
+include(ExternalProject)
 
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTOMOC ON)
@@ -81,17 +82,14 @@ target_link_libraries(QtSim PRIVATE
     Qt${QT_VERSION_MAJOR}::OpenGLWidgets
 )
 
-# QNanoPainter
-function(add_prebuilt_dependencies)
-    set(QNANOPAINTER_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/dependencies/install/QNanoPainter/include")
-    set(QNANOPAINTER_LIB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/dependencies/install/QNanoPainter/lib")
-
-    target_include_directories(QtSim PRIVATE ${QNANOPAINTER_INCLUDE_DIR})
-    target_link_libraries(QtSim PRIVATE ${QNANOPAINTER_LIB_DIR}/qnanopainter.lib)
-
-    # Match compiled definitions (removes GLES/gl2.h from included files)
-    target_compile_definitions(QtSim PRIVATE QNANO_QT_GL_INCLUDE)
-endfunction()
+# Detect build system
+if (CMAKE_GENERATOR MATCHES "Ninja")
+    set(BUILD_SYSTEM_NAME "ninja")
+elseif (CMAKE_GENERATOR MATCHES "Visual Studio")
+    set(BUILD_SYSTEM_NAME "vs")
+else()
+    set(BUILD_SYSTEM_NAME "other") # Fallback
+endif()
 
 # FFmpeg
 function(add_ffmpeg)
@@ -140,9 +138,86 @@ function(add_ffmpeg)
         endif()
 endfunction()
 
+set(FETCHCONTENT_BASE_DIR ${CMAKE_SOURCE_DIR}/external) # Everything goes inside 'external'
+
+function(fetch_ffmpeg)
+    set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
+
+    # Ensure dependencies are fetched before FFmpeg
+    FetchContent_Declare(
+        zlib
+        GIT_REPOSITORY https://github.com/madler/zlib.git
+        GIT_TAG v1.2.13 # Latest stable release
+    )
+    FetchContent_MakeAvailable(zlib)
+
+    FetchContent_Declare(
+        bzip2
+        GIT_REPOSITORY https://gitlab.com/bzip2/bzip2.git
+        GIT_TAG bzip2-1.0.8 # Latest stable release
+    )
+    FetchContent_MakeAvailable(bzip2)
+
+    # Now let CMake find the built dependencies
+    set(ZLIB_INCLUDE_DIR ${zlib_SOURCE_DIR} ${zlib_BINARY_DIR})
+    set(ZLIB_LIBRARY ${zlib_BINARY_DIR}/libz.a)
+
+    set(BZIP2_INCLUDE_DIR ${bzip2_SOURCE_DIR})
+    set(BZIP2_LIBRARY ${bzip2_BINARY_DIR}/libbz2.a)
+
+    # Manually set the found paths to ensure CMake finds them
+    set(ZLIB_FOUND TRUE)
+    set(BZIP2_FOUND TRUE)
+
+
+    find_package(FFMPEG REQUIRED)
+    target_include_directories(QtSim PRIVATE ${FFMPEG_INCLUDE_DIRS})
+    target_link_libraries(QtSim PRIVATE ${FFMPEG_LIBRARIES})
+endfunction()
+
+function(add_qnanopainter)
+
+    set(QNANO_BUILD_DIR ${FETCHCONTENT_BASE_DIR}/${BUILD_SYSTEM_NAME}/QNanoPainter)
+
+    FetchContent_Declare(
+        QNanoPainter
+        GIT_REPOSITORY https://github.com/willmh93/qnanopainter
+        GIT_TAG master
+        SOURCE_DIR ${QNANO_BUILD_DIR}/src
+        BINARY_DIR ${QNANO_BUILD_DIR}/build
+        SUBBUILD_DIR ${QNANO_BUILD_DIR}/subbuild
+    )
+    FetchContent_MakeAvailable(QNanoPainter)
+    target_link_libraries(QtSim PRIVATE qnanopainter)
+endfunction()
+
+# QNanoPainter
+#function(add_prebuilt_dependencies)
+#    set(QNANOPAINTER_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/dependencies/install/QNanoPainter/include")
+#    set(QNANOPAINTER_LIB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/dependencies/install/QNanoPainter/lib")
+#
+#    target_include_directories(QtSim PRIVATE ${QNANOPAINTER_INCLUDE_DIR})
+#    target_link_libraries(QtSim PRIVATE ${QNANOPAINTER_LIB_DIR}/qnanopainter.lib)
+#
+#    # Match compiled definitions (removes GLES/gl2.h from included files)
+#    target_compile_definitions(QtSim PRIVATE QNANO_QT_GL_INCLUDE)
+#endfunction()
+
+
 # Setup libraries
-add_prebuilt_dependencies()
+#add_prebuilt_dependencies()
+
 add_ffmpeg()
+#fetch_ffmpeg()
+
+add_qnanopainter()
+
+
+
+
+
+#add_subdirectory(dependencies)
+#include_directories(external/qnanopainter/src)
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.
 # If you are developing for iOS or macOS you should consider setting an
