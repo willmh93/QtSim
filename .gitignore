@@ -54,5 +54,6 @@ compile_commands.json
 *_qmlcache.qrc
 
 build/*
+build_fetched/*
 dependencies/build/*
 dependencies/install/*

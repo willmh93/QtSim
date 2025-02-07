@@ -53,7 +53,16 @@ message(STATUS "Setting Source Filters")
     source_group("UI" FILES ${UI_SOURCES})
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
-    qt_add_executable(QtSim MANUAL_FINALIZATION ${PROJECT_SOURCES})
+    if (WIN32)
+        message(STATUS "Setting app.rc")
+        set(app_icon_resource_windows "${CMAKE_CURRENT_SOURCE_DIR}/resources/app.rc")
+        #qt_finalize_executable(QtSim WIN32 src/main.cpp ${app_icon_resource_windows})
+
+        qt_add_executable(QtSim MANUAL_FINALIZATION ${PROJECT_SOURCES} ${app_icon_resource_windows})
+    else()
+        qt_add_executable(QtSim MANUAL_FINALIZATION ${PROJECT_SOURCES})
+    endif()
+
     # Define target properties for Android with Qt 6 as:
     #    set_property(TARGET QtSim APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR
     #                 ${CMAKE_CURRENT_SOURCE_DIR}/android)
@@ -125,20 +134,22 @@ function(add_ffmpeg)
             message(STATUS "QtSim Source File Directory: ${FFMPEG_DIR}/bin/")
             message(STATUS "QtSim Target File Directory: ${CMAKE_BINARY_DIR}")
             add_custom_command(TARGET QtSim POST_BUILD
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different "${FFMPEG_DIR}/bin/avcodec.dll"  "${CMAKE_BINARY_DIR}/avcodec.dll"
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different "${FFMPEG_DIR}/bin/avformat.dll" "${CMAKE_BINARY_DIR}/avformat.dll"
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different "${FFMPEG_DIR}/bin/avutil.dll"   "${CMAKE_BINARY_DIR}/avutil.dll"
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different "${FFMPEG_DIR}/bin/swscale.dll"  "${CMAKE_BINARY_DIR}/swscale.dll"
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different "${FFMPEG_DIR}/bin/avcodec-61.dll"    "${CMAKE_BINARY_DIR}/avcodec-61.dll"
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different "${FFMPEG_DIR}/bin/avformat-61.dll"   "${CMAKE_BINARY_DIR}/avformat-61.dll"
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different "${FFMPEG_DIR}/bin/avutil-59.dll"     "${CMAKE_BINARY_DIR}/avutil-59.dll"
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different "${FFMPEG_DIR}/bin/swscale-8.dll"     "${CMAKE_BINARY_DIR}/swscale-8.dll"
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different "${FFMPEG_DIR}/bin/swresample-5.dll"  "${CMAKE_BINARY_DIR}/swresample-5.dll"
             )
 
-            find_library(AVCODEC_LIBRARY avcodec PATHS "${FFMPEG_DIR}/bin/avcodec.dll")
-            find_library(AVFORMAT_LIBRARY avformat PATHS "${FFMPEG_DIR}/bin/avformat.dll")
-            find_library(AVUTIL_LIBRARY avutil PATHS "${FFMPEG_DIR}/bin/avutil.dll")
-            find_library(SWSCALE_LIBRARY swscale PATHS "${FFMPEG_DIR}/bin/swscale.dll")
+            find_library(AVCODEC_LIBRARY avcodec PATHS "${FFMPEG_DIR}/bin/avcodec-61.dll")
+            find_library(AVFORMAT_LIBRARY avformat PATHS "${FFMPEG_DIR}/bin/avformat-61.dll")
+            find_library(AVUTIL_LIBRARY avutil PATHS "${FFMPEG_DIR}/bin/avutil-59.dll")
+            find_library(SWSCALE_LIBRARY swscale PATHS "${FFMPEG_DIR}/bin/swscale-8.dll")
+            find_library(SWSCALE_LIBRARY swscale PATHS "${FFMPEG_DIR}/bin/swresample-5.dll")
         endif()
 endfunction()
 
-set(FETCHCONTENT_BASE_DIR ${CMAKE_SOURCE_DIR}/external) # Everything goes inside 'external'
+set(FETCHCONTENT_BASE_DIR ${CMAKE_SOURCE_DIR}/build_fetched) # Everything goes inside 'external'
 
 function(fetch_ffmpeg)
     set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
@@ -187,7 +198,15 @@ function(add_qnanopainter)
         BINARY_DIR ${QNANO_BUILD_DIR}/build
         SUBBUILD_DIR ${QNANO_BUILD_DIR}/subbuild
     )
-    FetchContent_MakeAvailable(QNanoPainter)
+    FetchContent_Populate(QNanoPainter)
+
+    add_subdirectory(${qnanopainter_SOURCE_DIR}/libqnanopainter
+                     ${qnanopainter_BINARY_DIR}/libqnanopainter)
+
+    ## Ensure the macro is applied to QNanoPainter
+    target_compile_definitions(qnanopainter PUBLIC QNANO_USE_RENDERNODE)
+
+    #FetchContent_MakeAvailable(QNanoPainter)
     target_link_libraries(QtSim PRIVATE qnanopainter)
 endfunction()
 

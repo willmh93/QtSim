@@ -115,7 +115,8 @@ int main(int argc, char *argv[])
     w.setWindowTitle("QtSim - Developer: Will Hemsworth");
     w.setStyleSheet("background: #2E2E3E;");
     w.resize(1024, 768);
-    w.setWindowIcon(QIcon(":/icon.png"));
+    //w.setWindowIcon(QIcon(":/resources/icon.png"));
+    w.setWindowIcon(QIcon(":/resources/icon.ico"));
     //w.show();
     w.showMaximized();
     return a.exec();

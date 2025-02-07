@@ -16,7 +16,7 @@ void MaxPractice::start()
 void MaxPracticeInstance::instanceAttributes()
 {
     // Instance Settings
-    options->realtime_slider("Num Particles", &particle_count, 1, 1000, 1);
+    options->realtime_slider("Num Particles", &particle_count, 1, 100, 1);
     options->realtime_slider("Max Start Speed", &max_speed, 0.0, 20.0, 0.1);
 }
 
