@@ -1,59 +1,6 @@
-#include "Simulation.h"
-
-#include "Canvas2D.h"
-
-
-//#include <cstdlib>
-//#include <ctime>
-//#include <iostream>
-
 #include <QThread>
-
-//std::vector<std::function<Simulation* (void)>> Simulation::sim_factory;
-
-#ifdef _WIN32
-HMODULE avcodecLib = nullptr;
-HMODULE avformatLib = nullptr;
-HMODULE avutilLib = nullptr;
-HMODULE swscaleLib = nullptr;
-#else
-void* avcodecLib = nullptr;
-void* avformatLib = nullptr;
-void* avutilLib = nullptr;
-void* swscaleLib = nullptr;
-#endif
-
-/*bool LoadFFmpegLibraries()
-{
-    HMODULE avcodecLib = LoadLibrary(L"avcodec.dll");
-
-#ifdef _WIN32
-    avcodecLib = LOAD_LIBRARY("avcodec.dll");
-    avformatLib = LOAD_LIBRARY("avformat.dll");
-    avutilLib = LOAD_LIBRARY("avutil.dll");
-    swscaleLib = LOAD_LIBRARY("swscale.dll");
-#else
-    avcodecLib = LOAD_LIBRARY("libavcodec.so");
-    avformatLib = LOAD_LIBRARY("libavformat.so");
-    avutilLib = LOAD_LIBRARY("libavutil.so");
-    swscaleLib = LOAD_LIBRARY("libswscale.so");
-#endif
-
-    if (!avcodecLib || !avformatLib || !avutilLib || !swscaleLib)
-    {
-        return false;
-    }
-
-    return true;
-}*/
-
-/*void UnloadFFmpegLibraries()
-{
-    if (avcodecLib) CLOSE_LIBRARY(avcodecLib);
-    if (avformatLib) CLOSE_LIBRARY(avformatLib);
-    if (avutilLib) CLOSE_LIBRARY(avutilLib);
-    if (swscaleLib) CLOSE_LIBRARY(swscaleLib);
-}*/
+#include "Simulation.h"
+#include "Canvas2D.h"
 
 bool FFmpegWorker::startRecording()
 {
@@ -301,14 +248,7 @@ void SimulationBase::_destroy()
 
 void SimulationBase::_start()
 {
-    // [Start] will remove old instances, meaning their pointers become invalid
-    // Remove just those pointers.
-
-    /// todo: Unsafe? Refreshing pointers from old simulation?
-    
-
     _prepare();
-
     start();
 
     // Start simulation instances
@@ -316,7 +256,6 @@ void SimulationBase::_start()
     {
         panel->sim->width = panel->width;
         panel->sim->height = panel->height;
-        //panel->sim->main = this;
         panel->sim->start();
     }
 
@@ -339,12 +278,6 @@ void SimulationBase::_stop()
 
 void SimulationBase::_process()
 {
-    /*for (Camera* cam : attachedCameras)
-    {
-        cam->viewport_w = width();
-        cam->viewport_h = height();
-    }*/
-
     double w = width();
     double h = height();
     double panel_width = w / panels_x;
@@ -520,8 +453,6 @@ void DrawingContext::drawPanel(QNanoPainter* p, double vw, double vh)
     double origin_ox = (panel->width * (origin_ratio_x - 0.5) * camera.zoom_x);
     double origin_oy = (panel->height * (origin_ratio_y - 0.5) * camera.zoom_y);
 
-    //painter->transform
-
     // Move to panel
     painter->translate(
         viewport_cx + origin_ox, 
@@ -541,80 +472,8 @@ void DrawingContext::drawPanel(QNanoPainter* p, double vw, double vh)
     );
 
     painter->scale(camera.zoom_x, camera.zoom_y);
-
-    // Move origin relative to viewport
-    //p->translate(
-    //    x + (vw * origin_ratio_x),
-    //    y + (vh * origin_ratio_y)
-    //);
-
-    // Scale by default (use built-in transformer)
-    //scaleGraphics(true, true);
-
-    //if (!camera.scale_graphics)
-    //    save();
-
     panel->sim->draw(this);
-
-    //scaleGraphics(false, true);
-    //
-    //while (scale_stack.size())
-    //    restore();
-
-    
 }
-
-/*inline void DrawingContext::scaleGraphics(bool b, bool force)
-{
-    camera.scale_graphics = b;
-    //return;
-    //
-    //
-    //
-    //if ((force && b) || (!camera.scale_graphics && b))
-    //{
-    //    // If we WEREN'T scaling, but now we ARE
-    //    painter->save();
-
-        /// Transform world to stage
-
-        // Always zoom to CENTER of viewport, regardless of origin
-        //painter->translate(width / 2, height / 2);
-
-        // Move origin relative to viewport (when resizing window, this doesn't move)
-        double viewport_cx = (panel->width / 2.0);
-        double viewport_cy = (panel->height / 2.0);
-        double origin_ox   = (panel->width * (origin_ratio_x - 0.5) * camera.zoom_x);
-        double origin_oy   = (panel->height * (origin_ratio_y - 0.5) * camera.zoom_y);
-
-        //painter->transform
-
-        // Move to panel
-        painter->translate(panel->x + viewport_cx, panel->y + viewport_cy);
-
-        /// Do transform
-        painter->translate(
-            (camera.pan_x * camera.zoom_x) + origin_ox,
-            (camera.pan_y * camera.zoom_y) + origin_oy
-        );
-
-        painter->rotate(camera.rotation);
-        painter->translate(
-            -camera.x * camera.zoom_x,
-            -camera.y * camera.zoom_y
-        );
-
-        painter->scale(camera.zoom_x, camera.zoom_y);
-
-        //painter->translate(-width / 2, -height / 2);
-    //}
-    //else if ((force && !b) || (!b && camera.scale_graphics))
-    //{
-    //    // If we WERE scaling, but now we're NOT
-    //    painter->restore();
-    //}
-    //camera.scale_graphics = b;
-}*/
 
 double roundAxisTickStep(double step)
 {

@@ -1,22 +1,6 @@
 #include "World.h"
 #include "Simulation.h"
-
 #include <cmath>
-
-/*void Camera::setCamera(
-    double camera_x,
-    double camera_y,
-    double camera_zoom_x,
-    double camera_zoom_y,
-    double camera_rotation)
-{
-    //enabled = true;
-    x = camera_x;
-    y = camera_y;
-    zoom_x = camera_zoom_x;
-    zoom_y = camera_zoom_y;
-    rotation = camera_rotation;
-}*/
 
 // Scale world to fit viewport rect
 void Camera::cameraToViewport(
@@ -151,7 +135,7 @@ Vec2 Camera::toStage(const Vec2& pt)
     double origin_ox   = (panel->width * (panel->ctx.origin_ratio_x - 0.5) * camera->zoom_x);
     double origin_oy   = (panel->height * (panel->ctx.origin_ratio_y - 0.5) * camera->zoom_y);
 
-    /// Do transform (same as scaleGraphics, but reverse order)
+    /// Do transform
 
     px *= camera->zoom_x;
     py *= camera->zoom_y;
@@ -165,44 +149,10 @@ Vec2 Camera::toStage(const Vec2& pt)
     ret_x += (camera->pan_x * camera->zoom_x);
     ret_y += (camera->pan_y * camera->zoom_y);
 
-    ret_x += /*panel->x +*/ viewport_cx + origin_ox;
-    ret_y += /*panel->y +*/ viewport_cy + origin_oy;
+    ret_x += viewport_cx + origin_ox;
+    ret_y += viewport_cy + origin_oy;
 
     return { ret_x, ret_y };
-
-    //px
-
-    // p->rotate(camera.rotation);
-    /*px = camera->zoom_x * (cos_r * px - sin_r * py);
-    py = camera->zoom_y * (sin_r * px + cos_r * py);
-    
-    // p->translate( (camera.pan_x * camera.zoom_x),
-    //               (camera.pan_y * camera.zoom_y) );
-    px += (camera->pan_x * camera->zoom_x);
-    py += (camera->pan_y * camera->zoom_y);
-
-    // p->translate( -camera.x * camera.zoom_x,
-    //               -camera.y * camera.zoom_y);
-    px += (camera->x * camera->zoom_x);
-    py += (camera->y * camera->zoom_y);*/
-
-    //p->scale(camera.zoom_x, camera.zoom_y);
-    //px *= zoom_x;
-    //py *= zoom_y;
-
-    //return { px, py };
-
-    ////////
-
-    /*// Compute translation offsets
-    double tx = viewport_w / 2 + (pan_x * zoom_x) - (x * zoom_x);
-    double ty = viewport_h / 2 + (pan_y * zoom_y) - (y * zoom_y);
-
-    // Apply transformations
-    double x_new = zoom_x * (cos_r * pt.x - sin_r * pt.y) + tx;
-    double y_new = zoom_y * (sin_r * pt.x + cos_r * pt.y) + ty;
-
-    return { x_new, y_new };*/
 }
 
 Vec2 Camera::toStage(double x, double y)
@@ -230,4 +180,30 @@ FRect Camera::toStageRect(double x0, double y0, double x1, double y1)
 FRect Camera::toStageRect(const Vec2& pt1, const Vec2& pt2)
 {
     return toStageRect(pt1.x, pt1.y, pt2.x, pt2.y);
+}
+
+void Camera::panBegin(int _x, int _y)
+{
+    pan_down_x = _x;
+    pan_down_y = _y;
+    pan_beg_x = pan_x;
+    pan_beg_y = pan_y;
+    panning = true;
+}
+
+void Camera::panProcess(int _x, int _y)
+{
+    if (panning)
+    {
+        int dx = _x - pan_down_x;
+        int dy = _y - pan_down_y;
+        pan_x = pan_beg_x + (double)dx * (pan_mult / zoom_x);
+        pan_y = pan_beg_y + (double)dy * (pan_mult / zoom_y);
+    }
+}
+
+void Camera::panEnd(int _x, int _y)
+{
+    panProcess(_x, _y);
+    panning = false;
 }

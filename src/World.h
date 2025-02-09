@@ -78,11 +78,6 @@ public:
         stage_oy = oy;
     }
 
-    //Vec2 worldPos(Vec2 stagePos)
-    //{
-    //    toWorld(stagePos.x, stagePos.y);
-    //}
-
     void textTransform(bool world_position, bool scale_size, bool rotate)
     {
         transform_coordinates = world_position;
@@ -100,61 +95,19 @@ public:
     double pan_beg_y;
     bool panning = false;
 
-    //void enable()
-    //{
-    //    enabled = true;
-    //}
-
-    //void scaleGraphics(bool b)
-    //{
-    //    scale_graphics = b;
-    //}
-
     void setZoom(double zoom)
     {
         zoom_x = zoom;
         zoom_y = zoom;
     }
 
-    /*void setCamera(const Camera& rhs)
-    {
-        x = rhs.x;
-        y = rhs.y;
-        pan_x = rhs.pan_x;
-        pan_y = rhs.pan_y;
-        zoom_x = rhs.zoom_x;
-        zoom_y = rhs.zoom_y;
-        rotation = rhs.rotation;
-        viewport_w = rhs.viewport_w;
-        viewport_h = rhs.viewport_h;
-    }
-
-    void setCamera(
-        double camera_x,
-        double camera_y,
-        double camera_zoom_x,
-        double camera_zoom_y,
-        double camera_rotation = 0);*/
-
-    void cameraToViewport(
-        double left,
-        double top,
-        double right,
-        double bottom);
-
-    void cameraToWorld(
-        double left,
-        double top,
-        double right,
-        double bottom,
-        bool stretch=false
-    );
-
+    void cameraToViewport(double left, double top, double right, double bottom);
+    void cameraToWorld(double left, double top, double right, double bottom, bool stretch=false);
     void cameraToWorld(const FRect &r, bool stretch = false);
 
     void originToCenterViewport();
 
-    inline Vec2 toStageOffset(const Vec2& world_offset)
+    Vec2 toStageOffset(const Vec2& world_offset)
     {
         if (this->transform_coordinates)
         {
@@ -171,7 +124,7 @@ public:
             };
         }
     }
-    inline Vec2 toWorldOffset(const Vec2& stage_offset)
+    Vec2 toWorldOffset(const Vec2& stage_offset)
     {
         if (this->transform_coordinates)
         {
@@ -208,7 +161,6 @@ public:
     Vec2 toStageSize(double w, double h);
     FRect toStageRect(double x0, double y0, double x1, double y1);
     FRect toStageRect(const Vec2& pt1, const Vec2& pt2);
-
 
     void panBegin(int _x, int _y)
     {

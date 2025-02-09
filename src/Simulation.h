@@ -5,6 +5,7 @@
 #include <QColor>
 #include <QElapsedTimer>
 
+// Common includes for all simulations
 #include <random>
 #include <cmath>
 #include <vector>
@@ -12,14 +13,7 @@
 #include <limits>
 #include <set>
 #include <unordered_map>
-
-
 #include "qnanopainter.h"
-
-#include "Options.h"
-#include "World.h"
-#include "graphics.h"
-#include "helpers.h"
 
 extern "C" {
 #include <libavcodec/avcodec.h>
@@ -29,29 +23,24 @@ extern "C" {
 #include <libavutil/imgutils.h>
 }
 
-/*#ifdef _WIN32
-#define WIN32_LEAN_AND_MEAN
-#define NOMINMAX
-#include <windows.h>
-#define LOAD_LIBRARY(name) LoadLibraryA(name)
-#define GET_PROC_ADDR(lib, func) GetProcAddress(lib, func)
-#define CLOSE_LIBRARY(lib) FreeLibrary(lib)
-#else
-#include <dlfcn.h>
-#define LOAD_LIBRARY(name) dlopen(name, RTLD_LAZY)
-#define GET_PROC_ADDR(lib, func) dlsym(lib, func)
-#define CLOSE_LIBRARY(lib) dlclose(lib)
-#endif*/
+#include "Options.h"
+#include "World.h"
+#include "graphics.h"
+#include "helpers.h"
 
-// Load FFmpeg dynamically
-bool LoadFFmpegLibraries();
-void UnloadFFmpegLibraries();
+using namespace std;
+
+#define SIM_BEG(cls) namespace NS_##cls {
+#define SIM_DECLARE(cls, name) namespace NS_##cls { AutoRegisterSimulation<cls> register_##cls(name);
+#define BASE_SIM(cls) using namespace NS_##cls; //typedef NS_##cls::Sim cls;
+//#define BASE_SIM(id) namespace NS_##id {
+#define SIM_END }
 
 class FFmpegWorker : public QObject
 {
     Q_OBJECT
 
-    int src_w;
+        int src_w;
     int src_h;
     int targ_w;
     int targ_h;
@@ -83,8 +72,8 @@ public:
         output_path = save_path;
         src_w = src_width;
         src_h = src_height;
-        targ_w = src_width;// targ_width;
-        targ_h = src_height;// targ_height;
+        targ_w = src_width;
+        targ_h = src_height;
     }
 
 signals:
@@ -104,15 +93,6 @@ public slots:
     }
 
 };
-
-using namespace std;
-
-
-#define SIM_BEG(cls) namespace NS_##cls { //struct Sim; inline AutoRegisterSimulation<Sim> register_##id;
-#define SIM_DECLARE(cls, name) namespace NS_##cls { AutoRegisterSimulation<cls> register_##cls(name);
-#define BASE_SIM(cls) using namespace NS_##cls; //typedef NS_##cls::Sim cls;
-//#define BASE_SIM(id) namespace NS_##id {
-#define SIM_END }
 
 class Canvas2D;
 class SimulationBase;
@@ -139,14 +119,6 @@ private:
     }
 
 public:
-    //int panel_index;
-    //int panel_x;
-    //int panel_y;
-
-    //double x;
-    //double y;
-    //double width;
-    //double height;
 
     Panel* panel = nullptr;
 
@@ -154,40 +126,15 @@ public:
     double origin_ratio_y;
 
     Camera camera;
-    //Camera* focused_cam = nullptr;
-
-    // Drawing abstraction
     QNanoPainter* painter;
     QTransform default_viewport_transform;
-    //std::vector<bool> scale_stack;
 
     DrawingContext() {}
-    /*DrawingContext(
-        int _panel_index, 
-        int _panel_x, 
-        int _panel_y, 
-        double _x, double _y, 
-        double _w, double _h)
-    {
-        panel_index = _panel_index;
-        panel_x = _panel_x;
-        panel_y = _panel_y;
-        x = _x;
-        y = _y;
-        width = _w;
-        height = _h;
-    }*/
-
-    //void beginWorldTransform();
-    //void beginStageTransform();
-    //void beginWorldInplaceTransform();
-    //void endTransform();
 
     void drawPanel(QNanoPainter *p, double vw, double vh);
 
     Vec2 PT(double x, double y)
     {
-        //if (camera.scale_graphics)
         if (camera.transform_coordinates)
         {
             Vec2 o = camera.toWorldOffset({ camera.stage_ox, camera.stage_oy });
@@ -197,31 +144,10 @@ public:
         {
             // (x,y) represents stage coordinate, but transform is active
             Vec2 ret = camera.toWorld(x + camera.stage_ox, y + camera.stage_oy);
-            //ret.x += camera.stage_ox;
-            //ret.y += camera.stage_oy;
             return ret;
         }
-        //else
-        //    return camera.toStage(x, y);
     }
 
-    /*void save()
-    {
-        //painter->save();
-        scale_stack.push_back(camera.scale_graphics);
-    }
-
-    void restore()
-    {
-        //painter->restore();
-
-        bool b = scale_stack.back();
-        scale_stack.pop_back();
-
-        scaleGraphics(b);
-    }
-
-    void scaleGraphics(bool b, bool force = false);*/
 
     void save()
     {
@@ -362,7 +288,6 @@ public:
         else
         {
             QTransform cur_transform = painter->currentTransform();
-
             painter->resetTransform();
             painter->transform(default_viewport_transform);
 
@@ -383,7 +308,6 @@ public:
             painter->transform(cur_transform);
         }
     }
-
 
     void strokeRect(const FRect &r)
     {
@@ -464,7 +388,6 @@ public:
     void drawGraphGrid();
 };
 
-//template<typename T>
 class SimulationInstance
 {
     std::random_device rd;
@@ -484,8 +407,7 @@ public:
     double width;
     double height;
 
-    SimulationInstance() : gen(rd())
-    {}
+    SimulationInstance() : gen(rd()) {}
 
     virtual void instanceAttributes() {}
 
@@ -503,8 +425,6 @@ public:
 
     void _destroy()
     {
-        // Destroying instance, remove invalid pointers from options?
-        //panel->options->clearAllPointers();
     }
 
     double random(double min = 0, double max = 1)
@@ -808,14 +728,7 @@ public:
             }
         }
 
-        /*if (focused_cam)
-        {
-            if (focused_cam->panning_enabled && btn == Qt::MiddleButton)
-            {
-                focused_cam->panEnd(x, y);
-            }
-        }
-
+        /*
         _updateSimMouseInfo(x, y);
         mouseUp(mouse);*/
     }
@@ -832,14 +745,7 @@ public:
                 cam.panProcess(x, y);
         }
 
-        /*if (focused_cam)
-        {
-            if (focused_cam->panning_enabled &&focused_cam->panning)
-            {
-                focused_cam->panProcess(x, y);
-            }
-        }
-
+        /*
         _updateSimMouseInfo(x, y);
         mouseMove(mouse);*/
     }
@@ -863,15 +769,7 @@ public:
             }
         }
 
-        /*if (focused_cam)
-        {
-            if (focused_cam->zooming_enabled)
-            {
-                focused_cam->zoom_x += (((double)delta) * focused_cam->zoom_x) / 1000.0;
-                focused_cam->zoom_y = focused_cam->zoom_x;
-            }
-        }
-        
+        /*
         mouse.scroll_delta = delta;
         mouseWheel(mouse);*/
     }
@@ -902,7 +800,6 @@ public:
 
     virtual void projectAttributes() {}
     
-
     void _prepare() override
     {
         _prepareProject();
@@ -914,33 +811,17 @@ public:
         panels.clear();
 
         options->clearAllPointers();
-        //options->forceRefreshPointers(); // todo: Refresh only project 
-
-        // Take options snapshot
-        //options->garbageTakePriorSnapshot();
         projectAttributes();
 
         // Prepare project and create layout
         // Note: This is where old panels get replaced
         prepare();
-
-        // Remove old options which weren't just added
-        //options->garbageRemoveUnreferencedPointers();
     }
 
     void _prepareInstances() override
     {
-        //options->forceRefreshPointers();
-
-        // Take options snapshot
-        //options->garbageTakePriorSnapshot();
-
         for (Panel* panel : this->panels)
             panel->sim->instanceAttributes();
-            //instanceAttributes(dynamic_cast<T*>(panel->sim));
-
-        // Remove old options which weren't just added
-        //options->garbageRemoveUnreferencedPointers();
     }
 };
 
@@ -949,24 +830,8 @@ struct AutoRegisterSimulation
 {
     AutoRegisterSimulation(QString name)
     {
-        // Here, we push a lambda that creates a new T()
-        // (which is a subclass of Simulation).
         SimulationBase::addFactoryItem(name, []() -> SimulationBase* {
             return (SimulationBase*)(new T());
         });
     }
 };
-
-
-
-/*void addFactoryItem(std::function<Simulation* (void)> creator)
-{  
-}
-struct Test
-{
-    Test(std::function<Simulation* (void)> creator)
-    {
-        Simulation::sim_factory.push_back(creator);
-    }
-};*/
-
