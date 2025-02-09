@@ -373,8 +373,8 @@ struct FRect
 
     void set(const Vec2& a, const Vec2& b)
     {
-        x1 = a.y;
-        y1 = a.x;
+        x1 = a.x;
+        y1 = a.y;
         x2 = b.x;
         y2 = b.y;
     }

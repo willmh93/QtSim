@@ -644,6 +644,16 @@ double roundAxisTickStep(double step)
     return niceMultiplier * factor;
 }
 
+double roundAxisValue(double v, double step)
+{
+    return floor(v / step) * step;
+}
+
+double ceilAxisValue(double v, double step)
+{
+    return ceil(v / step) * step;
+}
+
 double getAngle(Vec2 a, Vec2 b)
 {
     return (b - a).angle();
@@ -651,10 +661,11 @@ double getAngle(Vec2 a, Vec2 b)
 
 void DrawingContext::drawGraphGrid()
 {
-    /*painter->save();
+    painter->save();
 
     // Fist, draw axis
     Vec2 stage_origin = camera.toStage(0, 0);// camera.toWorld(0, 0);
+    FRect stage_rect = { 0, 0, panel->width, panel->height };
 
     // World quad
     Vec2 world_tl = camera.toWorld(0, 0);
@@ -668,190 +679,129 @@ void DrawingContext::drawGraphGrid()
     double stage_size = sqrt(panel->width * panel->width + panel->height * panel->height);
     double world_size = sqrt(world_w * world_w + world_h * world_h);
     double world_zoom = (world_size / stage_size);
-
     double angle = camera.rotation;
 
-    FRect stage_rect = { 0, 0, panel->width, panel->height };
-    //FRect world_rect = camera.toWorldRect(stage_rect);
 
-   
+    // Axis rays
+    Ray stage_axis_pos_x = { stage_origin, angle + 0 };
+    Ray stage_axis_pos_y = { stage_origin, angle + M_PI_2 };
 
+    Vec2 negX_intersect, posX_intersect, negY_intersect, posY_intersect;
+    bool x_axis_visible = getRayRectIntersection(&negX_intersect, &posX_intersect, stage_rect, stage_axis_pos_x);
+    bool y_axis_visible = getRayRectIntersection(&negY_intersect, &posY_intersect, stage_rect, stage_axis_pos_y);
 
-    // Stage rect intersections (world coordinates)
-    double world_y0_rot = getAngle(world_tl, world_tr);
-    double world_x1_rot = getAngle(world_tr, world_br);
-    double world_y1_rot = getAngle(world_br, world_bl);
-    double world_x0_rot = getAngle(world_bl, world_tl);
+    Vec2 negX_intersect_world = camera.toWorld(negX_intersect);
+    Vec2 posX_intersect_world = camera.toWorld(posX_intersect);
+    Vec2 negY_intersect_world = camera.toWorld(negY_intersect);
+    Vec2 posY_intersect_world = camera.toWorld(posY_intersect);
 
-    //Vec2 world_ix0, world_iy0, world_ix1, world_iy1;
-    bool bWorldIntersectX0 = true;
-    bool bWorldIntersectY0 = true;
-    bool bWorldIntersectX1 = true;
-    bool bWorldIntersectY1 = true;
-
-    Ray world_top_ray = { world_tl, world_tr };
-    Ray world_right_ray = { world_tr, world_br };
-    Ray world_bottom_ray = { world_br, world_bl };
-    Ray world_left_ray = { world_bl, world_tl };
-
-    Ray world_axis_neg_x = { Vec2(0, 0), M_PI };
-        
-    Vec2 left_axis_left_intersect;
-    Vec2 left_axis_top_intersect;
-    Vec2 left_axis_right_intersect;
-    Vec2 left_axis_bottom_intersect;
-    lineEqIntersect(&left_axis_left_intersect, world_left_ray, world_axis_neg_x, true);
-    lineEqIntersect(&left_axis_top_intersect, world_bl.x, world_bl.y, world_bl.angleTo(world_tl), 0, 0, M_PI, true);
-
-    //getRayRectIntersection(&world_ix0,
-    //    world_bl, world_x0_rot, // Left edge
-    //    0, 0, M_PI, true); // Left pointing axis
-
-
-    // Stage rect intersections (stage coordinates)
-    Vec2 stage_ix0, stage_iy0, stage_ix1, stage_iy1;
-    bWorldIntersectX0 = getRayRectIntersection(&stage_ix0, stage_rect, stage_origin, angle - M_PI);
-    bWorldIntersectY0 = getRayRectIntersection(&stage_iy0, stage_rect, stage_origin, angle - M_PI_2);
-    bWorldIntersectX1 = getRayRectIntersection(&stage_ix1, stage_rect, stage_origin, angle);
-    bWorldIntersectY1 = getRayRectIntersection(&stage_iy1, stage_rect, stage_origin, angle + M_PI_2);
-
-    Vec2 world_ix0 = camera.toWorld(stage_ix0);
-    Vec2 world_iy0 = camera.toWorld(stage_iy0);
-    Vec2 world_ix1 = camera.toWorld(stage_ix1);
-    Vec2 world_iy1 = camera.toWorld(stage_iy1);
-
-    //bool bWorldIntersectY0 = false;
-    //bool bWorldIntersectX1 = true;
-    //bool bWorldIntersectY1 = false;
-
-    if (bWorldIntersectX0)
-    {
-        beginPath();
-        circle(world_ix0, 5);
-        fill();
-    }
-
-    if (bWorldIntersectX1)
-    {
-        beginPath();
-        circle(world_ix1, 5);
-        fill();
-    }
-
-    camera.setTransformFilters(false, false, false);
+    camera.setTransformFilters(true, false, false);
     setStrokeStyle(255, 255, 255, 100);
     setFillStyle(255, 255, 255, 100);
     setLineWidth(1);
 
     // Draw main axis
     beginPath();
-    moveTo(floor(stage_ix0.x) + 0.5, floor(stage_ix0.y) + 0.5);
-    lineTo(floor(stage_ix1.x) + 0.5, floor(stage_ix1.y) + 0.5);
-    moveTo(floor(stage_iy0.x) + 0.5, floor(stage_iy0.y) + 0.5);
-    lineTo(floor(stage_iy1.x) + 0.5, floor(stage_iy1.y) + 0.5);
+    moveTo(negX_intersect_world.x, negX_intersect_world.y);
+    lineTo(posX_intersect_world.x, posX_intersect_world.y);
+    moveTo(negY_intersect_world.x, negY_intersect_world.y);
+    lineTo(posY_intersect_world.x, posY_intersect_world.y);
     stroke();
 
     // Draw axis ticks
     camera.setTransformFilters(false, false, false);
-    double world_step_x = roundAxisTickStep(100.0 / camera.zoom_x);
-    double world_step_y = roundAxisTickStep(100.0 / camera.zoom_y);
+    double step_wx = roundAxisTickStep(100.0 / camera.zoom_x);
+    double step_wy = roundAxisTickStep(100.0 / camera.zoom_y);
 
-    //Vec2 x_off = camera.toWorldOffset(0, 10); // Stage offset
     Vec2 x_perp_off = camera.toStageOffset(0, 6 * world_zoom);
     Vec2 x_perp_norm = camera.toStageOffset(0, 1).normalized();
 
     Vec2 y_perp_off = camera.toStageOffset(6 * world_zoom, 0);
     Vec2 y_perp_norm = camera.toStageOffset(1, 0).normalized();
-
-    //if (sin(angle) > 0)
-    //    setTextAlign(TextAlign::ALIGN_RIGHT);
-    //else
-    //    setTextAlign(TextAlign::ALIGN_LEFT);
     
     setTextAlign(TextAlign::ALIGN_CENTER);
     setTextBaseline(TextBaseline::BASELINE_MIDDLE);
 
-    beginPath();
-    
     QNanoFont font(QNanoFont::FontId::DEFAULT_FONT_NORMAL);
     font.setPixelSize(12);
     setFont(font);
     //painter->setPixelAlignText(QNanoPainter::PixelAlign::PIXEL_ALIGN_HALF);
 
-    double spacing = 5;
+    double spacing = 8;
 
-    double init_world_x = 0;
+    // Get world bounds, regardless of rotation
+    double world_minX = std::min({ world_tl.x, world_tr.x, world_br.x, world_bl.x });
+    double world_maxX = std::max({ world_tl.x, world_tr.x, world_br.x, world_bl.x });
+    double world_minY = std::min({ world_tl.y, world_tr.y, world_br.y, world_bl.y });
+    double world_maxY = std::max({ world_tl.y, world_tr.y, world_br.y, world_bl.y });
 
-    for (double world_x = world_step_x; world_x < stage_ix1.x; world_x += world_step_x)
+    // Draw gridlines
     {
-        Vec2 stage_pos = camera.toStage(world_x, 0);
-        QString txt = QString("%1").arg(world_x);
+        setStrokeStyle(255, 255, 255, 10);
+        beginPath();
+
+        Vec2 p1, p2;
+        for (double wx = ceilAxisValue(world_minX, step_wx); wx < world_maxX; wx += step_wx)
+        {
+            if (abs(wx) < 1e-9) continue;
+            Ray line_ray(camera.toStage(wx, 0), angle + M_PI_2);
+            if (!getRayRectIntersection(&p1, &p2, stage_rect, line_ray)) break;
+
+            moveTo(p1.floored(0.5));
+            lineTo(p2.floored(0.5));
+        }
+        for (double wy = ceilAxisValue(world_minY, step_wy); wy < world_maxY; wy += step_wy)
+        {
+            if (abs(wy) < 1e-9) continue;
+            Ray line_ray(camera.toStage(0, wy), angle);
+            if (!getRayRectIntersection(&p1, &p2, stage_rect, line_ray)) break;
+
+            moveTo(p1.floored(0.5));
+            lineTo(p2.floored(0.5));
+        }
+
+        stroke();
+    }
+
+    setStrokeStyle(255, 255, 255, 120);
+    beginPath();
+
+    // Draw x-axis labels
+    for (double wx = ceilAxisValue(world_minX, step_wx); wx < world_maxX; wx += step_wx)
+    {
+        if (abs(wx) < 1e-9) continue;
+
+        Vec2 stage_pos = camera.toStage(wx, 0);
+        QString txt = QString("%1").arg(wx);
         Vec2 txt_size = measureText(txt);
 
         double txt_dist = (abs(cos(angle)) * txt_size.y + abs(sin(angle)) * txt_size.x) * 0.5 + spacing;
 
         Vec2 tick_anchor = stage_pos + x_perp_off + (x_perp_norm * txt_dist);
 
-        moveTo((stage_pos - x_perp_off).floored(0.5));
-        lineTo((stage_pos + x_perp_off).floored(0.5));
+        moveTo(stage_pos - x_perp_off);
+        lineTo(stage_pos + x_perp_off);
         fillText(txt, tick_anchor);
-
-        //if (!stage_rect.hitTest(stage_pos.x, stage_pos.y))
-        //    break;
     }
-    
-    for (double world_x = -world_step_x; world_x > world_ix0.x; world_x -= world_step_x)
+
+    // Draw y-axis labels
+    for (double wy = ceilAxisValue(world_minY, step_wy); wy < world_maxY; wy += step_wy)
     {
-        Vec2 stage_pos = camera.toStage(world_x, 0);
-        QString txt = QString("%1").arg(world_x);
+        if (abs(wy) < 1e-9) continue;
+
+        Vec2 stage_pos = camera.toStage(0, wy);
+        QString txt = QString("%1").arg(wy);
         Vec2 txt_size = measureText(txt);
+
         double txt_dist = (abs(cos(angle)) * txt_size.y + abs(sin(angle)) * txt_size.x) * 0.5 + spacing;
 
-        Vec2 tick_anchor = stage_pos + x_perp_off + (x_perp_norm * txt_dist);
-
-        moveTo((stage_pos - x_perp_off).floored(0.5));
-        lineTo((stage_pos + x_perp_off).floored(0.5));
-        fillText(txt, tick_anchor);
-
-        //if (!stage_rect.hitTest(stage_pos.x, stage_pos.y))
-        //    break;
-    }
-    
-
-    for (double world_y = world_step_y; ; world_y += world_step_y)
-    {
-        Vec2 stage_pos = camera.toStage(0, world_y);
-        QString txt = QString("%1").arg(world_y);
-        Vec2 txt_size = measureText(txt);
-        double txt_dist = (abs(cos(angle)) * txt_size.x + abs(sin(angle)) * txt_size.y) * 0.5 + spacing;
-
         Vec2 tick_anchor = stage_pos + y_perp_off + (y_perp_norm * txt_dist);
-
-        moveTo((stage_pos - y_perp_off).floored(0.5));
-        lineTo((stage_pos + y_perp_off).floored(0.5));
+        
+        moveTo(stage_pos - y_perp_off);
+        lineTo(stage_pos + y_perp_off);
         fillText(txt, tick_anchor);
-
-        if (!stage_rect.hitTest(stage_pos.x, stage_pos.y))
-            break;
-    }
-
-    for (double world_y = -world_step_y; ; world_y -= world_step_y)
-    {
-        Vec2 stage_pos = camera.toStage(0, world_y);
-        QString txt = QString("%1").arg(world_y);
-        Vec2 txt_size = measureText(txt);
-        double txt_dist = (abs(cos(angle)) * txt_size.x + abs(sin(angle)) * txt_size.y) * 0.5 + spacing;
-
-        Vec2 tick_anchor = stage_pos + y_perp_off + (y_perp_norm * txt_dist);
-
-        moveTo((stage_pos - y_perp_off).floored(0.5));
-        lineTo((stage_pos + y_perp_off).floored(0.5));
-        fillText(txt, tick_anchor);
-
-        if (!stage_rect.hitTest(stage_pos.x, stage_pos.y))
-            break;
     }
 
     stroke();
-    painter->restore();*/
+    painter->restore();
 }

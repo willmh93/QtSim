@@ -210,29 +210,29 @@ public:
     FRect toStageRect(const Vec2& pt1, const Vec2& pt2);
 
 
-    void panBegin(int x, int y)
+    void panBegin(int _x, int _y)
     {
-        pan_down_x = x;
-        pan_down_y = y;
+        pan_down_x = _x;
+        pan_down_y = _y;
         pan_beg_x = pan_x;
         pan_beg_y = pan_y;
         panning = true;
     }
 
-    void panProcess(int x, int y)
+    void panProcess(int _x, int _y)
     {
         if (panning)
         {
-            int dx = x - pan_down_x;
-            int dy = y - pan_down_y;
+            int dx = _x - pan_down_x;
+            int dy = _y - pan_down_y;
             pan_x = pan_beg_x + (double)dx * (pan_mult / zoom_x);
             pan_y = pan_beg_y + (double)dy * (pan_mult / zoom_y);
         }
     }
 
-    void panEnd(int x, int y)
+    void panEnd(int _x, int _y)
     {
-        panProcess(x, y);
+        panProcess(_x, _y);
         panning = false;
     }
 };

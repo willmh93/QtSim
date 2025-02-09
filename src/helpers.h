@@ -209,7 +209,7 @@ public:
 
         // Insert each point into the triangulation
         //for (auto* currentPt : points)
-        int len = points.size();
+        int len = (int)points.size();
         for (int i=0; i< len; i++)
         {
             VecT* currentPt = points[i];
@@ -329,18 +329,9 @@ inline float atan2_approximation2(double y, double x);
 
 double distToPoint(double cx, double cy, double _x, double _y);
 
-struct _RayRectLine
-{
-    double x, y;
-    double angle_degrees;
-};
-
 Vec2 rotateVec(double cx, double cy, double angle, double x, double y);
 
+bool lineEqIntersect(Vec2 *targ, const Ray& ray1, const Ray& ray2, bool bidirectional=false);
+bool getRayRectIntersection(Vec2* back_intersect, Vec2* foward_intersect, const FRect& r, const Ray& ray);
 
-bool lineEqIntersect(
-    Vec2 *targ,
-    const Vec2& ray_cen,
-    bool bidirectional=false);
-
-bool lineEqIntersect(Vec2* targ, Ray ray1, Ray ray2, bool bidirectional);
+//bool getRayRectIntersection(Vec2* targ, const FRect& r, const Ray& ray);

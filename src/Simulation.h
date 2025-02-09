@@ -422,7 +422,6 @@ public:
         else
         {
             double s = 1.0 / _avgZoom();
-
             painter->save();
 
             painter->translate(pt.x, pt.y);
@@ -432,8 +431,6 @@ public:
                 painter->rotate(-camera.rotation);
 
             painter->fillText(txt, 0, 0);
-
-            //painter->fillText(txt, pt.x / s, pt.y / s);
             painter->restore();
         }
     }

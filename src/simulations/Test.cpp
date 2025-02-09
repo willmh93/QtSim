@@ -120,6 +120,9 @@ void Test_Instance::draw(DrawingContext* ctx)
     Vec2 p = Vec2(100, 100) + Offset(50,50);
     ctx->circle(p, 2);
     ctx->fill();
+
+    ctx->setTextAlign(TextAlign::ALIGN_LEFT);
+    ctx->setTextBaseline(TextBaseline::BASELINE_TOP);
     ctx->fillText("In-place with pixel offset", p);
 
     ctx->setStrokeStyle(0, 255, 0);

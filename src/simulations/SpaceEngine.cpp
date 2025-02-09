@@ -161,7 +161,7 @@ void SpaceEngineInstance::process(DrawingContext* ctx)
 
     double world_pixel_radius = bmp_scale / 2;
 
-    int len = particles.size();
+    int len = (int)particles.size();
     for (int y = 0; y < density_bmp_size; y++)
     {
         vector<double> density_row;
