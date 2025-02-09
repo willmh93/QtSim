@@ -1,8 +1,9 @@
 #pragma once
 #include <QString>
-
+#include <qmath.h>
 #include <unordered_set>
 #include "types.h"
+
 
 double min(double a, double b);
 double max(double a, double b);
@@ -326,3 +327,20 @@ QString normalizeSeconds(double seconds);
 // |error| < 0.005
 inline float atan2_approximation2(double y, double x);
 
+double distToPoint(double cx, double cy, double _x, double _y);
+
+struct _RayRectLine
+{
+    double x, y;
+    double angle_degrees;
+};
+
+Vec2 rotateVec(double cx, double cy, double angle, double x, double y);
+
+
+bool lineEqIntersect(
+    Vec2 *targ,
+    const Vec2& ray_cen,
+    bool bidirectional=false);
+
+bool lineEqIntersect(Vec2* targ, Ray ray1, Ray ray2, bool bidirectional);

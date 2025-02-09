@@ -64,6 +64,9 @@ def generate_simulation():
     header_template = read_template("sim_header.h")
     cpp_template = read_template("sim_source.cpp")
 
+    print(f"Generated: {header_template}")
+    
+
     # Fill templates with values
     header_content = header_template.format(
         HEADER_GUARD=header_guard,

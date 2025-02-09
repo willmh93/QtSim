@@ -131,13 +131,13 @@ void BigBangInstance::process(DrawingContext *ctx)
         focus_rect = lerpRect(focus_rect, FRect(x1, y1, x2, y2), 0.1);
     }
 
-    ctx->main_cam.cameraToWorld(focus_rect);*/
+    ctx->camera.cameraToWorld(focus_rect);*/
 }
 
 void BigBangInstance::draw(DrawingContext* ctx)
 {
     SpaceEngineInstance::draw(ctx);
-    FRect r = ctx->main_cam.toStageRect(-world_size / 2, -world_size / 2, world_size / 2, world_size / 2);
+    FRect r = ctx->camera.toStageRect(-world_size / 2, -world_size / 2, world_size / 2, world_size / 2);
 
     ctx->setStrokeStyle(255,255,255);
     ctx->strokeRect(r);

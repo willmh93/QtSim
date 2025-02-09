@@ -35,6 +35,79 @@ struct Vec2
     {
         return x == other.x && y == other.y;
     }
+
+    Vec2 operator +(const Vec2& rhs) const
+    {
+        return { x + rhs.x, y + rhs.y };
+    }
+
+    Vec2 operator -(const Vec2& rhs) const
+    {
+        return { x - rhs.x, y - rhs.y };
+    }
+
+    Vec2 operator *(const Vec2& rhs) const
+    {
+        return { x * rhs.x, y * rhs.y };
+    }
+
+    Vec2 operator /(const Vec2& rhs) const
+    {
+        return { x / rhs.x, y / rhs.y };
+    }
+
+    Vec2 operator *(double v) const
+    {
+        return { x * v, y * v };
+    }
+
+    Vec2 operator /(double v) const
+    {
+        return { x / v, y / v };
+    }
+
+    double angle() const
+    {
+        return atan2(y, x);
+    }
+
+    double angleTo(const Vec2& b) const
+    {
+        return atan2(b.y - y, b.x - x);
+    }
+
+    Vec2 normalized() const
+    {
+        double mag = sqrt(x * x + y * y);
+        return { x / mag, y / mag };
+    }
+
+    Vec2 floored(double offset = 0)
+    {
+        return {
+            floor(x) + offset,
+            floor(y) + offset
+        };
+    }
+
+    Vec2 rounded(double offset=0)
+    {
+        return {
+            round(x) + offset,
+            round(y) + offset
+        };
+    }
+};
+
+struct Ray : public Vec2
+{
+    double angle;
+    Ray(double x, double y, double angle) : Vec2(x, y), angle(angle)
+    {}
+    Ray(const Vec2 &p, double angle) : Vec2(p.x, p.y), angle(angle)
+    {}
+    Ray(const Vec2& a, const Vec2 &b) : Vec2(a.x, a.y), angle(a.angleTo(b))
+    {}
 };
 
 // Triangle structure
@@ -285,6 +358,11 @@ struct FRect
         set(_x1, _y1, _x2, _y2);
     }
 
+    FRect(const Vec2 &a, const Vec2 &b)
+    {
+        set(a, b);
+    }
+
     void set(double _x1, double _y1, double _x2, double _y2)
     {
         x1 = _x1;
@@ -293,9 +371,22 @@ struct FRect
         y2 = _y2;
     }
 
+    void set(const Vec2& a, const Vec2& b)
+    {
+        x1 = a.y;
+        y1 = a.x;
+        x2 = b.x;
+        y2 = b.y;
+    }
+
     operator QRectF()
     {
         return QRectF(x1, y1, x2 - x1, y2 - y1);
+    }
+
+    bool hitTest(double x, double y)
+    {
+        return (x >= x1 && y >= y1 && x <= x2 && y <= y2);
     }
 };
 

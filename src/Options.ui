@@ -574,7 +574,8 @@ QLineEdit, QTextEdit {
            <bool>false</bool>
           </property>
           <property name="styleSheet">
-           <string notr="true">QScrollBar { all: unset; }</string>
+           <string notr="true">QScrollBar { all: unset; }
+background: transparent;</string>
           </property>
           <property name="widgetResizable">
            <bool>true</bool>
@@ -607,7 +608,8 @@ QLineEdit, QTextEdit {
             </size>
            </property>
            <property name="styleSheet">
-            <string notr="true">QScrollBar { background: none; border: none; }</string>
+            <string notr="true">QScrollBar { background: none; border: none; }
+QWidget { background: transparent; }</string>
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_8">
             <property name="sizeConstraint">

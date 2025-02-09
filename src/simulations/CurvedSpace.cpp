@@ -50,8 +50,8 @@ void CurvedSpaceInstance::destroy()
 void CurvedSpaceInstance::process(DrawingContext* ctx)
 {
     //instances[ctx.panel_index].process(ctx);
-    //cam.setCamera(main_cam);
-    //active_context->main_cam.x += 1.0;
+    //cam.setCamera(camera);
+    //active_context->camera.x += 1.0;
     camera->rotation += (gravity / 180.0 * M_PI);
 }
 

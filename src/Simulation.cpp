@@ -271,8 +271,8 @@ Layout& SimulationBase::setLayout(int _panels_x, int _panels_y)
 
             DrawingContext& context = panels[i]->ctx;
 
-            context.main_cam.viewport_w = panel_w - 2;
-            context.main_cam.viewport_h = panel_h - 2;
+            context.camera.viewport_w = panel_w - 2;
+            context.camera.viewport_h = panel_h - 2;
             context.origin_ratio_x = 0.5;
             context.origin_ratio_y = 0.5;
         }
@@ -356,8 +356,8 @@ void SimulationBase::_process()
         panel->y = panel->panel_y * panel_height;
         panel->width = panel_width - 1;
         panel->height = panel_height - 1;
-        panel->ctx.main_cam.viewport_w = panel_width - 1;
-        panel->ctx.main_cam.viewport_h = panel_height - 1;
+        panel->ctx.camera.viewport_w = panel_width - 1;
+        panel->ctx.camera.viewport_h = panel_height - 1;
     }
 
     if (!encoder_busy)
@@ -391,7 +391,19 @@ void SimulationBase::_draw(QNanoPainter* p)
     for (Panel* panel : panels)
     {
         p->setClipRect(panel->x, panel->y, panel->width, panel->height);
+        p->save();
+
+        // Move to panel
+        p->translate(
+            panel->x,
+            panel->y
+        );
+
+        panel->ctx.camera.worldTransform();
+        
         panel->ctx.drawPanel(p, panel->width, panel->height);
+
+        p->restore();
         p->resetClipping();
     }
 
@@ -498,8 +510,37 @@ int SimulationBase::height()
 void DrawingContext::drawPanel(QNanoPainter* p, double vw, double vh)
 {
     painter = p;
+    setTextBaseline(TextBaseline::BASELINE_TOP);
+    
+    default_viewport_transform = painter->currentTransform();
 
-    p->save();
+    // Move origin relative to viewport (when resizing window, this doesn't move)
+    double viewport_cx = (panel->width / 2.0);
+    double viewport_cy = (panel->height / 2.0);
+    double origin_ox = (panel->width * (origin_ratio_x - 0.5) * camera.zoom_x);
+    double origin_oy = (panel->height * (origin_ratio_y - 0.5) * camera.zoom_y);
+
+    //painter->transform
+
+    // Move to panel
+    painter->translate(
+        viewport_cx + origin_ox, 
+        viewport_cy + origin_oy
+    );
+
+    /// Do transform
+    painter->translate(
+        (camera.pan_x * camera.zoom_x),
+        (camera.pan_y * camera.zoom_y)
+    );
+
+    painter->rotate(camera.rotation);
+    painter->translate(
+        -camera.x * camera.zoom_x,
+        -camera.y * camera.zoom_y
+    );
+
+    painter->scale(camera.zoom_x, camera.zoom_y);
 
     // Move origin relative to viewport
     //p->translate(
@@ -508,27 +549,32 @@ void DrawingContext::drawPanel(QNanoPainter* p, double vw, double vh)
     //);
 
     // Scale by default (use built-in transformer)
-    scaleGraphics(true, true);
+    //scaleGraphics(true, true);
 
-    //if (!main_cam.scale_graphics)
+    //if (!camera.scale_graphics)
     //    save();
 
     panel->sim->draw(this);
 
-    scaleGraphics(false, true);
+    //scaleGraphics(false, true);
+    //
+    //while (scale_stack.size())
+    //    restore();
 
-    while (scale_stack.size())
-        restore();
-
-    p->restore();
+    
 }
 
-inline void DrawingContext::scaleGraphics(bool b, bool force)
+/*inline void DrawingContext::scaleGraphics(bool b, bool force)
 {
-    if ((force && b) || (!main_cam.scale_graphics && b))
-    {
-        // If we WEREN'T scaling, but now we ARE
-        painter->save();
+    camera.scale_graphics = b;
+    //return;
+    //
+    //
+    //
+    //if ((force && b) || (!camera.scale_graphics && b))
+    //{
+    //    // If we WEREN'T scaling, but now we ARE
+    //    painter->save();
 
         /// Transform world to stage
 
@@ -538,31 +584,274 @@ inline void DrawingContext::scaleGraphics(bool b, bool force)
         // Move origin relative to viewport (when resizing window, this doesn't move)
         double viewport_cx = (panel->width / 2.0);
         double viewport_cy = (panel->height / 2.0);
+        double origin_ox   = (panel->width * (origin_ratio_x - 0.5) * camera.zoom_x);
+        double origin_oy   = (panel->height * (origin_ratio_y - 0.5) * camera.zoom_y);
 
-        double origin_ox = (panel->width * (origin_ratio_x - 0.5) * main_cam.zoom_x);
-        double origin_oy = (panel->height * (origin_ratio_y - 0.5) * main_cam.zoom_y);
+        //painter->transform
 
+        // Move to panel
         painter->translate(panel->x + viewport_cx, panel->y + viewport_cy);
 
+        /// Do transform
         painter->translate(
-            (main_cam.pan_x * main_cam.zoom_x) + origin_ox,
-            (main_cam.pan_y * main_cam.zoom_y) + origin_oy
+            (camera.pan_x * camera.zoom_x) + origin_ox,
+            (camera.pan_y * camera.zoom_y) + origin_oy
         );
 
-        painter->rotate(main_cam.rotation);
+        painter->rotate(camera.rotation);
         painter->translate(
-            -main_cam.x * main_cam.zoom_x,
-            -main_cam.y * main_cam.zoom_y
+            -camera.x * camera.zoom_x,
+            -camera.y * camera.zoom_y
         );
 
-        painter->scale(main_cam.zoom_x, main_cam.zoom_y);
+        painter->scale(camera.zoom_x, camera.zoom_y);
 
         //painter->translate(-width / 2, -height / 2);
-    }
-    else if ((force && !b) || (!b && main_cam.scale_graphics))
+    //}
+    //else if ((force && !b) || (!b && camera.scale_graphics))
+    //{
+    //    // If we WERE scaling, but now we're NOT
+    //    painter->restore();
+    //}
+    //camera.scale_graphics = b;
+}*/
+
+double roundAxisTickStep(double step)
+{
+    if (step <= 0)
+        return 0; // or handle error
+
+    // Determine the order of magnitude of 'step'
+    double exponent = floor(log10(step));
+    double factor = pow(10.0, exponent);
+
+    // Normalize step to the range [1, 10)
+    double base = step / factor;
+    double niceMultiplier;
+
+    // Choose the largest candidate from {1, 2, 2.5, 5, 10} that is <= base.
+    if (base >= 10.0)
+        niceMultiplier = 10.0;
+    else if (base >= 5.0)
+        niceMultiplier = 5.0;
+    else if (base >= 2.5)
+        niceMultiplier = 2.5;
+    else if (base >= 2.0)
+        niceMultiplier = 2.0;
+    else
+        niceMultiplier = 1.0;
+
+    return niceMultiplier * factor;
+}
+
+double getAngle(Vec2 a, Vec2 b)
+{
+    return (b - a).angle();
+}
+
+void DrawingContext::drawGraphGrid()
+{
+    /*painter->save();
+
+    // Fist, draw axis
+    Vec2 stage_origin = camera.toStage(0, 0);// camera.toWorld(0, 0);
+
+    // World quad
+    Vec2 world_tl = camera.toWorld(0, 0);
+    Vec2 world_tr = camera.toWorld(panel->width, 0);
+    Vec2 world_br = camera.toWorld(panel->width, panel->height);
+    Vec2 world_bl = camera.toWorld(0, panel->height);
+
+    double world_w = world_br.x - world_tl.x;
+    double world_h = world_br.y - world_tl.y;
+
+    double stage_size = sqrt(panel->width * panel->width + panel->height * panel->height);
+    double world_size = sqrt(world_w * world_w + world_h * world_h);
+    double world_zoom = (world_size / stage_size);
+
+    double angle = camera.rotation;
+
+    FRect stage_rect = { 0, 0, panel->width, panel->height };
+    //FRect world_rect = camera.toWorldRect(stage_rect);
+
+   
+
+
+    // Stage rect intersections (world coordinates)
+    double world_y0_rot = getAngle(world_tl, world_tr);
+    double world_x1_rot = getAngle(world_tr, world_br);
+    double world_y1_rot = getAngle(world_br, world_bl);
+    double world_x0_rot = getAngle(world_bl, world_tl);
+
+    //Vec2 world_ix0, world_iy0, world_ix1, world_iy1;
+    bool bWorldIntersectX0 = true;
+    bool bWorldIntersectY0 = true;
+    bool bWorldIntersectX1 = true;
+    bool bWorldIntersectY1 = true;
+
+    Ray world_top_ray = { world_tl, world_tr };
+    Ray world_right_ray = { world_tr, world_br };
+    Ray world_bottom_ray = { world_br, world_bl };
+    Ray world_left_ray = { world_bl, world_tl };
+
+    Ray world_axis_neg_x = { Vec2(0, 0), M_PI };
+        
+    Vec2 left_axis_left_intersect;
+    Vec2 left_axis_top_intersect;
+    Vec2 left_axis_right_intersect;
+    Vec2 left_axis_bottom_intersect;
+    lineEqIntersect(&left_axis_left_intersect, world_left_ray, world_axis_neg_x, true);
+    lineEqIntersect(&left_axis_top_intersect, world_bl.x, world_bl.y, world_bl.angleTo(world_tl), 0, 0, M_PI, true);
+
+    //getRayRectIntersection(&world_ix0,
+    //    world_bl, world_x0_rot, // Left edge
+    //    0, 0, M_PI, true); // Left pointing axis
+
+
+    // Stage rect intersections (stage coordinates)
+    Vec2 stage_ix0, stage_iy0, stage_ix1, stage_iy1;
+    bWorldIntersectX0 = getRayRectIntersection(&stage_ix0, stage_rect, stage_origin, angle - M_PI);
+    bWorldIntersectY0 = getRayRectIntersection(&stage_iy0, stage_rect, stage_origin, angle - M_PI_2);
+    bWorldIntersectX1 = getRayRectIntersection(&stage_ix1, stage_rect, stage_origin, angle);
+    bWorldIntersectY1 = getRayRectIntersection(&stage_iy1, stage_rect, stage_origin, angle + M_PI_2);
+
+    Vec2 world_ix0 = camera.toWorld(stage_ix0);
+    Vec2 world_iy0 = camera.toWorld(stage_iy0);
+    Vec2 world_ix1 = camera.toWorld(stage_ix1);
+    Vec2 world_iy1 = camera.toWorld(stage_iy1);
+
+    //bool bWorldIntersectY0 = false;
+    //bool bWorldIntersectX1 = true;
+    //bool bWorldIntersectY1 = false;
+
+    if (bWorldIntersectX0)
     {
-        // If we WERE scaling, but now we're NOT
-        painter->restore();
+        beginPath();
+        circle(world_ix0, 5);
+        fill();
     }
-    main_cam.scale_graphics = b;
+
+    if (bWorldIntersectX1)
+    {
+        beginPath();
+        circle(world_ix1, 5);
+        fill();
+    }
+
+    camera.setTransformFilters(false, false, false);
+    setStrokeStyle(255, 255, 255, 100);
+    setFillStyle(255, 255, 255, 100);
+    setLineWidth(1);
+
+    // Draw main axis
+    beginPath();
+    moveTo(floor(stage_ix0.x) + 0.5, floor(stage_ix0.y) + 0.5);
+    lineTo(floor(stage_ix1.x) + 0.5, floor(stage_ix1.y) + 0.5);
+    moveTo(floor(stage_iy0.x) + 0.5, floor(stage_iy0.y) + 0.5);
+    lineTo(floor(stage_iy1.x) + 0.5, floor(stage_iy1.y) + 0.5);
+    stroke();
+
+    // Draw axis ticks
+    camera.setTransformFilters(false, false, false);
+    double world_step_x = roundAxisTickStep(100.0 / camera.zoom_x);
+    double world_step_y = roundAxisTickStep(100.0 / camera.zoom_y);
+
+    //Vec2 x_off = camera.toWorldOffset(0, 10); // Stage offset
+    Vec2 x_perp_off = camera.toStageOffset(0, 6 * world_zoom);
+    Vec2 x_perp_norm = camera.toStageOffset(0, 1).normalized();
+
+    Vec2 y_perp_off = camera.toStageOffset(6 * world_zoom, 0);
+    Vec2 y_perp_norm = camera.toStageOffset(1, 0).normalized();
+
+    //if (sin(angle) > 0)
+    //    setTextAlign(TextAlign::ALIGN_RIGHT);
+    //else
+    //    setTextAlign(TextAlign::ALIGN_LEFT);
+    
+    setTextAlign(TextAlign::ALIGN_CENTER);
+    setTextBaseline(TextBaseline::BASELINE_MIDDLE);
+
+    beginPath();
+    
+    QNanoFont font(QNanoFont::FontId::DEFAULT_FONT_NORMAL);
+    font.setPixelSize(12);
+    setFont(font);
+    //painter->setPixelAlignText(QNanoPainter::PixelAlign::PIXEL_ALIGN_HALF);
+
+    double spacing = 5;
+
+    double init_world_x = 0;
+
+    for (double world_x = world_step_x; world_x < stage_ix1.x; world_x += world_step_x)
+    {
+        Vec2 stage_pos = camera.toStage(world_x, 0);
+        QString txt = QString("%1").arg(world_x);
+        Vec2 txt_size = measureText(txt);
+
+        double txt_dist = (abs(cos(angle)) * txt_size.y + abs(sin(angle)) * txt_size.x) * 0.5 + spacing;
+
+        Vec2 tick_anchor = stage_pos + x_perp_off + (x_perp_norm * txt_dist);
+
+        moveTo((stage_pos - x_perp_off).floored(0.5));
+        lineTo((stage_pos + x_perp_off).floored(0.5));
+        fillText(txt, tick_anchor);
+
+        //if (!stage_rect.hitTest(stage_pos.x, stage_pos.y))
+        //    break;
+    }
+    
+    for (double world_x = -world_step_x; world_x > world_ix0.x; world_x -= world_step_x)
+    {
+        Vec2 stage_pos = camera.toStage(world_x, 0);
+        QString txt = QString("%1").arg(world_x);
+        Vec2 txt_size = measureText(txt);
+        double txt_dist = (abs(cos(angle)) * txt_size.y + abs(sin(angle)) * txt_size.x) * 0.5 + spacing;
+
+        Vec2 tick_anchor = stage_pos + x_perp_off + (x_perp_norm * txt_dist);
+
+        moveTo((stage_pos - x_perp_off).floored(0.5));
+        lineTo((stage_pos + x_perp_off).floored(0.5));
+        fillText(txt, tick_anchor);
+
+        //if (!stage_rect.hitTest(stage_pos.x, stage_pos.y))
+        //    break;
+    }
+    
+
+    for (double world_y = world_step_y; ; world_y += world_step_y)
+    {
+        Vec2 stage_pos = camera.toStage(0, world_y);
+        QString txt = QString("%1").arg(world_y);
+        Vec2 txt_size = measureText(txt);
+        double txt_dist = (abs(cos(angle)) * txt_size.x + abs(sin(angle)) * txt_size.y) * 0.5 + spacing;
+
+        Vec2 tick_anchor = stage_pos + y_perp_off + (y_perp_norm * txt_dist);
+
+        moveTo((stage_pos - y_perp_off).floored(0.5));
+        lineTo((stage_pos + y_perp_off).floored(0.5));
+        fillText(txt, tick_anchor);
+
+        if (!stage_rect.hitTest(stage_pos.x, stage_pos.y))
+            break;
+    }
+
+    for (double world_y = -world_step_y; ; world_y -= world_step_y)
+    {
+        Vec2 stage_pos = camera.toStage(0, world_y);
+        QString txt = QString("%1").arg(world_y);
+        Vec2 txt_size = measureText(txt);
+        double txt_dist = (abs(cos(angle)) * txt_size.x + abs(sin(angle)) * txt_size.y) * 0.5 + spacing;
+
+        Vec2 tick_anchor = stage_pos + y_perp_off + (y_perp_norm * txt_dist);
+
+        moveTo((stage_pos - y_perp_off).floored(0.5));
+        lineTo((stage_pos + y_perp_off).floored(0.5));
+        fillText(txt, tick_anchor);
+
+        if (!stage_rect.hitTest(stage_pos.x, stage_pos.y))
+            break;
+    }
+
+    stroke();
+    painter->restore();*/
 }

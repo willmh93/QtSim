@@ -690,24 +690,24 @@ void SpaceEngineInstance::draw(DrawingContext *ctx)
         //ctx->moveTo(x0, y0);
         //ctx->lineTo(x1, y1);
         //ctx->circle(cam.toStage(n.x, n.y), n.r * cam.zoom_x);
-        ctx->circle(n.x, n.y, n.r/* * ctx->main_cam.zoom_x*/);
+        ctx->circle(n.x, n.y, n.r/* * ctx->camera.zoom_x*/);
         ctx->fill();
 
         
     }
 
     /*if (draw_gravity_grid)
-        gravity_grid_near.draw(ctx, ctx->main_cam, "#7f0000");
+        gravity_grid_near.draw(ctx, ctx->camera, "#7f0000");
     if (draw_collision_grid)
-    collision_grid.draw(ctx, ctx->main_cam, "#007f00");
+    collision_grid.draw(ctx, ctx->camera, "#007f00");
 
     ctx->beginPath();
     ctx->setLineWidth(10);
     ctx->setStrokeStyle({ 0,255,0,50 });
     forEachCellAndNeighbors(gravity_grid_near, [this, ctx](CellData& a, CellData& b)
     {
-        Vec2 pt1 = ctx->main_cam.toStage(a.cx, a.cy);
-        Vec2 pt2 = ctx->main_cam.toStage(b.cx, b.cy);
+        Vec2 pt1 = ctx->camera.toStage(a.cx, a.cy);
+        Vec2 pt2 = ctx->camera.toStage(b.cx, b.cy);
         Draw::arrow(ctx, pt1, pt2, { 0,255,0,50 });
     }, gravity_cell_near_grid_radius);
 

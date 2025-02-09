@@ -35,6 +35,9 @@ void FluidInstance::instanceAttributes()
 
 void FluidInstance::start()
 {
+    // Initialize instance
+    panel->setOriginViewportAnchor(Anchor::TOP_LEFT);
+
     particles.clear();
     for (int i = 0; i < particle_count; i++)
     {
@@ -97,12 +100,23 @@ void FluidInstance::draw(DrawingContext* ctx)
 
     // Fill particles
     ctx->setFillStyle(255, 255, 255);
+    int i = 0;
     for (Particle* n : particles)
     {
+        camera->worldTransform();
         ctx->beginPath();
         ctx->circle(n->x, n->y, 2);
         ctx->fill();
+
+        QString txt = QString("%1").arg(i);
+        camera->labelTransform();
+        ctx->save();
+        ctx->fillText(txt, Vec2(n->x, n->y) + Offset(10, 10));
+        ctx->restore();
+        i++;
     }
+
+    camera->worldTransform();
 
     // Draw links
     ctx->setLineWidth(1);
@@ -123,6 +137,9 @@ void FluidInstance::draw(DrawingContext* ctx)
     ctx->setTextAlign(QNanoPainter::TextAlign::ALIGN_LEFT);
     ctx->setTextBaseline(QNanoPainter::TextBaseline::BASELINE_TOP);
     ctx->setFillStyle("#ffffff");
+
+    camera->stageTransform();
+    ctx->fillText(QString("Particles: %1").arg(particles.size()), 5, ty);
 
     ty += row_h;
     //p->fillText(QString("Frame dt: %1").arg(frame_dt), 5, ty);

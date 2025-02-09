@@ -11,6 +11,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # sets default startup project in Visual Studio
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT QtSim)
+if (MSVC)
+    add_compile_options(/MP)
+endif()
 
 # packages
 find_package(QT NAMES Qt6 Qt5 REQUIRED)

@@ -1,4 +1,6 @@
 #include "World.h"
+#include "Simulation.h"
+
 #include <cmath>
 
 /*void Camera::setCamera(
@@ -88,93 +90,37 @@ void Camera::originToCenterViewport()
 
 Vec2 Camera::toWorld(const Vec2& pt)
 {
-    /*double cos_r = cos(rotation);
-    double sin_r = sin(rotation);
+    Camera* camera = this;
 
-    // Rotate
-    double x_new = (cos_r * pt.x - sin_r * pt.y);
-    double y_new = (sin_r * pt.x + cos_r * pt.y);
-
-    // Zoom
-    x_new *= zoom_x;
-    y_new *= zoom_y;
-
-    // Translate
-    x_new += viewport_w / 2 + (pan_x * zoom_x) - (x * zoom_x);
-    y_new += viewport_h / 2 + (pan_y * zoom_y) - (y * zoom_y);
-
-    return { x_new, y_new };*/
-
-    double cos_r = cos(rotation);
-    double sin_r = sin(rotation);
-
+    // World coordinate
     double px = pt.x;
     double py = pt.y;
 
-    /// Translations
+    double cos_r = cos(camera->rotation);
+    double sin_r = sin(camera->rotation);
 
-    // Point
-    px -= (x * zoom_x);
-    py -= (y * zoom_y);
+    double viewport_cx = (panel->width / 2.0);
+    double viewport_cy = (panel->height / 2.0);
 
-    // Pan
-    px += (pan_x * zoom_x);
-    py += (pan_y * zoom_y);
+    double origin_ox = (panel->width * (panel->ctx.origin_ratio_x - 0.5) * camera->zoom_x);
+    double origin_oy = (panel->height * (panel->ctx.origin_ratio_y - 0.5) * camera->zoom_y);
 
-    // Center viewport
-    px += (viewport_w / 2);
-    py += (viewport_h / 2);
+    px -= viewport_cx + origin_ox;
+    py -= viewport_cy + origin_oy;
 
-    // Zoom
-    px /= zoom_x;
-    py /= zoom_y;
-    
-    // Apply inverse rotation
-    double x_orig = px * cos_r - py * sin_r;
-    double y_orig = py * cos_r + px * sin_r;
+    px -= (camera->pan_x * camera->zoom_x);
+    py -= (camera->pan_y * camera->zoom_y);
 
-    return { x_orig, y_orig };
+    double world_x = (px * cos_r + py * sin_r);
+    double world_y = (py * cos_r - px * sin_r);
 
-    /// Untranslate
+    world_x -= -camera->x * camera->zoom_x;
+    world_y -= -camera->y * camera->zoom_y;
 
-    // Point
-    //px -= (x / zoom_x);
-    //py -= (y / zoom_y);
-    //
-    //// Unpan
-    //px -= (pan_x / zoom_x);
-    //py -= (pan_y / zoom_y);
+    world_x /= camera->zoom_x;
+    world_y /= camera->zoom_y;
 
-    //// Uncenter viewport
-    //px -= (viewport_w / 2);
-    //py -= (viewport_h / 2);
-
-    //// Unzoom
-    //px /= zoom_x;
-    //py /= zoom_y;
-
-    //// Unrotate
-    //double x_orig = px * cos_r - py * sin_r;
-    //double y_orig = py * cos_r + px * sin_r;
-
-    return { x_orig, y_orig };
-    /*// Precompute trigonometric values
-    double cos_r = cos(rotation);
-    double sin_r = sin(rotation);
-
-    // Compute translation offsets
-    double tx = viewport_w / 2 + (pan_x * zoom_x) - (x * zoom_x);
-    double ty = viewport_h / 2 + (pan_y * zoom_y) - (y * zoom_y);
-
-    // Reverse transformations
-    double x_unzoomed = (pt.x - tx) / zoom_x;
-    double y_unzoomed = (pt.y - ty) / zoom_y;
-
-    // Apply inverse rotation
-    double x_orig = cos_r * x_unzoomed + sin_r * y_unzoomed;
-    double y_orig = -sin_r * x_unzoomed + cos_r * y_unzoomed;
-
-    return { x_orig, y_orig };*/
+    return { world_x, world_y };
 }
 
 Vec2 Camera::toWorld(double x, double y)
@@ -182,35 +128,69 @@ Vec2 Camera::toWorld(double x, double y)
     return toWorld({ x, y });
 }
 
+FRect Camera::toWorldRect(const FRect& r)
+{
+    Vec2 tl = toWorld(r.x1, r.y1);
+    Vec2 br = toWorld(r.x2, r.y2);
+    return { tl.x, tl.y, br.x, br.y };
+}
+
 Vec2 Camera::toStage(const Vec2& pt)
 {
-    // Precompute trigonometric values
-    double cos_r = cos(rotation);
-    double sin_r = sin(rotation);
+    Camera* camera = this;
 
+    // World coordinate
     double px = pt.x;
     double py = pt.y;
 
+    double cos_r = cos(camera->rotation);
+    double sin_r = sin(camera->rotation);
 
-    // p->rotate(main_cam.rotation);
-    px = zoom_x * (cos_r * px - sin_r * py);
-    py = zoom_y * (sin_r * px + cos_r * py);
+    double viewport_cx = (panel->width / 2.0);
+    double viewport_cy = (panel->height / 2.0);
+    double origin_ox   = (panel->width * (panel->ctx.origin_ratio_x - 0.5) * camera->zoom_x);
+    double origin_oy   = (panel->height * (panel->ctx.origin_ratio_y - 0.5) * camera->zoom_y);
+
+    /// Do transform (same as scaleGraphics, but reverse order)
+
+    px *= camera->zoom_x;
+    py *= camera->zoom_y;
+
+    px += -camera->x * camera->zoom_x;
+    py += -camera->y * camera->zoom_y;
+
+    double ret_x = (px * cos_r - py * sin_r);
+    double ret_y = (py * cos_r + px * sin_r);
+
+    ret_x += (camera->pan_x * camera->zoom_x);
+    ret_y += (camera->pan_y * camera->zoom_y);
+
+    ret_x += /*panel->x +*/ viewport_cx + origin_ox;
+    ret_y += /*panel->y +*/ viewport_cy + origin_oy;
+
+    return { ret_x, ret_y };
+
+    //px
+
+    // p->rotate(camera.rotation);
+    /*px = camera->zoom_x * (cos_r * px - sin_r * py);
+    py = camera->zoom_y * (sin_r * px + cos_r * py);
     
-    // p->translate( (main_cam.pan_x * main_cam.zoom_x),
-    //               (main_cam.pan_y * main_cam.zoom_y) );
-    px += (pan_x * zoom_x);
-    py += (pan_y * zoom_y);
+    // p->translate( (camera.pan_x * camera.zoom_x),
+    //               (camera.pan_y * camera.zoom_y) );
+    px += (camera->pan_x * camera->zoom_x);
+    py += (camera->pan_y * camera->zoom_y);
 
-    // p->translate( -main_cam.x * main_cam.zoom_x,
-    //               -main_cam.y * main_cam.zoom_y);
-    px += (this->x * zoom_x);
-    py += (this->y * zoom_y);
+    // p->translate( -camera.x * camera.zoom_x,
+    //               -camera.y * camera.zoom_y);
+    px += (camera->x * camera->zoom_x);
+    py += (camera->y * camera->zoom_y);*/
 
-    //p->scale(main_cam.zoom_x, main_cam.zoom_y);
+    //p->scale(camera.zoom_x, camera.zoom_y);
     //px *= zoom_x;
     //py *= zoom_y;
 
-    return { px, py };
+    //return { px, py };
 
     ////////
 

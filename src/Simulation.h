@@ -123,8 +123,22 @@ using LineJoin = QNanoPainter::LineJoin;
 using TextAlign = QNanoPainter::TextAlign;
 using TextBaseline = QNanoPainter::TextBaseline;
 
+enum Anchor
+{
+    TOP_LEFT,
+    CENTER
+};
+
 struct DrawingContext
 {
+private:
+
+    double _avgZoom()
+    {
+        return (camera.zoom_x + camera.zoom_y) * 0.5;
+    }
+
+public:
     //int panel_index;
     //int panel_x;
     //int panel_y;
@@ -139,12 +153,13 @@ struct DrawingContext
     double origin_ratio_x;
     double origin_ratio_y;
 
-    Camera main_cam;
+    Camera camera;
     //Camera* focused_cam = nullptr;
 
     // Drawing abstraction
     QNanoPainter* painter;
-    std::vector<bool> scale_stack;
+    QTransform default_viewport_transform;
+    //std::vector<bool> scale_stack;
 
     DrawingContext() {}
     /*DrawingContext(
@@ -163,20 +178,37 @@ struct DrawingContext
         height = _h;
     }*/
 
+    //void beginWorldTransform();
+    //void beginStageTransform();
+    //void beginWorldInplaceTransform();
+    //void endTransform();
+
     void drawPanel(QNanoPainter *p, double vw, double vh);
 
     Vec2 PT(double x, double y)
     {
-        if (main_cam.scale_graphics)
-            return { x, y };
+        //if (camera.scale_graphics)
+        if (camera.transform_coordinates)
+        {
+            Vec2 o = camera.toWorldOffset({ camera.stage_ox, camera.stage_oy });
+            return { x + o.x, y + o.y };
+        }
         else
-            return main_cam.toStage(x, y);
+        {
+            // (x,y) represents stage coordinate, but transform is active
+            Vec2 ret = camera.toWorld(x + camera.stage_ox, y + camera.stage_oy);
+            //ret.x += camera.stage_ox;
+            //ret.y += camera.stage_oy;
+            return ret;
+        }
+        //else
+        //    return camera.toStage(x, y);
     }
 
-    void save()
+    /*void save()
     {
         //painter->save();
-        scale_stack.push_back(main_cam.scale_graphics);
+        scale_stack.push_back(camera.scale_graphics);
     }
 
     void restore()
@@ -189,7 +221,22 @@ struct DrawingContext
         scaleGraphics(b);
     }
 
-    void scaleGraphics(bool b, bool force = false);
+    void scaleGraphics(bool b, bool force = false);*/
+
+    void save()
+    {
+        painter->save();
+    }
+
+    void restore()
+    {
+        painter->restore();
+    }
+
+    void translate(double tx, double ty)
+    {
+        painter->translate(tx, ty);
+    }
 
     void beginPath()
     {
@@ -216,9 +263,19 @@ struct DrawingContext
         painter->setStrokeStyle(color);
     }
 
-    void setLineWidth(int width)
+    double line_width = 1;
+    void setLineWidth(double w)
     {
-        painter->setLineWidth(width);
+        this->line_width = w;
+        
+        if (camera.scale_lines_text)
+        {
+            painter->setLineWidth(w);
+        }
+        else
+        {
+            painter->setLineWidth(w / _avgZoom());
+        }
     }
 
     void setLineCap(LineCap cap)
@@ -239,12 +296,38 @@ struct DrawingContext
     void circle(double cx, double cy, double r)
     {
         Vec2 pt = PT(cx, cy);
-        painter->circle(pt.x, pt.y, r);
+        if (camera.scale_lines_text)
+        {
+            painter->circle(pt.x, pt.y, r);
+        }
+        else
+        {
+            painter->circle(pt.x, pt.y, r / _avgZoom());
+        }
+    }
+
+    void circle(Vec2 cen, double r)
+    {
+        Vec2 pt = PT(cen.x, cen.y);
+        if (camera.scale_lines_text)
+        {
+            painter->circle(pt.x, pt.y, r);
+        }
+        else
+        {
+            painter->circle(pt.x, pt.y, r / _avgZoom());
+        }
     }
 
     void moveTo(double px, double py)
     {
         Vec2 pt = PT(px, py);
+        painter->moveTo(pt.x, pt.y);
+    }
+
+    void moveTo(Vec2 p)
+    {
+        Vec2 pt = PT(p.x, p.y);
         painter->moveTo(pt.x, pt.y);
     }
 
@@ -254,30 +337,121 @@ struct DrawingContext
         painter->lineTo(pt.x, pt.y);
     }
 
-    void strokeRect(double x1, double y1, double x2, double y2)
+    void lineTo(Vec2 p)
     {
-        QRectF qr(
-            PT(x1, y1),
-            PT(x2, y2)
-        );
-
-        painter->strokeRect(qr);
+        Vec2 pt = PT(p.x, p.y);
+        painter->lineTo(pt.x, pt.y);
     }
+
+    void strokeRect(double x, double y, double w, double h)
+    {
+        if (camera.transform_coordinates)
+        {
+            if (camera.scale_lines_text)
+            {
+                painter->strokeRect(x, y, w, h);
+            }
+            else
+            {
+                double old_linewidth = line_width;
+                painter->setLineWidth(line_width / _avgZoom());
+                painter->strokeRect(x, y, w, h);
+                painter->setLineWidth(old_linewidth);
+            }
+        }
+        else
+        {
+            QTransform cur_transform = painter->currentTransform();
+
+            painter->resetTransform();
+            painter->transform(default_viewport_transform);
+
+            if (camera.scale_lines_text)
+            {
+                double old_linewidth = line_width;
+                painter->setLineWidth(line_width * _avgZoom());
+                painter->strokeRect(x, y, w, h);
+                painter->setLineWidth(old_linewidth);
+            }
+            else
+            {
+                painter->setLineWidth(line_width); // Refresh cached line width
+                painter->strokeRect(x, y, w, h);
+            }
+
+            painter->resetTransform();
+            painter->transform(cur_transform);
+        }
+    }
+
 
     void strokeRect(const FRect &r)
     {
-        QRectF qr(
-            PT(r.x1, r.y1),
-            PT(r.x2, r.y2)
+        painter->strokeRect(
+            r.x1, 
+            r.y1,
+            r.x2 - r.x1,
+            r.y2 - r.y1
         );
+    }
 
-        painter->strokeRect(qr);
+    void setFont(QNanoFont font)
+    {
+        painter->setFont(font);
     }
 
     void fillText(const QString &txt, double px, double py)
     {
         Vec2 pt = PT(px, py);
-        painter->fillText(txt, pt.x, pt.y);
+
+        if (camera.scale_lines_text)
+        {
+            if (camera.rotate_text)
+            {
+                painter->fillText(txt, pt.x, pt.y);
+            }
+            else
+            {
+                painter->save();
+                painter->translate(pt.x, pt.y);
+                painter->rotate(-camera.rotation);
+                painter->fillText(txt, 0, 0);
+                painter->restore();
+            }
+        }
+        else
+        {
+            double s = 1.0 / _avgZoom();
+
+            painter->save();
+
+            painter->translate(pt.x, pt.y);
+            painter->scale(s);
+
+            if (!camera.rotate_text)
+                painter->rotate(-camera.rotation);
+
+            painter->fillText(txt, 0, 0);
+
+            //painter->fillText(txt, pt.x / s, pt.y / s);
+            painter->restore();
+        }
+    }
+
+    void fillText(const QString& txt, const Vec2 &pos)
+    {
+        fillText(txt, pos.x, pos.y);
+    }
+
+    Vec2 measureText(const QString& txt)
+    {
+        painter->save();
+        painter->resetTransform();
+        painter->transform(default_viewport_transform);
+        auto r = painter->textBoundingBox(txt, 0, 0);
+        painter->restore();
+        
+        return { r.width(), r.height() };
     }
 
     void setTextAlign(TextAlign align)
@@ -289,6 +463,8 @@ struct DrawingContext
     {
         painter->setTextBaseline(align);
     }
+
+    void drawGraphGrid();
 };
 
 //template<typename T>
@@ -339,6 +515,11 @@ public:
         std::uniform_real_distribution<> dist(min, max);
         return dist(gen);
     }
+
+    Vec2 Offset(double stage_offX, double stage_offY)
+    {
+        return camera->toWorldOffset({ stage_offX, stage_offY });
+    }
 };
 
 struct Panel
@@ -358,7 +539,7 @@ struct Panel
 
     Panel()
     {
-        
+        ctx.camera.panel = this;
     }
 
     ~Panel()
@@ -380,10 +561,30 @@ struct Panel
         sim->main = main;
         sim->options = options;
         sim->panel = ctx.panel;
-        sim->camera = &ctx.main_cam;
+        sim->camera = &ctx.camera;
         return dynamic_cast<T*>(sim);
     }
 
+    void setOriginViewportAnchor(double ax, double ay)
+    {
+        ctx.origin_ratio_x = ax;
+        ctx.origin_ratio_y = ay;
+    }
+
+    void setOriginViewportAnchor(Anchor anchor)
+    {
+        switch (anchor)
+        {
+        case Anchor::TOP_LEFT:
+            ctx.origin_ratio_x = 0;
+            ctx.origin_ratio_y = 0;
+            break;
+        case Anchor::CENTER:
+            ctx.origin_ratio_x = 0.5;
+            ctx.origin_ratio_y = 0.5;
+            break;
+        }
+    }
 };
 
 struct Layout
@@ -556,7 +757,7 @@ public:
 
         //if (focused_cam)
         {
-            Vec2 wp = main_cam.toWorld(mouse.stage_x, mouse.stage_y);
+            Vec2 wp = camera.toWorld(mouse.stage_x, mouse.stage_y);
             mouse.world_x = wp.x;
             mouse.world_y = wp.y;
         }*/
@@ -572,7 +773,7 @@ public:
             if (panel_mx >= 0 && panel_my >= 0 &&
                 panel_mx <= panel->width && panel_my <= panel->height)
             {
-                Camera& cam = panel->ctx.main_cam;
+                Camera& cam = panel->ctx.camera;
                 if (cam.panning_enabled && btn == Qt::MiddleButton)
                 {
                     cam.panBegin(x, y);
@@ -602,7 +803,7 @@ public:
             if (panel_mx >= 0 && panel_my >= 0 &&
                 panel_mx <= panel->width && panel_my <= panel->height)
             {
-                Camera& cam = panel->ctx.main_cam;
+                Camera& cam = panel->ctx.camera;
                 if (cam.panning_enabled && btn == Qt::MiddleButton)
                 {
                     cam.panEnd(x, y);
@@ -629,7 +830,7 @@ public:
             double panel_mx = x - panel->x;
             double panel_my = y - panel->y;
 
-            Camera& cam = panel->ctx.main_cam;
+            Camera& cam = panel->ctx.camera;
             if (cam.panning_enabled)
                 cam.panProcess(x, y);
         }
@@ -656,7 +857,7 @@ public:
             if (panel_mx >= 0 && panel_my >= 0 &&
                 panel_mx <= panel->width && panel_my <= panel->height)
             {
-                Camera& cam = panel->ctx.main_cam;
+                Camera& cam = panel->ctx.camera;
                 if (cam.zooming_enabled)
                 {
                     cam.zoom_x += (((double)delta) * cam.zoom_x) / 1000.0;
