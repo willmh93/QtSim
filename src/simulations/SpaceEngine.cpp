@@ -7,7 +7,7 @@ void SpaceEngine::prepare()
     setLayout(1).constructAll<SpaceEngineInstance>();
 }
 
-void SpaceEngineInstance::instanceAttributes()
+void SpaceEngineInstance::instanceAttributes(Options* options)
 {
     //camera.enable();
 
@@ -38,10 +38,13 @@ void SpaceEngineInstance::instanceAttributes()
     options->realtime_slider("Steps Per Frame", &steps_per_frame, 1, 100, 1);
     
     AttributeItem* timestep_slider = options->realtime_slider("Time step (seconds)",
-        &step_seconds, 
-        &step_seconds_min, 
-        &step_seconds_max, 
-        &step_seconds_step);
+        &step_seconds,
+        step_seconds * 0.5,
+        step_seconds * 10,
+        step_seconds * 0.1);
+        //&step_seconds_min, 
+        //&step_seconds_max, 
+        //&step_seconds_step);
 
     timestep_slider->label_value = [this](double seconds)
     {
@@ -63,13 +66,13 @@ void SpaceEngineInstance::instanceAttributes()
 
     ///
 
-    options->realtime_slider("World Size (gm) ", &start_world_size, &world_size_min, &world_size_max, &world_size_step);
+    //options->starting_slider("World Size (gm) ", &world_size, &world_size_min, &world_size_max, &world_size_step);
 }
 
 
 void SpaceEngineInstance::start()
 {
-    world_size = start_world_size;
+    //world_size = start_world_size;
     bmp_scale = world_size / density_bmp_size;
     time_elapsed = 0;
 
@@ -138,21 +141,26 @@ void SpaceEngineInstance::destroy()
     }
 }*/
 
-void SpaceEngineInstance::process(DrawingContext* ctx)
+void SpaceEngineInstance::processScene()
 {
-    for (int i = 0; i < steps_per_frame; i++)
+    if (cache->missing())
     {
-        processGravity();
-        processCollisions();
-
-        for (Particle& n : particles)
+        for (int i = 0; i < steps_per_frame; i++)
         {
-            n.x += n.vx * step_seconds;
-            n.y += n.vy * step_seconds;
-        }
+            processGravity();
+            processCollisions();
 
-        time_elapsed += step_seconds;
+            for (Particle& n : particles)
+            {
+                n.x += n.vx * step_seconds;
+                n.y += n.vy * step_seconds;
+            }
+
+            time_elapsed += step_seconds;
+        }
     }
+
+    cache->apply(particles);
 
  
     vector<vector<double>> density_map;
@@ -643,7 +651,7 @@ void SpaceEngineInstance::processCollisions()
     }
 }
 
-void SpaceEngineInstance::draw(DrawingContext *ctx)
+void SpaceEngineInstance::draw(Panel*ctx)
 {
     double left = -world_size / 2;
     double top = -world_size / 2;
@@ -654,6 +662,8 @@ void SpaceEngineInstance::draw(DrawingContext *ctx)
         left, top,
         world_size, world_size
     );
+
+    ctx->drawGraphGrid();
 
     //density_bmp.draw(p, 
     //    cam.toStage(left, top), 
@@ -770,6 +780,8 @@ void SpaceEngineInstance::draw(DrawingContext *ctx)
         QString id = QString("n%1").arg(i);
         p->fillText(id, n.x, n.y - 10);
     }*/
+
+    camera->setTransformFilters(false, false, false);
 
     int ty = 5;
     int row_h = 18;

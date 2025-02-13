@@ -83,14 +83,6 @@ public:
     int *slider_int_min_ptr;
     int *slider_int_max_ptr;
 
-    
-
-    //double* slider_step_ptr;// = 0.1;
-    //int* float_decimals_ptr;// = 1;
-    //int float_decimals = 1;
-   
-    
-
     std::vector<std::pair<QString, std::function<void(void)>>> combo_items;
 
     explicit AttributeItem(
@@ -103,42 +95,12 @@ public:
     std::function<void(double)> float_change;
     std::function<void(bool)>   bool_change;
 
-    //void setValuePtr(int* value);
     void updateUIValue();
-    //void forceRefreshPointers();
 
     std::vector<void*> getValuePointers();
     void removePointer(void* ptr);
     void removeAllPointers();
-    //AttributeItem* updateValue(int value);
 
-    //AttributeItem* updateValue(int value);
-    //AttributeItem* updateValue(double value);
-    //AttributeItem* updateRange(int min, int max, int step=1);
-    //AttributeItem* updateRange(double min, double max, double step);
-
-    /*struct AttributeItemSnapshot
-    {
-        QString name;
-        std::vector<void*> ptrs;
-    };
-
-    AttributeItemSnapshot snapshot;
-    void garbageTakePriorSnapshot()
-    {
-        snapshot.name = name;
-        snapshot.ptrs = getValuePointers();
-    }
-
-    void garbageRemoveUnreferencedPointers()
-    {
-        std::vector<void*> current_ptrs = getValuePointers();
-        for (void* ptr : snapshot.ptrs)
-        {
-            if (std::find(current_ptrs.begin(), current_ptrs.end(), ptr) != current_ptrs.end())
-                removePointer(ptr);
-        }
-    }*/
 
     AttributeItem* addComboItem(QString text, std::function<void(void)> callback = nullptr);
     void setActiveComboItem(QString text);

@@ -44,61 +44,94 @@ Options::Options(QWidget *parent)
     ui.setupUi(this);
     attributeList = ui.attributeList;
 
-    // Set the model to the QListView
-    ui.simList->setModel(&list_model);
+    ui.simTree->setSelectionMode(QAbstractItemView::SingleSelection);
+    ui.simTree->setSelectionBehavior(QAbstractItemView::SelectRows);
+    ui.simTree->setModel(&model);
 
-    connect(ui.startBtn, &QPushButton::clicked, this, &Options::startClicked);
-    connect(ui.stopBtn, &QPushButton::clicked, this, &Options::stopClicked);
-    connect(ui.simList->selectionModel(), &QItemSelectionModel::selectionChanged, this, &Options::selectionChanged);
+    icon_delegate = new DynamicIconDelegate(ui.simTree);
+    ui.simTree->setItemDelegate(icon_delegate);
 
-    connect(ui.checkBox_record, &QCheckBox::toggled, this, [this](bool checked) 
-    {
-        if (checked)
-            ui.frame_recordOptions->show();
-        else
-            ui.frame_recordOptions->hide();
-    });
+    //connect(ui.startBtn, &QPushButton::clicked, this, &Options::startClicked);
+    //connect(ui.stopBtn, &QPushButton::clicked, this, &Options::stopClicked);
+    connect(ui.simTree->selectionModel(), &QItemSelectionModel::selectionChanged, this, &Options::selectionChanged);
+    connect(ui.simTree, &QTreeView::doubleClicked, this, &Options::doubleClickSim);
+    connect(ui.spinBox_fps, &QSpinBox::valueChanged, this, &Options::onChangeFPS);
 
-    ui.lineEdit_output_path->setText(QDir::toNativeSeparators(getDesktopPath() + "/output.mp4"));
+    model.setHorizontalHeaderLabels({"Simulation Type"});
+    rootItem = model.invisibleRootItem();
 
-    ui.frame_recordOptions->hide();
+    ui.project_dir_input->setText(QDir::toNativeSeparators(getDesktopPath() + "/QtSims"));
 
-    /*attributeList->on_update = [this]()
-    {
-        for (auto& item : attributeList->item_widgets)
-        {
-            item->updateUIValue();
-        }
-    };*/
+    ui.frame_cacheOptions->hide();
 }
 
 Options::~Options()
-{}
+{
+}
 
+void Options::addSimListEntry(const std::shared_ptr<SimulationInfo>& info)
+{
+    auto& path = info->path;
+
+    // Start from the root and traverse the tree
+    QStandardItem* parent = rootItem;  // Assuming `rootItem` is your top-level node
+
+    //for (const QString& part : path)
+    for (size_t part_index=0; part_index<path.size(); part_index++)
+    {
+        const QString& part = path[part_index];
+        bool found = false;
+
+        // Loop over current node children
+        for (int i = 0; i < parent->rowCount(); ++i) 
+        {
+            // Did we find this part?
+            QStandardItem* child = parent->child(i);
+            if (child->text() == part) 
+            {
+                parent = child;
+                found = true;
+                break;
+            }
+        }
+
+        if (!found) 
+        {
+            bool isLeaf = (part_index == path.size() - 1);
+
+            // Create a new item if not found
+            SimTreeItem* newItem = new SimTreeItem(part, isLeaf ? info : nullptr);
+            parent->appendRow(newItem);
+            parent = newItem;
+        }
+    }
+
+    ui.simTree->expandAll();
+}
 
 void Options::selectionChanged(const QItemSelection& selected, const QItemSelection&)
 {
-    QModelIndex currentIndex = ui.simList->currentIndex();
+    if (!selected.indexes().isEmpty())
+    {
+        QModelIndex index = selected.indexes().first();
+        SimTreeItem* item = dynamic_cast<SimTreeItem*>(model.itemFromIndex(index));
 
-    if (currentIndex.isValid())
-    {
-        int selectedIndex = currentIndex.row();
-        emit onChooseSimulation(selectedIndex);
-    }
-    else
-    {
-        emit onChooseSimulation(-1);
+        if (item->sim_info && item->sim_info->sim_uid >= 0)
+        {
+            emit onChooseSimulation(item->sim_info->sim_uid);
+            return;
+        }
     }
 }
 
-void Options::startClicked()
+void Options::doubleClickSim(const QModelIndex& index)
 {
-    emit onStartSimulation();
-}
-
-void Options::stopClicked()
-{
-    emit onStopSimulation();
+    SimTreeItem* item = dynamic_cast<SimTreeItem*>(model.itemFromIndex(index));
+    if (item->sim_info && item->sim_info->sim_uid >= 0)
+    {
+        emit onForceStartBeginSimulation(item->sim_info->sim_uid);
+        return;
+    }
 }
 
 template<typename T>
@@ -284,14 +317,6 @@ AttributeItem* Options::combo(const QString& name, const std::vector<QString>& i
     return combo;
 }
 
-
-
-void Options::addSimListEntry(const QString& name)
-{
-    QStandardItem* item = new QStandardItem(name);
-    list_model.appendRow(item);
-}
-
 void Options::clearAttributeList()
 {
     attributeList->clearItems();
@@ -305,9 +330,9 @@ void Options::updateListUI()
     }
 }
 
-bool Options::getRecordChecked()
+void Options::refreshTreeUI()
 {
-    return  ui.checkBox_record->isChecked();
+    ui.simTree->update();
 }
 
 Size Options::getRecordResolution()
@@ -318,7 +343,84 @@ Size Options::getRecordResolution()
     };
 }
 
-QString Options::getRecordPath()
+int Options::getRecordFPS()
 {
-    return ui.lineEdit_output_path->text();
+    return ui.spinBox_fps->value();
 }
+
+QString Options::getProjectsDirectory()
+{
+    return QDir::toNativeSeparators(ui.project_dir_input->text());
+}
+
+void DynamicIconDelegate::paint(
+    QPainter* painter, 
+    const QStyleOptionViewItem& option, 
+    const QModelIndex& index) const
+{
+    // Get the text from the model
+    QString text = index.data(Qt::DisplayRole).toString();
+    if (text.isEmpty()) return;
+
+
+
+    // Define the rectangle for text
+    QRect textRect = option.rect;
+    //textRect.setLeft(option.rect.left() + 5); // Small left margin for readability
+
+
+    if (option.state & QStyle::State_Selected) {
+        painter->fillRect(option.rect, option.palette.highlight());
+        painter->setPen(option.palette.highlightedText().color());
+    }
+    else {
+        painter->setPen(option.palette.text().color()); // Reset to default text color
+    }
+
+    // Draw the text
+    painter->drawText(textRect, Qt::AlignVCenter | Qt::AlignLeft, text);
+
+    //QTreeView* treeView = qobject_cast<QTreeView*>(parent());
+
+    const QAbstractItemModel* model = index.model();  // Get the model
+    const QStandardItemModel* standardModel = qobject_cast<const QStandardItemModel*>(model);
+    SimTreeItem* item = dynamic_cast<SimTreeItem*>(standardModel->itemFromIndex(index));
+
+    std::shared_ptr<SimulationInfo>& sim_info = item->sim_info;
+
+    if (sim_info && sim_info->sim_uid >= 0)
+    {
+        // Define icon properties
+        int iconSize = 10; // Diameter of the circle
+        int spacing = 8;    // Space between text and icon
+        QColor iconColor;// = (index.row() % 2 == 0) ? Qt::red : Qt::blue; // Alternate colors
+
+        switch (sim_info->state)
+        {
+        case SimulationInfo::INACTIVE: iconColor = Qt::darkGray; break;
+        case SimulationInfo::ACTIVE: iconColor = Qt::green; break;
+        case SimulationInfo::RECORDING: iconColor = Qt::red; break;
+        }
+
+        // Set up font metrics to measure text width
+        QFontMetrics fm(option.font);
+        int textWidth = fm.horizontalAdvance(text);
+
+        // Define the rectangle for the icon (right after the text)
+        QRect iconRect(textRect.left() + textWidth + spacing, option.rect.center().y() - iconSize / 2 + 2,
+            iconSize, iconSize);
+
+
+        // Draw the dynamically generated icon (a colored circle)
+        painter->setRenderHint(QPainter::Antialiasing);
+        painter->setBrush(iconColor);
+
+        painter->setPen(QPen(QBrush({ 30,30,40 }), 2));
+        painter->drawEllipse(iconRect);
+    }
+
+    // Reset painter brush to default after drawing
+    painter->setPen(Qt::NoPen);
+    painter->setBrush(Qt::NoBrush);
+}
+

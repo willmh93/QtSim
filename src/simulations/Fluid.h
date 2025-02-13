@@ -25,20 +25,19 @@ struct FluidInstance : public SimulationInstance
     std::vector<Triangle<Particle>> triangles;
 
     double timestep = 0.1;
-    int particle_count = 200;
+    int particle_count = 100;
     double spring_dist = 20.0;
     double spring_stiffness = 1;
     double spring_damping = 0.01;
     double viscosity_strength = 1;
     double viscosity_spring_dist_ratio = 10.0;
     
-    void instanceAttributes() override;
+    void instanceAttributes(Options* options) override;
 
-    void start();
-    
-    void destroy();
-    void process(DrawingContext* ctx);
-    void draw(DrawingContext* ctx);
+    void start() override;
+    void destroy() override;
+    void processScene() override;
+    void draw(Panel* ctx) override;
 
     void applyLinkViscosity(Particle* a, Particle* b, double r, double strength, double dt);
     void applyViscosityAll(double r, double strength, double dt);
@@ -46,13 +45,13 @@ struct FluidInstance : public SimulationInstance
     void spring(Particle* a, Particle* b, double restLength, double k, double damping, double deltaTime);
 };
 
-struct Fluid : public Simulation<FluidInstance>
+struct Fluid : public Simulation
 {
     int panel_count = 4;
 
-    void prepare();
+    void prepare() override;
     //void start();
-    void projectAttributes() override;
+    void projectAttributes(Options *options) override;
     
 };
 

@@ -254,8 +254,12 @@ void Canvas2D::paint(QNanoPainter* p)
     p->beginFrame(vw*scaleFactor, vh*scaleFactor);
     p->scale(scaleFactor);
 
-    p->setFillStyle({ 10,10,15 });
-    p->fillRect(0, 0, vw, vh);
+    if (!sim || !sim->started)
+    {
+        p->setFillStyle({ 10,10,15 });
+        p->fillRect(0, 0, vw, vh);
+    }
+    
 
     if (sim && sim->started)
     {

@@ -141,9 +141,9 @@ bool getRayRectIntersection(Vec2* back_intersect, Vec2* foward_intersect, const 
     double dy = sin(ray.angle);
 
     // Aaccumulate candidate intersections as (t, point) pairs
-    struct IntersectionCandidate 
+    struct IntersectionCandidate
     {
-       double t;
+        double t;
         Vec2 pt;
     };
 
@@ -169,7 +169,7 @@ bool getRayRectIntersection(Vec2* back_intersect, Vec2* foward_intersect, const 
     }
 
     // --- Check intersection with horizontal edges ---
-    
+
     // Bottom edge: y = minY
     if (std::fabs(dy) > eps) {
         double t = (minY - ry) / dy;
@@ -180,7 +180,7 @@ bool getRayRectIntersection(Vec2* back_intersect, Vec2* foward_intersect, const 
     }
 
     // Top edge: y = maxY
-    if (std::fabs(dy) > eps) 
+    if (std::fabs(dy) > eps)
     {
         double t = (maxY - ry) / dy;
         double x_int = rx + t * dx;
@@ -194,29 +194,29 @@ bool getRayRectIntersection(Vec2* back_intersect, Vec2* foward_intersect, const 
 
     // Sort candidates by their t-value.
     std::sort(candidates.begin(), candidates.end(), [](
-        const IntersectionCandidate& a, 
-        const IntersectionCandidate& b) 
-    {
-        return a.t < b.t;
-    });
+        const IntersectionCandidate& a,
+        const IntersectionCandidate& b)
+        {
+            return a.t < b.t;
+        });
 
     // Remove duplicates: if two candidate intersections have nearly the same t, keep only one.
     std::vector<IntersectionCandidate> unique;
     unique.push_back(candidates.front());
-    for (size_t i = 1; i < candidates.size(); ++i) 
+    for (size_t i = 1; i < candidates.size(); ++i)
     {
         if (std::fabs(candidates[i].t - unique.back().t) > eps)
             unique.push_back(candidates[i]);
     }
 
-    if (unique.size() != 2) 
+    if (unique.size() != 2)
     {
         // In degenerate cases (e.g. ray exactly tangent to the rectangle)
         return false;
     }
 
     // Order the two intersections:
-    // The one with the smaller t is the "back" intersection (may be behind the ray’s origin)
+    // The one with the smaller t is the "back" intersection (may be behind the rayâ€™s origin)
     // and the one with the larger t is the "foward" intersection.
     *back_intersect = unique[0].pt;
     *foward_intersect = unique[1].pt;

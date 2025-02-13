@@ -1,10 +1,10 @@
 #include "Fluid.h"
-SIM_DECLARE(Fluid, "Fluid")
+SIM_DECLARE(Fluid, "Physics", "Fabric")
 
 // Shared variables (available to all instances)
 
 
-void Fluid::projectAttributes()
+void Fluid::projectAttributes(Options* options)
 {
     // Project settings
     options->realtime_slider("Panel Count", &panel_count, 1, 36, 1);
@@ -19,7 +19,7 @@ void Fluid::prepare()
     }
 }
 
-void FluidInstance::instanceAttributes()
+void FluidInstance::instanceAttributes(Options* options)
 {
     // Instance Settings
     options->realtime_slider("Timestep", &timestep, 0.01, 0.1, 0.01);
@@ -36,7 +36,7 @@ void FluidInstance::instanceAttributes()
 void FluidInstance::start()
 {
     // Initialize instance
-    panel->setOriginViewportAnchor(Anchor::TOP_LEFT);
+    camera->setOriginViewportAnchor(Anchor::CENTER);
 
     particles.clear();
     for (int i = 0; i < particle_count; i++)
@@ -57,7 +57,7 @@ void FluidInstance::destroy()
     particles.clear();
 }
 
-void FluidInstance::process(DrawingContext* ctx)
+void FluidInstance::processScene()
 {
     delaunay.triangulate(particles, triangles);
     delaunay.extractLinks(triangles, links);
@@ -83,8 +83,9 @@ void FluidInstance::process(DrawingContext* ctx)
     }
 }
 
-void FluidInstance::draw(DrawingContext* ctx)
+void FluidInstance::draw(Panel* ctx)
 {
+    ctx->drawGraphGrid();
     ctx->setLineCap(LineCap::CAP_ROUND);
 
     // Fill triangles

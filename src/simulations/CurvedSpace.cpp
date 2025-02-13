@@ -1,9 +1,9 @@
 #include "CurvedSpace.h"
 #include "Fluid.h"
-SIM_DECLARE(CurvedSpace, "Curved Space")
+SIM_DECLARE(CurvedSpace, "Physics", "Experimental", "Space Curvature")
 
 
-void CurvedSpace::projectAttributes()
+void CurvedSpace::projectAttributes(Options* options)
 {
     options->realtime_slider("Panel Count", &panel_count, 1, 36, 1);
     options->realtime_slider("Start Radius Mult", &radius_mult, 0.1, 2.0, 0.1); // Never add same pointer twice
@@ -25,7 +25,7 @@ void CurvedSpace::prepare()
 
 
 
-void CurvedSpaceInstance::instanceAttributes()
+void CurvedSpaceInstance::instanceAttributes(Options* options)
 {
     options->realtime_slider("Gravity", &gravity, 0.0, 1.0, 0.1);
     options->starting_checkbox("Custom Color", &custom_color);
@@ -38,7 +38,7 @@ void CurvedSpaceInstance::start()
 {
     //main->options->realtime_slider("Gravity", &gravity, 0.0, 1.0, 0.1);
     radius = radius_mult * radius;
-    particles = allocDelaunayTriangleMesh<Particle>(0, 0, width, height, 20);
+    particles = allocDelaunayTriangleMesh<Particle>(0, 0, 400, 400, 20);
     //qDebug() << "Instance Constructed: " << panel->panel_index;
 }
 
@@ -47,7 +47,7 @@ void CurvedSpaceInstance::destroy()
     //qDebug() << "Instance Destroyed: " << panel->panel_index;
 }
 
-void CurvedSpaceInstance::process(DrawingContext* ctx)
+void CurvedSpaceInstance::processScene()
 {
     //instances[ctx.panel_index].process(ctx);
     //cam.setCamera(camera);
@@ -55,7 +55,7 @@ void CurvedSpaceInstance::process(DrawingContext* ctx)
     camera->rotation += (gravity / 180.0 * M_PI);
 }
 
-void CurvedSpaceInstance::draw(DrawingContext* ctx)
+void CurvedSpaceInstance::draw(Panel* ctx)
 {
     srand(0);
 

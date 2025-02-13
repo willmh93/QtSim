@@ -1,11 +1,12 @@
 #pragma once
 
+// Qt includes
 #include <QObject>
 #include <QString>
 #include <QColor>
 #include <QElapsedTimer>
 
-// Common includes for all simulations
+// Standard libraries for simulations
 #include <random>
 #include <cmath>
 #include <vector>
@@ -13,410 +14,82 @@
 #include <limits>
 #include <set>
 #include <unordered_map>
-#include "qnanopainter.h"
-
-extern "C" {
-#include <libavcodec/avcodec.h>
-#include <libavformat/avformat.h>
-#include <libswscale/swscale.h>
-#include <libavutil/opt.h>
-#include <libavutil/imgutils.h>
-}
-
-#include "Options.h"
-#include "World.h"
-#include "graphics.h"
-#include "helpers.h"
-
+#include <fstream>
 using namespace std;
 
+// Custom includes
+#include "World.h"
+#include "helpers.h"
+#include "CacheContext.h"
+
+// Graphics
+#include "FFmpegWorker.h"
+#include "DrawingContext.h"
+#include "graphics.h"
+
+// UI
+#include "Options.h"
+
+
+
+// Provide macros for easy Simulation registration
+template<typename... Ts>
+std::vector<QString> VectorizeArgs(Ts&&... args) { return { QString::fromUtf8(std::forward<Ts>(args))... }; }
+
+
 #define SIM_BEG(cls) namespace NS_##cls {
-#define SIM_DECLARE(cls, name) namespace NS_##cls { AutoRegisterSimulation<cls> register_##cls(name);
+#define SIM_DECLARE(cls, ...) namespace NS_##cls { AutoRegisterSimulation<cls> register_##cls(VectorizeArgs(__VA_ARGS__));
 #define BASE_SIM(cls) using namespace NS_##cls; //typedef NS_##cls::Sim cls;
 //#define BASE_SIM(id) namespace NS_##id {
 #define SIM_END }
 
-class FFmpegWorker : public QObject
-{
-    Q_OBJECT
+#define SIM_ORDER(...) AutoRegisterSimulationOrder register_order(VectorizeArgs(__VA_ARGS__));
 
-        int src_w;
-    int src_h;
-    int targ_w;
-    int targ_h;
-    int frame_index;
-
-    bool finalizing = false;
-    bool busy = false;
-
-    std::string output_path;
-    AVFormatContext* format_context;
-    AVStream* stream;
-    AVCodecContext* codec_context;
-    AVFrame* frame;
-    AVFrame* rgb_frame;
-    SwsContext* sws_ctx;
-    AVPacket* packet;
-
-    void doFinalize();
-
-public:
-
-    void initialize(
-        std::string save_path,
-        int src_width,
-        int src_height,
-        int targ_width = 640,
-        int targ_height = 480)
-    {
-        output_path = save_path;
-        src_w = src_width;
-        src_h = src_height;
-        targ_w = src_width;
-        targ_h = src_height;
-    }
-
-signals:
-
-    void frameFlushed();
-
-public slots:
-
-    bool startRecording();
-    bool encodeFrame(uint8_t* data);
-    void finalizeRecording()
-    {
-        if (busy)
-            finalizing = true;
-        else
-            doFinalize();
-    }
-
-};
-
+class QNanoPainter;
 class Canvas2D;
-class SimulationBase;
-struct Panel;
 
-using LineCap = QNanoPainter::LineCap;
-using LineJoin = QNanoPainter::LineJoin;
-using TextAlign = QNanoPainter::TextAlign;
-using TextBaseline = QNanoPainter::TextBaseline;
-
-enum Anchor
-{
-    TOP_LEFT,
-    CENTER
-};
-
-struct DrawingContext
-{
-private:
-
-    double _avgZoom()
-    {
-        return (camera.zoom_x + camera.zoom_y) * 0.5;
-    }
-
-public:
-
-    Panel* panel = nullptr;
-
-    double origin_ratio_x;
-    double origin_ratio_y;
-
-    Camera camera;
-    QNanoPainter* painter;
-    QTransform default_viewport_transform;
-
-    DrawingContext() {}
-
-    void drawPanel(QNanoPainter *p, double vw, double vh);
-
-    Vec2 PT(double x, double y)
-    {
-        if (camera.transform_coordinates)
-        {
-            Vec2 o = camera.toWorldOffset({ camera.stage_ox, camera.stage_oy });
-            return { x + o.x, y + o.y };
-        }
-        else
-        {
-            // (x,y) represents stage coordinate, but transform is active
-            Vec2 ret = camera.toWorld(x + camera.stage_ox, y + camera.stage_oy);
-            return ret;
-        }
-    }
-
-
-    void save()
-    {
-        painter->save();
-    }
-
-    void restore()
-    {
-        painter->restore();
-    }
-
-    void translate(double tx, double ty)
-    {
-        painter->translate(tx, ty);
-    }
-
-    void beginPath()
-    {
-        painter->beginPath();
-    }
-
-    void setFillStyle(int r, int g, int b, int a = 255)
-    {
-        painter->setFillStyle({ r,g,b,a });
-    }
-
-    void setFillStyle(const QNanoColor& color)
-    {
-        painter->setFillStyle(color);
-    }
-
-    void setStrokeStyle(int r, int g, int b, int a = 255)
-    {
-        painter->setStrokeStyle({ r,g,b,a });
-    }
-
-    void setStrokeStyle(const QNanoColor& color)
-    {
-        painter->setStrokeStyle(color);
-    }
-
-    double line_width = 1;
-    void setLineWidth(double w)
-    {
-        this->line_width = w;
-        
-        if (camera.scale_lines_text)
-        {
-            painter->setLineWidth(w);
-        }
-        else
-        {
-            painter->setLineWidth(w / _avgZoom());
-        }
-    }
-
-    void setLineCap(LineCap cap)
-    {
-        painter->setLineCap(cap);
-    }
-
-    void fill()
-    {
-        painter->fill();
-    }
-
-    void stroke()
-    {
-        painter->stroke();
-    }
-
-    void circle(double cx, double cy, double r)
-    {
-        Vec2 pt = PT(cx, cy);
-        if (camera.scale_lines_text)
-        {
-            painter->circle(pt.x, pt.y, r);
-        }
-        else
-        {
-            painter->circle(pt.x, pt.y, r / _avgZoom());
-        }
-    }
-
-    void circle(Vec2 cen, double r)
-    {
-        Vec2 pt = PT(cen.x, cen.y);
-        if (camera.scale_lines_text)
-        {
-            painter->circle(pt.x, pt.y, r);
-        }
-        else
-        {
-            painter->circle(pt.x, pt.y, r / _avgZoom());
-        }
-    }
-
-    void moveTo(double px, double py)
-    {
-        Vec2 pt = PT(px, py);
-        painter->moveTo(pt.x, pt.y);
-    }
-
-    void moveTo(Vec2 p)
-    {
-        Vec2 pt = PT(p.x, p.y);
-        painter->moveTo(pt.x, pt.y);
-    }
-
-    void lineTo(double px, double py)
-    {
-        Vec2 pt = PT(px, py);
-        painter->lineTo(pt.x, pt.y);
-    }
-
-    void lineTo(Vec2 p)
-    {
-        Vec2 pt = PT(p.x, p.y);
-        painter->lineTo(pt.x, pt.y);
-    }
-
-    void strokeRect(double x, double y, double w, double h)
-    {
-        if (camera.transform_coordinates)
-        {
-            if (camera.scale_lines_text)
-            {
-                painter->strokeRect(x, y, w, h);
-            }
-            else
-            {
-                double old_linewidth = line_width;
-                painter->setLineWidth(line_width / _avgZoom());
-                painter->strokeRect(x, y, w, h);
-                painter->setLineWidth(old_linewidth);
-            }
-        }
-        else
-        {
-            QTransform cur_transform = painter->currentTransform();
-            painter->resetTransform();
-            painter->transform(default_viewport_transform);
-
-            if (camera.scale_lines_text)
-            {
-                double old_linewidth = line_width;
-                painter->setLineWidth(line_width * _avgZoom());
-                painter->strokeRect(x, y, w, h);
-                painter->setLineWidth(old_linewidth);
-            }
-            else
-            {
-                painter->setLineWidth(line_width); // Refresh cached line width
-                painter->strokeRect(x, y, w, h);
-            }
-
-            painter->resetTransform();
-            painter->transform(cur_transform);
-        }
-    }
-
-    void strokeRect(const FRect &r)
-    {
-        painter->strokeRect(
-            r.x1, 
-            r.y1,
-            r.x2 - r.x1,
-            r.y2 - r.y1
-        );
-    }
-
-    void setFont(QNanoFont font)
-    {
-        painter->setFont(font);
-    }
-
-    void fillText(const QString &txt, double px, double py)
-    {
-        Vec2 pt = PT(px, py);
-
-        if (camera.scale_lines_text)
-        {
-            if (camera.rotate_text)
-            {
-                painter->fillText(txt, pt.x, pt.y);
-            }
-            else
-            {
-                painter->save();
-                painter->translate(pt.x, pt.y);
-                painter->rotate(-camera.rotation);
-                painter->fillText(txt, 0, 0);
-                painter->restore();
-            }
-        }
-        else
-        {
-            double s = 1.0 / _avgZoom();
-            painter->save();
-
-            painter->translate(pt.x, pt.y);
-            painter->scale(s);
-
-            if (!camera.rotate_text)
-                painter->rotate(-camera.rotation);
-
-            painter->fillText(txt, 0, 0);
-            painter->restore();
-        }
-    }
-
-    void fillText(const QString& txt, const Vec2 &pos)
-    {
-        fillText(txt, pos.x, pos.y);
-    }
-
-    Vec2 measureText(const QString& txt)
-    {
-        painter->save();
-        painter->resetTransform();
-        painter->transform(default_viewport_transform);
-        auto r = painter->textBoundingBox(txt, 0, 0);
-        painter->restore();
-        
-        return { r.width(), r.height() };
-    }
-
-    void setTextAlign(TextAlign align)
-    {
-        painter->setTextAlign(align);
-    }
-
-    void setTextBaseline(TextBaseline align)
-    {
-        painter->setTextBaseline(align);
-    }
-
-    void drawGraphGrid();
-};
+class Layout;
+class Panel;
+class Simulation;
 
 class SimulationInstance
 {
     std::random_device rd;
     std::mt19937 gen;
 
+    Options* options = nullptr;
+
+protected:
+
+    friend class Panel;
+
+    std::vector<Panel*> mounted_to_panels;
+
 public:
 
 
-    SimulationBase* main;
-    Options* options;
-
-    Panel* panel;
-    Camera* camera;
+    Simulation* main = nullptr;
+    Camera* camera = nullptr;
+    CacheContext* cache = nullptr;
 
     MouseInfo mouse;
 
-    double width;
-    double height;
-
     SimulationInstance() : gen(rd()) {}
+    virtual ~SimulationInstance() = default;
 
-    virtual void instanceAttributes() {}
+    // Mounting to/from panel
+    void mountToPanel(Panel* panel);
+    void unmountFromPanel(Panel* panel);
 
-    //virtual void prepare() {}
+    virtual void instanceAttributes(Options* options) {}
     virtual void start() {}
+    virtual void mount(Panel *ctx) {}
     virtual void stop() {}
     virtual void destroy() {}
-    virtual void process(DrawingContext* ctx) {}
-    virtual void draw(DrawingContext* ctx) {}
+    virtual void processScene() = 0;
+    virtual void processPanel(Panel* ctx) {}
+    virtual void draw(Panel* ctx) = 0;
+
     virtual void postProcess()
     {
         // Keep delta until entire frame processed and drawn
@@ -425,6 +98,7 @@ public:
 
     void _destroy()
     {
+        destroy();
     }
 
     double random(double min = 0, double max = 1)
@@ -439,80 +113,84 @@ public:
     }
 };
 
-struct Panel
+class Panel : public DrawingContext
 {
-    DrawingContext ctx;
-    SimulationInstance* sim;
-    SimulationBase* main;
-    Options* options;
+protected:
+
+    friend class Simulation;
+    friend class SimulationInstance;
 
     int panel_index;
-    int panel_x;
-    int panel_y;
+    int panel_grid_x;
+    int panel_grid_y;
+
+    Layout* layout;
+    SimulationInstance* sim;
+    Options* options;
+    Simulation* main;
+
     double x;
     double y;
-    double width;
-    double height;
+    
+public:
 
-    Panel()
-    {
-        ctx.camera.panel = this;
-    }
+    Panel(
+        Layout *layout, 
+        Simulation *main, 
+        Options *options,
+        int panel_index, 
+        int grid_x,
+        int grid_y
+    );
 
-    ~Panel()
-    {
-        qDebug() << "Panel destroyed: " << panel_index;
-        if (sim)
-        {
-            sim->_destroy();
-            delete sim;
-        }
-    }
+    ~Panel();
+
+    void draw(QNanoPainter* p);
+
+    int panelIndex() { return panel_index; }
+    int panelGridX() { return panel_grid_x; }
+    int panelGridY() { return panel_grid_y; }
 
     template<typename T, typename... Args>
     T* construct(Args&&... args)
     {
-        qDebug() << "Panel constructed: " << panel_index;
+        qDebug() << "Instance constructed. Mounting to Panel: " << panel_index;
 
         sim = new T(std::forward<Args>(args)...);
-        sim->main = main;
-        sim->options = options;
-        sim->panel = ctx.panel;
-        sim->camera = &ctx.camera;
+        sim->mountToPanel(this);
         return dynamic_cast<T*>(sim);
     }
 
-    void setOriginViewportAnchor(double ax, double ay)
+    template<typename T>
+    T* mountInstance(T *_sim)
     {
-        ctx.origin_ratio_x = ax;
-        ctx.origin_ratio_y = ay;
-    }
+        qDebug() << "Mounting existing instance to Panel: " << panel_index;
 
-    void setOriginViewportAnchor(Anchor anchor)
-    {
-        switch (anchor)
-        {
-        case Anchor::TOP_LEFT:
-            ctx.origin_ratio_x = 0;
-            ctx.origin_ratio_y = 0;
-            break;
-        case Anchor::CENTER:
-            ctx.origin_ratio_x = 0.5;
-            ctx.origin_ratio_y = 0.5;
-            break;
-        }
+        sim = _sim;
+        sim->mountToPanel(this);
+        return _sim;
     }
 };
 
-struct Layout
+class Layout
 {
-    SimulationBase* main;
-    Options* options;
     std::vector<Panel*> panels;
+
+protected:
+
+    friend class Simulation;
+    friend class SimulationInstance;
+
+    Simulation* main;
+    Options* options;
+
     int panels_x;
     int panels_y;
 
-    // Custom iterator
+    std::vector<SimulationInstance*> all_instances;
+
+public:
+
     using iterator = typename std::vector<Panel*>::iterator;
     using const_iterator = typename std::vector<Panel*>::const_iterator;
 
@@ -527,27 +205,16 @@ struct Layout
         // Panels freed each time you call setLayout
         for (Panel* p : panels)
             delete p;
+
         panels.clear();
     }
 
     void add(
         int _panel_index,
-        int _panel_x,
-        int _panel_y,
-        double _x, double _y,
-        double _w, double _h)
+        int _grid_x,
+        int _grid_y)
     {
-        Panel* panel = new Panel();
-        panel->ctx.panel = panel;
-        panel->main = main;
-        panel->options = options;
-        panel->panel_index = _panel_index;
-        panel->panel_x = _panel_x;
-        panel->panel_y = _panel_y;
-        panel->x = _x;
-        panel->y = _y;
-        panel->width = _w;
-        panel->height = _h;
+        Panel* panel = new Panel(this, main, options, _panel_index, _grid_x, _grid_y);
         panels.push_back(panel);
     }
 
@@ -559,10 +226,7 @@ struct Layout
         return this;
     }
 
-    Panel* operator[](int i)
-    {
-        return panels[i];
-    }
+    Panel* operator[](int i) { return panels[i]; }
 
     iterator begin() { return panels.begin(); }
     iterator end() { return panels.end(); }
@@ -571,96 +235,114 @@ struct Layout
     const_iterator end() const { return panels.end(); }
 };
 
-class SimulationBase : public QObject
+class Simulation : public QObject
 {
     Q_OBJECT
 
-public:
-
-    using CreatorFunc = std::function<SimulationBase* ()>;
-
-    // Factory methods
-    static std::vector<CreatorFunc>& getCreators()
-    {
-        static std::vector<CreatorFunc> creators;
-        return creators;
-    }
-    static std::vector<QString>& getNames()
-    {
-        static std::vector<QString> names;
-        return names;
-    }
-    static std::vector<SimulationBase*> createAll()
-    {
-        std::vector<SimulationBase*> result;
-        for (auto& f : getCreators())
-            result.push_back(f());
-        return result;
-    }
-    static void addFactoryItem(QString name, const CreatorFunc& func)
-    {
-        getNames().push_back(name);
-        getCreators().push_back(func);
-    }
-
-protected:
-
-    QString name;
-
-    Canvas2D* canvas;
-    QElapsedTimer dt_timer;
-
-    QThread* ffmpeg_thread;
-    FFmpegWorker* ffmpeg_worker;
-
-    Layout panels;
-    int panels_x = 1;
-    int panels_y = 1;
-
-public:
+    int sim_uid = -1;
 
     Options* options;
 
-    bool started;
-    bool paused;
-
-    int frame_dt;
+    QThread* ffmpeg_thread = nullptr;
+    FFmpegWorker* ffmpeg_worker = nullptr;
 
     // Recording states
+    bool allow_start_recording = true;
+    bool record_on_start = false;
     bool recording = false;
     bool encoder_busy = false;
     bool encode_next_paint = false;
     std::vector<GLubyte> frame_buffer; // Not changed until next process
     
-    //Simulation() {}
-    //~Simulation() {}
+    Canvas2D* canvas = nullptr;
+    QElapsedTimer dt_timer;
+    int frame_dt;
+
+    Layout panels;
+
+public:
+
+    // Factory methods
+    static std::vector<shared_ptr<SimulationInfo>> &simulationInfoList()
+    {
+        static std::vector<shared_ptr<SimulationInfo>> info_list;
+        return info_list;
+    }
+
+    static shared_ptr<SimulationInfo> findSimulationInfo(int sim_uid)
+    {
+        for (auto& info : simulationInfoList())
+        {
+            if (info->sim_uid == sim_uid)
+                return info;
+        }
+        return nullptr;
+    }
+
+    static void addSimulationInfo(const std::vector<QString> &tree_path, const CreatorFunc& func)
+    {
+        static int factory_sim_index = 0;
+        simulationInfoList().push_back(std::make_shared<SimulationInfo>(SimulationInfo(
+            tree_path, 
+            func, 
+            factory_sim_index++,
+            SimulationInfo::INACTIVE 
+        )));
+    }
+
+    static void hintOrder(const std::vector<QString> &tree_nodes)
+    {
+
+    }
+
+    std::shared_ptr<SimulationInfo> getSimulationInfo()
+    {
+        return findSimulationInfo(sim_uid);
+    }
+
+    void setSimulationInfoState(SimulationInfo::State state)
+    {
+        getSimulationInfo()->state = state;
+        options->refreshTreeUI();
+    }
+
+protected:
+
+    CacheContext cache;
+
+    friend class QtSim;
+    friend class Canvas2D;
+
+    bool started;
+    bool paused;
+
+public:
 
     Layout& setLayout(int _panels_x, int _panels_y);
     Layout& setLayout(int panel_count);
 
+    void configure(int sim_uid, Canvas2D *canvas, Options *options);
 
-    void configure();
+    int canvasWidth();  // Screen dimensions of canvas
+    int canvasHeight(); // Screen dimensions of canvas
+    Vec2 surfaceSize(); // Dimensions of FBO (depends on whether recording or not)
+    int getFrameTimeDelta() { return frame_dt; }
 
-    int width();
-    int height();
+    virtual void projectAttributes(Options* options) {}
 
-    virtual void _prepare() {}
-    virtual void _prepareProject() = 0;
-    virtual void _prepareInstances() = 0;
-
-    void _destroy();
+    void _prepare();
     void _start();
     void _stop();
+    void _pause();
+    void _destroy();
     void _process();
 
-    
-    virtual void prepare() {}
+    virtual void prepare() = 0;
+    virtual void start() {}
+    virtual void stop() {}
     virtual void destroy() {}
 
     virtual void postProcess();
-
-    virtual void start() {}
-    virtual void stop() {}
 
     virtual void mouseDown(MouseInfo mouse) {}
     virtual void mouseUp(MouseInfo mouse) {}
@@ -690,7 +372,7 @@ public:
             if (panel_mx >= 0 && panel_my >= 0 &&
                 panel_mx <= panel->width && panel_my <= panel->height)
             {
-                Camera& cam = panel->ctx.camera;
+                Camera& cam = panel->camera;// panel->ctx.camera;
                 if (cam.panning_enabled && btn == Qt::MiddleButton)
                 {
                     cam.panBegin(x, y);
@@ -720,7 +402,7 @@ public:
             if (panel_mx >= 0 && panel_my >= 0 &&
                 panel_mx <= panel->width && panel_my <= panel->height)
             {
-                Camera& cam = panel->ctx.camera;
+                Camera& cam = panel->camera; ;// panel->ctx.camera;
                 if (cam.panning_enabled && btn == Qt::MiddleButton)
                 {
                     cam.panEnd(x, y);
@@ -740,9 +422,9 @@ public:
             double panel_mx = x - panel->x;
             double panel_my = y - panel->y;
 
-            Camera& cam = panel->ctx.camera;
+            Camera& cam = panel->camera; ;// panel->ctx.camera;
             if (cam.panning_enabled)
-                cam.panProcess(x, y);
+                cam.panDrag(x, y);
         }
 
         /*
@@ -760,11 +442,11 @@ public:
             if (panel_mx >= 0 && panel_my >= 0 &&
                 panel_mx <= panel->width && panel_my <= panel->height)
             {
-                Camera& cam = panel->ctx.camera;
+                Camera& cam = panel->camera; ;// panel->ctx.camera;
                 if (cam.zooming_enabled)
                 {
-                    cam.zoom_x += (((double)delta) * cam.zoom_x) / 1000.0;
-                    cam.zoom_y = cam.zoom_x;
+                    cam.targ_zoom_x += (((double)delta) * cam.targ_zoom_x) / 1000.0;
+                    cam.targ_zoom_y = cam.targ_zoom_x;
                 }
             }
         }
@@ -778,11 +460,12 @@ public:
     void _draw(QNanoPainter* p);
     void onPainted(const std::vector<GLubyte>& frame);
 
-    void setCanvas(Canvas2D* _canvas) { canvas = _canvas; }
-    void setOptions(Options* _options) { options = _options; }
-    void setName(const QString& _name) { name = _name; }
-
     bool startRecording();
+    void setRecordOnStart(bool b)
+    {
+        record_on_start = b;
+    }
+
     bool encodeFrame(uint8_t* data);
     void finalizeRecording();
 
@@ -793,45 +476,21 @@ signals:
     void endRecording();
 };
 
-template<typename T>
-class Simulation : public SimulationBase //: public QObject
-{
-public:
-
-    virtual void projectAttributes() {}
-    
-    void _prepare() override
-    {
-        _prepareProject();
-        _prepareInstances();
-    }
-
-    void _prepareProject() override
-    {
-        panels.clear();
-
-        options->clearAllPointers();
-        projectAttributes();
-
-        // Prepare project and create layout
-        // Note: This is where old panels get replaced
-        prepare();
-    }
-
-    void _prepareInstances() override
-    {
-        for (Panel* panel : this->panels)
-            panel->sim->instanceAttributes();
-    }
-};
-
 template <typename T>
 struct AutoRegisterSimulation
 {
-    AutoRegisterSimulation(QString name)
+    AutoRegisterSimulation(const std::vector<QString> &tree_path)
     {
-        SimulationBase::addFactoryItem(name, []() -> SimulationBase* {
-            return (SimulationBase*)(new T());
+        Simulation::addSimulationInfo(tree_path, []() -> Simulation* {
+            return (Simulation*)(new T());
         });
+    }
+};
+
+struct AutoRegisterSimulationOrder
+{
+    AutoRegisterSimulationOrder(const std::vector<QString> &node_names)
+    {
+        //Simulation::getOrderMap();
     }
 };

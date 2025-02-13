@@ -2,6 +2,34 @@
 #include <QPoint>
 #include <QRectF>
 
+class Simulation;
+using CreatorFunc = std::function<Simulation*()>;
+
+struct SimulationInfo
+{
+    enum State
+    {
+        INACTIVE,
+        ACTIVE,
+        RECORDING
+    };
+
+    std::vector<QString> path;
+    CreatorFunc creator;
+    int sim_uid;
+    State state;
+
+    SimulationInfo(
+        std::vector<QString> path,
+        CreatorFunc creator=nullptr, 
+        int sim_uid=-100, 
+        State state=State::INACTIVE
+    ) 
+        : path(path), creator(creator), sim_uid(sim_uid), state(state)
+    {}
+};
+
+
 struct MouseInfo
 {
     double stage_x = 0;
@@ -10,6 +38,12 @@ struct MouseInfo
     double world_y = 0;
     int scroll_delta = 0;
     Qt::MouseButton btn = Qt::MouseButton::NoButton;
+};
+
+enum Anchor
+{
+    TOP_LEFT,
+    CENTER
 };
 
 struct Vec2

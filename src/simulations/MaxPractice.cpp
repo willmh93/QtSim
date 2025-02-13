@@ -1,5 +1,8 @@
 #include "MaxPractice.h"
-SIM_DECLARE(MaxPractice, "Max Practice")
+
+
+SIM_DECLARE(MaxPractice, "Lessons", "Max Practice 1")
+SIM_ORDER("Physics", "Lessons")
 
 void MaxPractice::prepare()
 {
@@ -13,10 +16,10 @@ void MaxPractice::start()
    
 }
 
-void MaxPracticeInstance::instanceAttributes()
+void MaxPracticeInstance::instanceAttributes(Options* options)
 {
     // Instance Settings
-    options->realtime_slider("Num Particles", &particle_count, 1, 100, 1);
+    options->realtime_slider("Num Particles", &particle_count, 1, 1000000, 1);
     options->realtime_slider("Max Start Speed", &max_speed, 0.0, 20.0, 0.1);
 }
 
@@ -27,7 +30,7 @@ void MaxPracticeInstance::start()
         Ball ball;
         ball.x = 0;
         ball.y = 0;
-        ball.rad = random(1,50);
+        ball.rad = random(1,3);
         ball.vx = random(-max_speed, max_speed);
         ball.vy = random(-max_speed, max_speed);
         ball.r = random(0, 255);
@@ -41,8 +44,38 @@ void MaxPracticeInstance::start()
 void MaxPracticeInstance::destroy()
 {}
 
-void MaxPracticeInstance::process(DrawingContext* ctx)
+void MaxPracticeInstance::processScene()
 {
+    //uint8_t arr[] = {1,2,3,4,5};
+    //std::vector<uint8_t> arr;// = { 1,2,3,4,5 };
+    //cache->apply(arr);
+
+    //if (missing_cache())
+
+    if (cache->missing())
+    {
+        for (int i = 0; i < particle_count; i++)
+        {
+            Ball& a = balls[i];
+            double sum_vx = 0;
+            double sum_vy = 0;
+            for (int j = i; j < particle_count; j++)
+            {
+                if (i == j) continue;
+                Ball& b = balls[j];
+                double f = 0.00000001;
+                double dx = b.x - a.x;
+                double dy = b.y - a.y;
+                a.vx += dx * f;
+                a.vy += dy * f;
+                b.vx -= dx * f;
+                b.vy -= dy * f;
+            }
+        }
+    }
+
+    cache->apply(balls);
+
     for (Ball &ball : balls)
     {
         ball.x += ball.vx;
@@ -71,11 +104,9 @@ void MaxPracticeInstance::process(DrawingContext* ctx)
             ball.vy = -ball.vy;
         }
     }
-
-    
 }
 
-void MaxPracticeInstance::draw(DrawingContext* ctx)
+void MaxPracticeInstance::draw(Panel* ctx)
 {
     for (Ball &ball : balls)
     {
@@ -85,7 +116,7 @@ void MaxPracticeInstance::draw(DrawingContext* ctx)
         ctx->fill();
     }
 
-    ctx->setStrokeStyle(0, 255, 0, 100);
+    /*ctx->setStrokeStyle(0, 255, 0, 100);
     ctx->setLineWidth(1);
     for (int i = 0; i < particle_count; i++)
     {
@@ -99,11 +130,11 @@ void MaxPracticeInstance::draw(DrawingContext* ctx)
             ctx->lineTo(b.x, b.y);
             ctx->stroke();
         }
-    }
+    }*/
 
     ctx->setStrokeStyle(255, 255, 255);
     ctx->setLineWidth(1);
-    ctx->strokeRect(-world_size, -world_size, world_size, world_size);
+    ctx->strokeRect(-world_size, -world_size, world_size*2, world_size*2);
 }
 
 SIM_END

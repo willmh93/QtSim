@@ -49,24 +49,24 @@ struct CurvedSpaceInstance : public SimulationInstance
         }
     }
 
-    void instanceAttributes() override;
+    void instanceAttributes(Options* options) override;
 
     //void prepare();
-    void start();
-    void destroy();
-    void process(DrawingContext* ctx);
-    void draw(DrawingContext* ctx);
+    void start() override;
+    void destroy() override;
+    void processScene() override;
+    void draw(Panel* ctx) override;
 
     void mouseDown(MouseInfo mouse);
 };
 
-struct CurvedSpace : public Simulation<CurvedSpaceInstance>
+struct CurvedSpace : public Simulation
 {
     int panel_count = 4;
     double radius_mult = 1;
 
-    void prepare();
-    void projectAttributes() override;
+    void prepare() override;
+    void projectAttributes(Options* options) override;
     
 };
 

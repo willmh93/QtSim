@@ -8,7 +8,7 @@ struct WorldObject
     double y;
 };
 
-struct Panel;
+class Panel;
 class Camera
 {
 
@@ -22,15 +22,34 @@ public:
 
     double x = 0;
     double y = 0;
-    double pan_x = 0;
-    double pan_y = 0;
     double zoom_x = 1;
     double zoom_y = 1;
     double rotation = 0;
+    double targ_zoom_x = 1;
+    double targ_zoom_y = 1;
+
+    double pan_x = 0;
+    double pan_y = 0;
+    double targ_pan_x = 0;
+    double targ_pan_y = 0;
 
     bool transform_coordinates = true;
     bool scale_lines_text = true;
     bool rotate_text = true;
+
+    double viewport_w = 0;
+    double viewport_h = 0;
+
+    double origin_ratio_x = 0.5;
+    double origin_ratio_y = 0.5;
+
+    double pan_mult = 1.0;
+    int pan_down_x = 0;
+    int pan_down_y = 0;
+    double pan_beg_x = 0;
+    double pan_beg_y = 0;
+    bool panning = false;
+
 
     void setTransformFilters(
         bool _transform_coordinates,
@@ -85,15 +104,26 @@ public:
         rotate_text = rotate;
     }
 
-    double viewport_w;
-    double viewport_h;
+    void setOriginViewportAnchor(double ax, double ay)
+    {
+        origin_ratio_x = ax;
+        origin_ratio_y = ay;
+    }
 
-    double pan_mult = 1.0;
-    int pan_down_x;
-    int pan_down_y;
-    double pan_beg_x;
-    double pan_beg_y;
-    bool panning = false;
+    void setOriginViewportAnchor(Anchor anchor)
+    {
+        switch (anchor)
+        {
+        case Anchor::TOP_LEFT:
+            origin_ratio_x = 0;
+            origin_ratio_y = 0;
+            break;
+        case Anchor::CENTER:
+            origin_ratio_x = 0.5;
+            origin_ratio_y = 0.5;
+            break;
+        }
+    }
 
     void setZoom(double zoom)
     {
@@ -163,7 +193,8 @@ public:
     FRect toStageRect(const Vec2& pt1, const Vec2& pt2);
 
     void panBegin(int _x, int _y);
-    void panProcess(int _x, int _y);
+    void panDrag(int _x, int _y);
     void panEnd(int _x, int _y);
+    void panProcess();
 };
 

@@ -11,16 +11,14 @@ struct BigBangInstance : public SpaceEngineInstance
     bool focus_rect_initialized = false;
     FRect focus_rect;
 
-    void prepare();
-    void start();
-    void process(DrawingContext *ctx);
-    void draw(DrawingContext* ctx);
+    void start() override;
+    void processScene() override;
+    void draw(Panel* ctx) override;
 };
 
-struct BigBang : public Simulation<BigBangInstance>
+struct BigBang : public SpaceEngine
 {
-    void projectAttributes() {}
-    void prepare();
+    void prepare() override;
 };
 
 SIM_END

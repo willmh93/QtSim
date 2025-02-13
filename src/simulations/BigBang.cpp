@@ -1,6 +1,6 @@
 #include "BigBang.h"
 
-SIM_DECLARE(BigBang, "Big Bang")
+SIM_DECLARE(BigBang, "Physics", "Space Engine", "Big Bang")
 
 void BigBang::prepare()
 {
@@ -34,27 +34,28 @@ void BigBang::prepare()
 
 void BigBangInstance::start()
 {
-    world_size_min = 100;
-    world_size_max = 10000;
+    //world_size_min = 100;
+    //world_size_max = 10000;
     steps_per_frame = 1;
     step_seconds = 0.001;
-    particle_count = 50;// 5000;
+    particle_count = 10000;
     collision_substeps = 10;
     gravity_cell_near_ratio = 0.01;
     //start_particle_radius = 0.05;
     gravity = 0.03;
 
-    start_world_size = 5000;
+    //start_world_size = 5000;
+    world_size = 5000;
 
-    step_seconds_step = step_seconds * 0.1;
-    step_seconds_min = 0;// step_seconds * 0.5;
-    step_seconds_max = step_seconds * 10;
+    //step_seconds_step = step_seconds * 0.1;
+    //step_seconds_min = 0;// step_seconds * 0.5;
+    //step_seconds_max = step_seconds * 10;
 
     SpaceEngineInstance::start();
 
-    auto universe_particles = newPlanetFromParticleCount(0, 0, 50, start_world_size, particle_count);
+    auto universe_particles = newPlanetFromParticleCount(0, 0, 50, world_size, particle_count);
 
-    double explode_speed = 100.0;
+    double explode_speed = 1000.0;
     double max_perp_speed_ratio = 1;
     double perp_bias = 1;
 
@@ -104,9 +105,9 @@ void BigBangInstance::start()
     
 }
 
-void BigBangInstance::process(DrawingContext *ctx)
+void BigBangInstance::processScene()
 {
-    SpaceEngineInstance::process(ctx);
+    SpaceEngineInstance::processScene();
 
     double x1 = std::numeric_limits<double>::max();
     double x2 = std::numeric_limits<double>::lowest();
@@ -134,13 +135,13 @@ void BigBangInstance::process(DrawingContext *ctx)
     ctx->camera.cameraToWorld(focus_rect);*/
 }
 
-void BigBangInstance::draw(DrawingContext* ctx)
+void BigBangInstance::draw(Panel* ctx)
 {
     SpaceEngineInstance::draw(ctx);
-    FRect r = ctx->camera.toStageRect(-world_size / 2, -world_size / 2, world_size / 2, world_size / 2);
+    /*FRect r = ctx->camera.toStageRect(-world_size / 2, -world_size / 2, world_size / 2, world_size / 2);
 
     ctx->setStrokeStyle(255,255,255);
-    ctx->strokeRect(r);
+    ctx->strokeRect(r);*/
 }
 
 SIM_END

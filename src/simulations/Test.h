@@ -2,13 +2,25 @@
 #define TEST_H
 #include "Simulation.h"
 
+
 SIM_BEG(Test)
+
+struct Particle : public Vec2
+{
+    double vx, vy;
+    Particle(double x, double y, double vx, double vy)
+        : Vec2(x,y), vx(vx), vy(vy)
+    {}
+};
 
 struct Test_Instance : public SimulationInstance
 {
     bool transform_coordinates = true;
     bool scale_lines_text = true;
     bool rotate_text = true;
+    double seed = 0;
+
+    vector<Particle> particles;
 
     Test_Instance()
     {
@@ -16,12 +28,14 @@ struct Test_Instance : public SimulationInstance
         // Use initializer list for reference variables
     }
 
-    void instanceAttributes() override;
+    void instanceAttributes(Options* options) override;
 
-    void start();
-    void destroy();
-    void process(DrawingContext* ctx);
-    void draw(DrawingContext* ctx);
+    void start() override;
+    void mount(Panel *panel) override;
+    void destroy() override;
+    void processScene() override;
+    void processPanel(Panel* ctx) override;
+    void draw(Panel* ctx) override;
 
     //void mouseDown(MouseInfo mouse);
     //void mouseUp(MouseInfo mouse);
@@ -29,12 +43,12 @@ struct Test_Instance : public SimulationInstance
     //void mouseWheel(MouseInfo mouse);
 };
 
-struct Test : public Simulation<Test_Instance>
+struct Test : public Simulation
 {
     int panel_count = 1;
 
-    void projectAttributes() override;
-    void prepare();
+    void projectAttributes(Options* options) override;
+    void prepare() override;
 };
 
 SIM_END

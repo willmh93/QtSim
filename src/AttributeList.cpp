@@ -3,7 +3,7 @@
 AttributeList::AttributeList(QWidget* parent)
 {
     layout = new QVBoxLayout(this);
-    layout->setSpacing(0);
+    layout->setSpacing(6);
     layout->setContentsMargins(0, 0, 0, 0);
     layout->setAlignment(Qt::AlignTop);  // Ensure widgets stack at the top
     layout->setSizeConstraint(QLayout::SetMinAndMaxSize);

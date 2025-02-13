@@ -2,18 +2,63 @@
 
 #include <QWidget>
 #include <QStandardItemModel>
+#include <QStyledItemDelegate>
+#include <QPainter>
+
 #include "ui_Options.h"
 #include "AttributeList.h"
 
 //#include "Simulations/simulation_types.h"
 #include "types.h"
 
+class DynamicIconDelegate : public QStyledItemDelegate {
+public:
+    DynamicIconDelegate(QObject* parent = nullptr) : QStyledItemDelegate(parent) {}
+
+    void paint(QPainter* painter, const QStyleOptionViewItem& option,
+        const QModelIndex& index) const override;
+};
+
+class SimTreeItem : public QStandardItem
+{
+public:
+    std::shared_ptr<SimulationInfo> sim_info;
+
+    SimTreeItem(const QString& label, std::shared_ptr<SimulationInfo> sim_info)
+        : QStandardItem(label), sim_info(sim_info)
+    {}
+};
+
+class SimTreeModel : public QStandardItemModel
+{
+public:
+    SimTreeModel(QObject* parent = nullptr) : QStandardItemModel(parent)
+    {}
+
+    Qt::ItemFlags flags(const QModelIndex& index) const override
+    {
+        if (!index.isValid())
+            return Qt::NoItemFlags;
+
+        SimTreeItem *item = dynamic_cast<SimTreeItem*>(itemFromIndex(index));
+
+        if (!item->sim_info || item->sim_info->sim_uid < 0)
+            return QAbstractItemModel::flags(index) & ~Qt::ItemIsSelectable;
+
+        return QAbstractItemModel::flags(index);
+    }
+};
+
 class Options : public QWidget
 {
     Q_OBJECT;
 
     AttributeList* attributeList;
-    QStandardItemModel list_model;
+
+    //SimTreeModel tree_model;
+    SimTreeModel model;
+    QStandardItem* rootItem;
+    DynamicIconDelegate* icon_delegate;
 
 public:
     Options(QWidget *parent = nullptr);
@@ -49,62 +94,39 @@ public:
             item->removeAllPointers();
     }
 
-    //void forceRefreshPointers()
-    //{
-    //    attributeList->forceRefreshPointers();
-    //}
-
-
-    /*void garbageTakePriorSnapshot()
-    {
-        for (AttributeItem* item : attributeList->item_widgets)
-        {
-            item->touched = false;
-            item->garbageTakePriorSnapshot();
-            //AttributeItemSnapshot item_snapshot;
-            //item_snapshot.name = item->name;
-            //item_snapshot.ptrs = item->getValuePointers();
-        }
-    }
-
-    void garbageRemoveUnreferencedPointers()
-    {
-        for (AttributeItem* item : attributeList->item_widgets)
-        {
-            if (item->touched)
-            {
-                item->garbageRemoveUnreferencedPointers();
-            }
-        }
-        updateListUI();
-    }*/
-
     //AttributeItem* slider(const QString& name, double *target, double min, double max, double step=0.1, std::function<void(double)> on_change = nullptr);
     //AttributeItem* number(const QString& name, int min, int max, int step, std::function<void(int)> on_change = nullptr);
     //AttributeItem* number(const QString& name, double min, double max, double step, std::function<void(double)> on_change = nullptr);
     AttributeItem* combo(const QString& name, const std::vector<QString> &items=std::vector<QString>(), std::function<void(int)> on_change = nullptr);
 
-    void addSimListEntry(const QString& name);
+    void addSimListEntry(const std::shared_ptr<SimulationInfo>& info);
+    void addSimListEntry(SimulationInfo info)
+    {
+        addSimListEntry(std::make_shared<SimulationInfo>(info));
+    }
 
     void clearAttributeList();
     void updateListUI();
+    void refreshTreeUI();
 
-    bool getRecordChecked();
+    //bool getRecordChecked();
     Size getRecordResolution();
+    int getRecordFPS();
 
-    QString getRecordPath();
+    QString getProjectsDirectory();
 
 signals:
 
-    void onChooseSimulation(int type);
+    void onChooseSimulation(int sim_uid);
+    void onForceStartBeginSimulation(int sim_uid);
     void onStartSimulation();
     void onStopSimulation();
+    void onChangeFPS(int fps);
 
 protected slots:
 
     void selectionChanged(const QItemSelection& selected, const QItemSelection&);
-    void startClicked();
-    void stopClicked();
+    void doubleClickSim(const QModelIndex& index);
 
 private:
     Ui::OptionsClass ui;

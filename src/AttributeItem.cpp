@@ -51,12 +51,13 @@ AttributeItem::AttributeItem(
     // Add Layout to Frame
     layout = new QVBoxLayout(this);
     layout->setSpacing(0);
-    layout->setContentsMargins(3,3,3,3);
+    layout->setContentsMargins(0,0,0,0);
 
     // Create frame
     QFrame* frame = new QFrame(this);
     frame->setFrameShape(QFrame::Box);
     frame->setFrameShadow(QFrame::Raised);
+    frame->setStyleSheet("background: #292942;");
     frame->setLineWidth(1);
 
     // Create inner layout for components
@@ -558,7 +559,7 @@ void AttributeItem::setActiveComboItem(QString text)
         if (combo_items[i].first == text)
         {
             QComboBox* comboBox = (QComboBox*)input;
-            comboBox->setCurrentIndex(i);
+            comboBox->setCurrentIndex((int)i);
             combo_items[i].second();
         }
     }

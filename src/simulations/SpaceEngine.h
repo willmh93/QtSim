@@ -24,7 +24,7 @@ struct Cluster
     std::vector<Particle*> particles;
 };
 
-struct Particle
+struct Particle : public Serializable
 {
     Cluster* cluster;
     std::vector<Bond*> bonds;
@@ -42,6 +42,14 @@ struct Particle
     {
         double volume = (4.0 / 3.0) * M_PI * pow(real_radius, 3);
         mass = density * volume;
+    }
+
+    void cache(SerializeContext* cache)
+    {
+        cache->apply(x);
+        cache->apply(y);
+        cache->apply(vx);
+        cache->apply(vy);
     }
 };
 
@@ -157,9 +165,9 @@ struct SpaceEngineInstance : public SimulationInstance
 
     // Starting values
     int density_bmp_size = 10;
-    double start_world_size = 100;
-    double start_particle_speed = 1;
-    double start_particle_radius = 1;
+    //double start_world_size = 100;
+    //double start_particle_speed = 1;
+    //double start_particle_radius = 1;
     double particle_bounce = 0.9;
     double particle_magnify = 1;
     double gravity = 0.1;
@@ -170,15 +178,17 @@ struct SpaceEngineInstance : public SimulationInstance
     //double collision_cell_size = start_particle_radius * 10;
     
     // Ranges
-    double step_seconds_min = 1;
-    double step_seconds_max = 10;
-    double step_seconds_step = 1;
-    double world_size_min = 100;
-    double world_size_max = 1000;
-    double world_size_step = 100;
-    double particle_radius_min = 1;
-    double particle_radius_max = 10;
-    double particle_radius_step = 1;
+
+    //double step_seconds_min = 1;
+    //double step_seconds_max = 10;
+    //double step_seconds_step = 1;
+    //double world_size_min = 100;
+    //double world_size_max = 1000;
+    //double world_size_step = 100;
+    //double particle_radius_min = 1;
+    //double particle_radius_max = 10;
+    //double particle_radius_step = 1;
+
     //double collision_cell_size_min = collision_cell_size * 0.1;
     //double collision_cell_size_max = collision_cell_size * 2;
     //double collision_cell_size_step = collision_cell_size * 0.1;
@@ -186,7 +196,7 @@ struct SpaceEngineInstance : public SimulationInstance
 
 
 
-    double world_size = start_world_size;
+    double world_size = 100;// start_world_size;
     
 
     double hex_lattice_density = 0.952;
@@ -216,11 +226,11 @@ struct SpaceEngineInstance : public SimulationInstance
     bool optimize_gravity = true;
     bool optimize_collisions = true;
 
-    void instanceAttributes();
-    void start();
-    void destroy();
-    void process(DrawingContext* ctx);
-    void draw(DrawingContext* ctx);
+    void instanceAttributes(Options* options) override;
+    void start() override;
+    void destroy() override;
+    void processScene() override;
+    void draw(Panel* ctx) override;
 
     
 
@@ -507,10 +517,9 @@ struct SpaceEngineInstance : public SimulationInstance
 
 };
 
-struct SpaceEngine : public Simulation<SpaceEngineInstance>
+struct SpaceEngine : public Simulation
 {
-    void projectAttributes() {}
-    void prepare();
+    void prepare() override;
 };
 
 SIM_END

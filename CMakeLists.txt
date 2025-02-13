@@ -9,15 +9,17 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# sets default startup project in Visual Studio
-set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT QtSim)
-if (MSVC)
-    add_compile_options(/MP)
-endif()
-
 # packages
 find_package(QT NAMES Qt6 Qt5 REQUIRED)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Gui Widgets Quick Xml OpenGL OpenGLWidgets)
+
+# sets default startup project in Visual Studio
+set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT QtSim)
+if (MSVC)
+    add_compile_options(/MP) # Multi-threaded compilation
+    add_compile_options(/permissive- /W3 /WX) # Enforce stricter conformance to C++ standard
+    add_compile_options(/wd4244 /wd4267 /wd4101 /wd4996)
+endif()
 
 # Linux Locate ffmpeg
 if(UNIX)
@@ -264,3 +266,5 @@ install(TARGETS QtSim BUNDLE DESTINATION .
 if(QT_VERSION_MAJOR EQUAL 6)
     qt_finalize_executable(QtSim)
 endif()
+
+#add_subdirectory(plugins/MixedInputList)
