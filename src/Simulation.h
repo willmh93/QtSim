@@ -43,7 +43,7 @@ std::vector<QString> VectorizeArgs(Ts&&... args) { return { QString::fromUtf8(st
 //#define BASE_SIM(id) namespace NS_##id {
 #define SIM_END }
 
-#define SIM_ORDER(...) AutoRegisterSimulationOrder register_order(VectorizeArgs(__VA_ARGS__));
+#define SIBLING_ORDER(...) AutoRegisterSimulationOrder register_order(VectorizeArgs(__VA_ARGS__));
 
 class QNanoPainter;
 class Canvas2D;

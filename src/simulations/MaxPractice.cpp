@@ -2,7 +2,7 @@
 
 
 SIM_DECLARE(MaxPractice, "Lessons", "Max Practice 1")
-SIM_ORDER("Physics", "Lessons")
+SIBLING_ORDER("Physics", "Lessons")
 
 void MaxPractice::prepare()
 {

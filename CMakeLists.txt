@@ -36,6 +36,9 @@ message(STATUS "Auto-generating simulations")
     # Collect all simulation header files
     file(GLOB SIMULATION_HEADERS CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/simulations/*.h")
     file(GLOB SIMULATION_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/simulations/*.cpp")
+    list(SORT SIMULATION_HEADERS)
+    list(SORT SIMULATION_SOURCES)
+
     file(GLOB PROJECT_SOURCES CONFIGURE_DEPENDS
         "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/*.h"
