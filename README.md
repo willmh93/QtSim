@@ -2,13 +2,13 @@
 
 &#x20;&#x20;
 
-A cross-platform (Windows, Linux) framework for building and recording 2D simulations.
+A cross-platform (Windows, Linux) framework for building and recording 2D simulations
 
 - UI developed in Qt
 - Uses https://github.com/QUItCoding/qnanopainter (NanoVG wrapper) for high-performance Canvas drawing with OpenGL
 - FFmpeg for video encoding
 
-Included are Physics, Biology and Chemistry simulations, as well as other experiments.
+Included are some Physics, Biology and Chemistry simulations experiments
 
 ## Features
 
@@ -27,27 +27,20 @@ Included are Physics, Biology and Chemistry simulations, as well as other experi
     options->starting_slider("Particle Count", &particle_count, 10, 1000);
     options->realtime_checkbox("Optimize Collisions", &optimize_collisions);
     ```
-  
   - **Bitmap** - Uses Offscreen FBO for high-performance Pixel manipulation
 - **x264 Video Recording**
-  
-- - Custom resolution / FPS (uses offscreen FBO for rendering)
+  - Custom record resolution / FPS (uses offscreen FBO for rendering)
   - Window Capture (optional)
     
 - **Custom Qt Components**
-     
   - Custom Spline Graph input component (coming soon)
-    
-- **Various Templates** - Physics / Biology / Chemistry templates to build on
-  
-- **My Personal Projects**
 
 ## Gallery
 
 ## Prerequisites
 
 - **Windows or Linux OS**
-- **Qt 6.x or later** (Qt Creator)
+- **Qt 6.8.x or later** (Qt Creator)
 - **CMake 3.16+**
 - **Python 3.12** *(optional but recommended for creating new simulations from templates)*
 - **Compiler:** MSVC or GCC
@@ -60,40 +53,41 @@ Included are Physics, Biology and Chemistry simulations, as well as other experi
    git clone https://github.com/willmh93/QtSim.git
    cd QtSim
    ```
-2. (Windows) Extract FFmpeg_dlls.7z into: ``external\ffmpeg\windows\bin``
+2. Open project in Qt Creator
+    - Select target kit (**MinGW 64-bit**, or **MSVC2022 64-bit** if Visual Studio build)
+    - Click **Configure**
+    - Wait for CMake to fetch dependencies and create project files
+
+3. If using Visual Studio:
+   - Run Generator (QtCreator Menu: **Build** --> **Run Generator**)
+   - Open **build/Desktop_Qt_6_8_x_MSVC2022-Debug/qtc_Visual_Studio_17_2022/QtSim.sln**
+     
+4. Compile and run!
    
-3. Build the project with CMake (automatically fetches other dependencies):
-
-   ```sh
-   cmake -B build
-   ```
-
 ## Simulation Tutorial
+
 ### Creating a new simulation
-  - **Run Python Script:**
+  - **Run Python Script**
     - ```python scripts/new_sim.py```
     - Enter Class Name        (e.g. **"Explosion"**)
     - Enter Descriptive Name  (e.g. **"Exploding Particles"**)
-  - **Open Project in Qt Creator**
-      - Optionally, generate a Visual Studio 2022 Solution (QtCreator Menu: **Build** --> **Run Generator**)
-  - **Find your generated simulation source files:**
+  - **This will generate your simulation source files**
     ```
     src/simulations/Explosion.h
     src/simulations/Explosion.cpp
     ```
-  - If you run the application, your simulation should now appear in the TreeView
-
+  - When you run the application, your simulation should appear in the TreeView in the top-left corner
 ### Creating your Scene and rendering it
-- Your **Scene** can override these various methods:
+- Your **Scene** can override these various methods
     ```
     virtual void instanceAttributes(Options* options)
-    virtual void start()
-    virtual void mount(Panel *ctx)
-    virtual void stop()
-    virtual void destroy()
+    virtual void startScene()
+    virtual void onMount(Viewport *ctx)
+    virtual void stopScene()
+    virtual void destroyScene()
     virtual void processScene()
-    virtual void processPanel(Panel* ctx)
-    virtual void draw(Panel* ctx)
+    virtual void processViewport(Viewport* ctx)
+    virtual void drawViewport(Viewport* ctx)
     
     virtual void mouseDown() {}
     virtual void mouseUp() {}
@@ -101,36 +95,26 @@ Included are Physics, Biology and Chemistry simulations, as well as other experi
     virtual void mouseWheel() {}
     ```
 
-## Project Structure
+## Key Files / Directories
 
 ```
 QtSim/
 ├── src/
-│   └── simulations/    # Auto-included Simulations
-├── resources/
-├── external/
-│   └── ffmpeg/
-│       └── windows/
-│           ├── bin/
-│           │   └── FFmpeg_dlls.7z  # (extract in-place)
-│           ├── include/
-│           ├── lib/
+│   └── simulations/
+│       └── # Auto-included Simulations...
 ├── scripts
-│   ├── new_sim.py      # Python helper for creating simulation
-│   └── rename_sim.py   # Python helper for renaming simulation
-├── templates
-├── CMakeLists.txt      # Build system
-├── README.md           # Project documentation
-└── LICENSE             # License information
+│   ├── new_sim.py                  # Python helper for creating simulation
+│   └── rename_sim.py               # Python helper for renaming existing simulation
+└── CMakeLists.txt
 ```
 
 ## Contributing
 
-1. Fork the repository.
-2. Create a feature branch (`git checkout -b feature-xyz`).
-3. Commit your changes (`git commit -m 'Added new simulation template'`).
-4. Push to the branch (`git push origin feature-xyz`).
-5. Open a pull request.
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature-xyz`)
+3. Commit your changes (`git commit -m 'Added new simulation template'`)
+4. Push to the branch (`git push origin feature-xyz`)
+5. Open a pull request
 
 ## License
 
