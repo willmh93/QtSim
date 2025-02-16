@@ -15,23 +15,7 @@ Included are Physics, Biology and Chemistry simulations, as well as other experi
 - **Simulation Framework**
   - **Layout** - Supports multiple Viewports / Scenes
   - **Viewport** - For hassle-free performant 2D drawing (uses Qnanopainter, NanoVG wrapper)
-  - **Scene** - Can be mounted to multiple **Viewport**'s for shared Scenes with multiple **Camera**'s
-    - Virtual functions for your simulation to override, such as:
-      ```
-      virtual void instanceAttributes(Options* options)
-      virtual void start()
-      virtual void mount(Panel *ctx)
-      virtual void stop()
-      virtual void destroy()
-      virtual void processScene()
-      virtual void processPanel(Panel* ctx)
-      virtual void draw(Panel* ctx)
-      
-      virtual void mouseDown() {}
-      virtual void mouseUp() {}
-      virtual void mouseMove() {}
-      virtual void mouseWheel() {}
-      ```
+  - **Scene** - A scene be mounted to multiple **Viewports** for shared **Scenes** with multiple **Cameras** (each Viewport has it's own Camera)
   - **Camera**
      - Position / Rotation / Panning
      - Easy conversion between Stage / World coordinates
@@ -58,16 +42,17 @@ Included are Physics, Biology and Chemistry simulations, as well as other experi
   
 - **My Personal Projects**
 
-## Screenshots
+## Gallery
 
-### Prerequisites
+## Prerequisites
 
 - **Windows or Linux OS**
 - **Qt 6.x or later** (Qt Creator)
 - **CMake 3.16+**
+- **Python 3.12** *(optional but recommended for creating new simulations from templates)*
 - **Compiler:** MSVC or GCC
 
-### Installation
+## Installation
 
 1. Clone the repository:
 
@@ -83,15 +68,37 @@ Included are Physics, Biology and Chemistry simulations, as well as other experi
    cmake -B build
    ```
 
-## Making your first simulation
-  - Run Python Script: ```scripts/new_sim.py```
-    - Enter Class Name (e.g. Explosion)
-    - Enter Descriptive Name (e.g. "Exploding Particles")
-  - Open Project in Qt Creator, or generate a Visual Studio 2022 Solution (QtCreator Menu: Build => Run Generator)
-  - Open your generated simulation files, e.g.
+## Simulation Tutorial
+### Creating a new simulation
+  - **Run Python Script:**
+    - ```python scripts/new_sim.py```
+    - Enter Class Name        (e.g. **"Explosion"**)
+    - Enter Descriptive Name  (e.g. **"Exploding Particles"**)
+  - **Open Project in Qt Creator**
+      - Optionally, generate a Visual Studio 2022 Solution (QtCreator Menu: **Build** --> **Run Generator**)
+  - **Find your generated simulation source files:**
     ```
-    src/simulations/my_sim.h
-    src/simulations/my_sim.cpp
+    src/simulations/Explosion.h
+    src/simulations/Explosion.cpp
+    ```
+  - If you run the application, your simulation should now appear in the TreeView
+
+### Creating your Scene and rendering it
+- Your **Scene** can override these various methods:
+    ```
+    virtual void instanceAttributes(Options* options)
+    virtual void start()
+    virtual void mount(Panel *ctx)
+    virtual void stop()
+    virtual void destroy()
+    virtual void processScene()
+    virtual void processPanel(Panel* ctx)
+    virtual void draw(Panel* ctx)
+    
+    virtual void mouseDown() {}
+    virtual void mouseUp() {}
+    virtual void mouseMove() {}
+    virtual void mouseWheel() {}
     ```
 
 ## Project Structure
@@ -121,7 +128,7 @@ QtSim/
 
 1. Fork the repository.
 2. Create a feature branch (`git checkout -b feature-xyz`).
-3. Commit your changes (`git commit -m 'Add new simulation'`).
+3. Commit your changes (`git commit -m 'Added new simulation template'`).
 4. Push to the branch (`git push origin feature-xyz`).
 5. Open a pull request.
 
