@@ -5,7 +5,7 @@
 A cross-platform (Windows, Linux) framework for building and recording 2D simulations.
 
 - UI developed in Qt
-- Uses https://github.com/QUItCoding/qnanopainter (NanoVG wrapper) for high-performance Canvas drawing.
+- Uses https://github.com/QUItCoding/qnanopainter (NanoVG wrapper) for high-performance Canvas drawing with OpenGL
 - FFmpeg for video encoding
 
 Included are Physics, Biology and Chemistry simulations, as well as other experiments.
@@ -13,26 +13,52 @@ Included are Physics, Biology and Chemistry simulations, as well as other experi
 ## Features
 
 - **Simulation Framework**
-- - Layouts supporting multiple viewports / scenes
-  - Custom Attribute Input List, for rapid prototyping (for starting conditions, or realtime feedback), e.g.
-  - ```options->starting_slider("Particle Count", &particle_count, 10, 1000); # Slider only 'updates particle_count' on simulation start```
-  - ```options->realtime_checkbox("Optimize Collisions", &optimize_collisions); # Updates 'optimize_collisions' boolean in realtime```
+  - **Layout** - Supports multiple Viewports / Scenes
+  - **Viewport** - For hassle-free performant 2D drawing (uses Qnanopainter, NanoVG wrapper)
+  - **Scene** - Can be mounted to multiple **Viewport**'s for shared Scenes with multiple **Camera**'s
+    - Virtual functions for your simulation to override, such as:
+      ```
+      virtual void instanceAttributes(Options* options)
+      virtual void start()
+      virtual void mount(Panel *ctx)
+      virtual void stop()
+      virtual void destroy()
+      virtual void processScene()
+      virtual void processPanel(Panel* ctx)
+      virtual void draw(Panel* ctx)
+      
+      virtual void mouseDown() {}
+      virtual void mouseUp() {}
+      virtual void mouseMove() {}
+      virtual void mouseWheel() {}
+      ```
+  - **Camera**
+     - Position / Rotation / Panning
+     - Easy conversion between Stage / World coordinates
+  - **DrawingContext**
+     - Easy switching between World-Transform and Stage-Transform (useful for UI / labeling)
+     - Viewport anchor (when zooming or resizing viewport)
+  - **AttributeList** - List of inputs (sliders, checboxes, etc) designed for rapid prototyping. e.g.
+    ```
+    options->starting_slider("Particle Count", &particle_count, 10, 1000);
+    options->realtime_checkbox("Optimize Collisions", &optimize_collisions);
+    ```
+  
+  - **Bitmap** - Uses Offscreen FBO for high-performance Pixel manipulation
 - **x264 Video Recording**
+  
 - - Custom resolution / FPS (uses offscreen FBO for rendering)
   - Window Capture (optional)
-- **Custom Components**
-- - 2D viewport (uses qnanopainter/NanoVG wrapper)
-     - Support for Camera rotation
-     - Conversion between Stage/World coordinates
-     - Easy switching between World-Transform and Stage-Transform (useful for UI/Labels)
-     - Viewport anchor (when zooming or resizing viewport)
-  - Custom Spline Graph input component
+    
+- **Custom Qt Components**
+     
+  - Custom Spline Graph input component (coming soon)
+    
 - **Various Templates** - Physics / Biology / Chemistry templates to build on
-- **Personal Projects**
+  
+- **My Personal Projects**
 
 ## Screenshots
-
-## Getting Started
 
 ### Prerequisites
 
@@ -51,11 +77,22 @@ Included are Physics, Biology and Chemistry simulations, as well as other experi
    ```
 2. (Windows) Extract FFmpeg_dlls.7z into: ``external\ffmpeg\windows\bin``
    
-3. Build the project:
+3. Build the project with CMake (automatically fetches other dependencies):
 
    ```sh
    cmake -B build
    ```
+
+## Making your first simulation
+  - Run Python Script: ```scripts/new_sim.py```
+    - Enter Class Name (e.g. Explosion)
+    - Enter Descriptive Name (e.g. "Exploding Particles")
+  - Open Project in Qt Creator, or generate a Visual Studio 2022 Solution (QtCreator Menu: Build => Run Generator)
+  - Open your generated simulation files, e.g.
+    ```
+    src/simulations/my_sim.h
+    src/simulations/my_sim.cpp
+    ```
 
 ## Project Structure
 
