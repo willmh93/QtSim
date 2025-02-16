@@ -18,15 +18,14 @@ Included are physics, biology and chemistry simulations, as well as other experi
 
 ## Screenshots
 
-
-
 ## Getting Started
 
 ### Prerequisites
 
+- **Windows or Linux OS**
 - **Qt 6.x or later** (Qt Creator)
 - **CMake 3.16+**
-- **Compiler:** MSVC, Clang, or GCC
+- **Compiler:** MSVC or GCC
 
 ### Installation
 
