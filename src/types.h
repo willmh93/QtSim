@@ -452,6 +452,21 @@ struct FRect
         y2 = cy + (y2 - cy) * mult;
         return FRect(x1, y1, x2, y2);
     }
+
+    double width()
+    {
+        return x2 - x1;
+    }
+
+    double height()
+    {
+        return y2 - y1;
+    }
+
+    Vec2 size()
+    {
+        return { x2 - x1, y2 - y1 };
+    }
 };
 
 struct Size

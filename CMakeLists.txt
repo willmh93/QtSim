@@ -110,89 +110,122 @@ endif()
 
 # FFmpeg
 function(add_ffmpeg)
-    # Paths
-        if(WIN32)
-            set(FFMPEG_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external/ffmpeg/windows)
-            target_include_directories(QtSim PRIVATE ${FFMPEG_DIR}/include)
-            target_link_directories(QtSim PRIVATE ${FFMPEG_DIR}/lib)
-            message(STATUS "FFMPEG_DIR: ${FFMPEG_DIR}")
-        elseif(APPLE)
-            #set(FFMPEG_LIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external/ffmpeg/macos/lib)
-            target_include_directories(QtSim PRIVATE ${FFMPEG_DIR}/include)
-            #target_link_directories(QtSim PRIVATE ${FFMPEG_DIR}/lib)
-        elseif(UNIX)
-            target_include_directories(QtSim PRIVATE ${FFMPEG_INCLUDE_DIRS})
-            target_link_directories(QtSim PRIVATE ${FFMPEG_LIBRARY_DIRS})
+    ## Fetch dlls (windows)
+    if (WIN32)
+        set(GITHUB_API_URL "https://api.github.com/repos/BtbN/FFmpeg-Builds/releases/latest")
+        set(JSON_FILE "${CMAKE_BINARY_DIR}/ffmpeg_release.json")
+        set(FFMPEG_ZIP "${CMAKE_CURRENT_SOURCE_DIR}/external/ffmpeg.zip")
+        set(FFMPEG_EXTRACT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/ffmpeg_extracted")
+        set(FFMPEG_DEST_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/ffmpeg/windows")
+
+        if (NOT EXISTS "${FFMPEG_DEST_DIR}")
+            message(STATUS "FFmpeg not found at: ${FFMPEG_DEST_DIR}")
+            message(STATUS "Downloading...")
+
+            # Get latest release JSON from GitHub
+            file(DOWNLOAD ${GITHUB_API_URL} ${JSON_FILE} SHOW_PROGRESS)
+
+            # Extract latest shared build URL from JSON
+            file(READ ${JSON_FILE} JSON_CONTENT)
+            string(REGEX MATCH "\"browser_download_url\": \"([^\"]*-win64-lgpl-shared.zip)\"" _ ${JSON_CONTENT})
+            set(FFMPEG_URL "${CMAKE_MATCH_1}")
+
+            if(NOT FFMPEG_URL)
+                message(FATAL_ERROR "Could not find the latest FFmpeg shared build download link")
+            endif()
+
+            # Download the latest FFmpeg shared DLLs
+            file(DOWNLOAD ${FFMPEG_URL} ${FFMPEG_ZIP} SHOW_PROGRESS)
+
+            # Ensure clean extraction directory
+            file(REMOVE_RECURSE ${FFMPEG_EXTRACT_DIR})
+            file(MAKE_DIRECTORY ${FFMPEG_EXTRACT_DIR})
+
+            # Extract the FFmpeg zip into FFMPEG_EXTRACT_DIR
+            message(STATUS "Extracting FFmpeg DLLs...")
+            execute_process(
+                COMMAND ${CMAKE_COMMAND} -E tar xzf ${FFMPEG_ZIP}
+                WORKING_DIRECTORY ${FFMPEG_EXTRACT_DIR}
+            )
+
+            # Detect the extracted folder name
+            file(GLOB FFMPEG_FOLDERS "${FFMPEG_EXTRACT_DIR}/*win64-lgpl-shared")
+            list(LENGTH FFMPEG_FOLDERS NUM_FOLDERS)
+
+            if(NUM_FOLDERS EQUAL 0)
+                message(FATAL_ERROR "Could not find extracted FFmpeg folder")
+            endif()
+
+            list(GET FFMPEG_FOLDERS 0 FFMPEG_DIR)
+            message(STATUS "Detected FFmpeg directory: ${FFMPEG_DIR}")
+
+            # Copy each subfolder (e.g. bin, lib, include) to destination directory
+            file(GLOB FFMPEG_SUBDIRS "${FFMPEG_DIR}/*")
+            file(MAKE_DIRECTORY ${FFMPEG_DEST_DIR})
+
+            foreach(SUBDIR ${FFMPEG_SUBDIRS})
+                get_filename_component(SUBDIR_NAME ${SUBDIR} NAME)
+                message(STATUS "Copying dir: ${SUBDIR} to ${FFMPEG_DEST_DIR}")
+                file(COPY "${SUBDIR}" DESTINATION "${FFMPEG_DEST_DIR}")
+            endforeach()
+
+            message(STATUS "FFmpeg contents copied to ${FFMPEG_DEST_DIR}")
+        else()
+            message(STATUS "FFmpeg detected: ${FFMPEG_DEST_DIR}")
         endif()
+
+        # Cleanup
+        file(REMOVE ${FFMPEG_ZIP})
+        file(REMOVE_RECURSE ${FFMPEG_EXTRACT_DIR})
+    endif()
+
+    ## Link
+
+    # Paths
+    if(WIN32)
+        target_include_directories(QtSim PRIVATE ${FFMPEG_DEST_DIR}/include)
+        target_link_directories(QtSim PRIVATE ${FFMPEG_DEST_DIR}/lib)
+        message(STATUS "FFmpeg Linked: ${FFMPEG_DEST_DIR}")
+    elseif(APPLE)
+        set(FFMPEG_LIB_DIR ${FFMPEG_DEST_DIR}/ffmpeg/macos/lib)
+        target_include_directories(QtSim PRIVATE ${FFMPEG_DEST_DIR}/ffmpeg/macos/include)
+        target_link_directories(QtSim PRIVATE ${FFMPEG_DEST_DIR}/ffmpeg/macos/lib)
+    elseif(UNIX)
+        target_include_directories(QtSim PRIVATE ${FFMPEG_INCLUDE_DIRS})
+        target_link_directories(QtSim PRIVATE ${FFMPEG_LIBRARY_DIRS})
+    endif()
 
     # Libs (for symbol definitions)
-        if(WIN32)
-            target_link_libraries(QtSim PRIVATE
-                ${FFMPEG_DIR}/lib/avcodec.lib
-                ${FFMPEG_DIR}/lib/avformat.lib
-                ${FFMPEG_DIR}/lib/avutil.lib
-                ${FFMPEG_DIR}/lib/swscale.lib
-            )
-        elseif(UNIX)
-            target_link_libraries(QtSim PRIVATE ${FFMPEG_LIBRARIES})
-        endif()
+    if(WIN32)
+        target_link_libraries(QtSim PRIVATE
+            ${FFMPEG_DEST_DIR}/lib/avcodec.lib
+            ${FFMPEG_DEST_DIR}/lib/avformat.lib
+            ${FFMPEG_DEST_DIR}/lib/avutil.lib
+            ${FFMPEG_DEST_DIR}/lib/swscale.lib
+        )
+    elseif(UNIX)
+        target_link_libraries(QtSim PRIVATE ${FFMPEG_LIBRARIES})
+    endif()
 
     # Dlls
-        if(WIN32)
-            message(STATUS "QtSim Source File Directory: ${FFMPEG_DIR}/bin/")
-            message(STATUS "QtSim Target File Directory: ${CMAKE_BINARY_DIR}")
-            add_custom_command(TARGET QtSim POST_BUILD
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different "${FFMPEG_DIR}/bin/avcodec-61.dll"    "${CMAKE_BINARY_DIR}/avcodec-61.dll"
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different "${FFMPEG_DIR}/bin/avformat-61.dll"   "${CMAKE_BINARY_DIR}/avformat-61.dll"
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different "${FFMPEG_DIR}/bin/avutil-59.dll"     "${CMAKE_BINARY_DIR}/avutil-59.dll"
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different "${FFMPEG_DIR}/bin/swscale-8.dll"     "${CMAKE_BINARY_DIR}/swscale-8.dll"
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different "${FFMPEG_DIR}/bin/swresample-5.dll"  "${CMAKE_BINARY_DIR}/swresample-5.dll"
-            )
+    if(WIN32)
+        add_custom_command(TARGET QtSim POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different "${FFMPEG_DEST_DIR}/bin/avcodec-61.dll"    "${CMAKE_BINARY_DIR}/avcodec-61.dll"
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different "${FFMPEG_DEST_DIR}/bin/avformat-61.dll"   "${CMAKE_BINARY_DIR}/avformat-61.dll"
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different "${FFMPEG_DEST_DIR}/bin/avutil-59.dll"     "${CMAKE_BINARY_DIR}/avutil-59.dll"
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different "${FFMPEG_DEST_DIR}/bin/swscale-8.dll"     "${CMAKE_BINARY_DIR}/swscale-8.dll"
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different "${FFMPEG_DEST_DIR}/bin/swresample-5.dll"  "${CMAKE_BINARY_DIR}/swresample-5.dll"
+        )
 
-            find_library(AVCODEC_LIBRARY avcodec PATHS "${FFMPEG_DIR}/bin/avcodec-61.dll")
-            find_library(AVFORMAT_LIBRARY avformat PATHS "${FFMPEG_DIR}/bin/avformat-61.dll")
-            find_library(AVUTIL_LIBRARY avutil PATHS "${FFMPEG_DIR}/bin/avutil-59.dll")
-            find_library(SWSCALE_LIBRARY swscale PATHS "${FFMPEG_DIR}/bin/swscale-8.dll")
-            find_library(SWSCALE_LIBRARY swscale PATHS "${FFMPEG_DIR}/bin/swresample-5.dll")
-        endif()
+        find_library(AVCODEC_LIBRARY avcodec PATHS "${DEST_DIR}/bin/avcodec-61.dll")
+        find_library(AVFORMAT_LIBRARY avformat PATHS "${FFMPEG_DEST_DIR}/bin/avformat-61.dll")
+        find_library(AVUTIL_LIBRARY avutil PATHS "${FFMPEG_DEST_DIR}/bin/avutil-59.dll")
+        find_library(SWSCALE_LIBRARY swscale PATHS "${FFMPEG_DEST_DIR}/bin/swscale-8.dll")
+        find_library(SWSCALE_LIBRARY swscale PATHS "${FFMPEG_DEST_DIR}/bin/swresample-5.dll")
+    endif()
 endfunction()
 
 set(FETCHCONTENT_BASE_DIR ${CMAKE_SOURCE_DIR}/build_fetched) # Everything goes inside 'external'
-
-function(fetch_ffmpeg)
-    set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
-
-    # Ensure dependencies are fetched before FFmpeg
-    FetchContent_Declare(
-        zlib
-        GIT_REPOSITORY https://github.com/madler/zlib.git
-        GIT_TAG v1.2.13 # Latest stable release
-    )
-    FetchContent_MakeAvailable(zlib)
-
-    FetchContent_Declare(
-        bzip2
-        GIT_REPOSITORY https://gitlab.com/bzip2/bzip2.git
-        GIT_TAG bzip2-1.0.8 # Latest stable release
-    )
-    FetchContent_MakeAvailable(bzip2)
-
-    # Now let CMake find the built dependencies
-    set(ZLIB_INCLUDE_DIR ${zlib_SOURCE_DIR} ${zlib_BINARY_DIR})
-    set(ZLIB_LIBRARY ${zlib_BINARY_DIR}/libz.a)
-
-    set(BZIP2_INCLUDE_DIR ${bzip2_SOURCE_DIR})
-    set(BZIP2_LIBRARY ${bzip2_BINARY_DIR}/libbz2.a)
-
-    # Manually set the found paths to ensure CMake finds them
-    set(ZLIB_FOUND TRUE)
-    set(BZIP2_FOUND TRUE)
-
-
-    find_package(FFMPEG REQUIRED)
-    target_include_directories(QtSim PRIVATE ${FFMPEG_INCLUDE_DIRS})
-    target_link_libraries(QtSim PRIVATE ${FFMPEG_LIBRARIES})
-endfunction()
 
 function(add_qnanopainter)
 
@@ -235,8 +268,6 @@ endfunction()
 #add_prebuilt_dependencies()
 
 add_ffmpeg()
-#fetch_ffmpeg()
-
 add_qnanopainter()
 
 

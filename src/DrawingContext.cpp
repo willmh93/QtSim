@@ -1,3 +1,22 @@
+/*
+ * This file is part of QtSim
+ *
+ * Copyright (C) 2025 William Hemsworth
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
+
 #include "DrawingContext.h"
 #include "helpers.h"
 
@@ -116,6 +135,7 @@ void DrawingContext::drawGraphGrid(
     font.setPixelSize(12);
     setFont(font);
     //painter->setPixelAlignText(QNanoPainter::PixelAlign::PIXEL_ALIGN_HALF);
+    //painter->setPixelAlign(QNanoPainter::PixelAlign::PIXEL_ALIGN_HALF);
 
     double spacing = 8;
 
@@ -167,7 +187,7 @@ void DrawingContext::drawGraphGrid(
 
         Vec2 stage_pos = camera.toStage(wx, 0);
         QString txt = QString("%1").arg(wx);
-        Vec2 txt_size = measureText(txt);
+        Vec2 txt_size = boundingBoxNumberScientific(wx).size();
 
         double txt_dist = (abs(cos(angle)) * txt_size.y + abs(sin(angle)) * txt_size.x) * 0.5 + spacing;
 
@@ -175,7 +195,7 @@ void DrawingContext::drawGraphGrid(
 
         moveToSharp(stage_pos - x_perp_off);
         lineToSharp(stage_pos + x_perp_off);
-        fillScientificNumber(wx, tick_anchor);
+        fillNumberScientific(wx, tick_anchor);
     }
 
     // Draw y-axis labels
@@ -185,7 +205,8 @@ void DrawingContext::drawGraphGrid(
 
         Vec2 stage_pos = camera.toStage(0, wy);
         QString txt = QString("%1").arg(wy);
-        Vec2 txt_size = measureText(txt);
+        //Vec2 txt_size = measureText(txt);
+        Vec2 txt_size = boundingBoxNumberScientific(wy).size();
 
         double txt_dist = (abs(cos(angle)) * txt_size.y + abs(sin(angle)) * txt_size.x) * 0.5 + spacing;
 
@@ -193,7 +214,7 @@ void DrawingContext::drawGraphGrid(
 
         moveToSharp(stage_pos - y_perp_off);
         lineToSharp(stage_pos + y_perp_off);
-        fillScientificNumber(wy, tick_anchor);
+        fillNumberScientific(wy, tick_anchor);
     }
 
     stroke();

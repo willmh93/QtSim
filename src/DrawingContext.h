@@ -47,24 +47,26 @@ public:
 
     double sharpX(double x)
     {
+        //return x;
         return floor(x) + 0.5;
         //return std::floor(x * camera.zoom_x) / camera.zoom_x + 0.5 / camera.zoom_x;
     }
 
     double sharpY(double y)
     {
+        //return y;
         return floor(y) + 0.5;
         //return std::floor(y * camera.zoom_y) / camera.zoom_y + 0.5 / camera.zoom_y;
     }
 
     Vec2 sharp(const Vec2& p)
     {
-        return p;
-        //return {
-        //    floor(p.x) + 0.5,
-        //    floor(p.y) + 0.5
-        //};
-        // 
+        //return p;
+        return {
+            floor(p.x) + 0.5,
+            floor(p.y) + 0.5
+        };
+         
         //return {
         //    std::floor(p.x * camera.zoom_x) / camera.zoom_x + 0.5 / camera.zoom_x,
         //    std::floor(p.y * camera.zoom_y) / camera.zoom_y + 0.5 / camera.zoom_y
@@ -314,12 +316,12 @@ public:
     void fillTextSharp(const QString& txt, const Vec2& pos)
     {
         painter->setPixelAlignText(QNanoPainter::PixelAlign::PIXEL_ALIGN_FULL);
-        fillText(txt, sharpX(pos.x), sharpY(pos.y));
+        fillText(txt, /*sharpX*/(pos.x), /*sharpY*/(pos.y));
     }
 
-    void fillScientificNumber(double v, Vec2 pos, float fontSize=12)
+    void fillNumberScientific(double v, Vec2 pos, float fontSize=12)
     {
-        QString qTxt = QString("%1").arg(v);
+        QString qTxt = QString::number(v);
         int ePos = qTxt.indexOf("e");
         if (ePos >= 0)
         {
@@ -328,14 +330,19 @@ public:
             QString mantissa_txt = qTxt.slice(0, ePos) + "x10";
             QString exponent_txt = QString::number(exponent);
 
+            painter->setFont(font);
             font.setPixelSize(fontSize);
-            float mantissaWidth = measureText(mantissa_txt).x;
+
+            pos.x = floor(pos.x);
+            pos.y = floor(pos.y);
+
+            float mantissaWidth = boundingBox(mantissa_txt).x2 + 1;
             fillTextSharp(mantissa_txt, pos);
 
             pos.x += mantissaWidth;
-            pos.y -= fontSize * 0.5;
+            pos.y -= (int)(fontSize * 0.7 + 1);
 
-            font.setPixelSize(fontSize * 0.7);
+            font.setPixelSize((int)(fontSize * 0.85));
             painter->setFont(font);
             fillTextSharp(exponent_txt, pos);
 
@@ -344,6 +351,8 @@ public:
         }
         else
         {
+            font.setPixelSize(fontSize);
+            painter->setFont(font);
             fillTextSharp(qTxt, pos);
         }
     }
@@ -357,6 +366,43 @@ public:
         painter->restore();
 
         return r;
+    }
+
+    FRect boundingBoxNumberScientific(double v, float fontSize=12)
+    {
+        QString qTxt = QString::number(v);
+        int ePos = qTxt.indexOf("e");
+        if (ePos >= 0)
+        {
+            QString exponent_part = qTxt.mid(ePos + 1);
+            int exponent = exponent_part.toInt();
+
+            QString mantissa_txt = qTxt.slice(0, ePos) + "x10";
+            QString exponent_txt = QString::number(exponent);
+
+            font.setPixelSize(fontSize);
+            painter->setFont(font);
+
+            FRect mantissaRect = boundingBox(mantissa_txt);
+            
+            font.setPixelSize((int)(fontSize * 0.85));
+            painter->setFont(font);
+
+            FRect exponentRect = boundingBox(exponent_txt);
+            FRect ret = mantissaRect;
+
+            ret.y1 -= (int)(fontSize * 0.7 + 1);
+            ret.x2 += exponentRect.width();
+
+            font.setPixelSize(fontSize);
+            painter->setFont(font);
+
+            return ret;
+        }
+        else
+        {
+            return boundingBox(QString::number(v));
+        }
     }
 
     Vec2 measureText(const QString& txt)

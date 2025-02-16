@@ -1,23 +1,30 @@
+/*
+ * This file is part of QtSim
+ *
+ * Copyright (C) 2025 William Hemsworth
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
+
 #include "Options.h"
-//#include "helpers.h"
 #include <QDir>
 
-QString getEnvironmentVariable(const char* varName) {
-#ifdef _WIN32
-    // Use _dupenv_s on Windows
-    char* buffer = nullptr;
-    size_t size = 0;
-    if (_dupenv_s(&buffer, &size, varName) == 0 && buffer != nullptr) {
-        QString value = QString::fromLocal8Bit(buffer);
-        free(buffer);  // Free the allocated buffer
-        return value;
-    }
-    return QString();  // Return an empty QString if the environment variable is not found
-#else
+QString getEnvironmentVariable(const char* varName)
+{
     // Use getenv on other platforms
     const char* value = std::getenv(varName);
     return value ? QString::fromLocal8Bit(value) : QString();
-#endif
 }
 
 QString getDesktopPath() {

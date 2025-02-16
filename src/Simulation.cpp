@@ -1,3 +1,22 @@
+/*
+ * This file is part of QtSim
+ *
+ * Copyright (C) 2025 William Hemsworth
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
+
 #include <QMainWindow>
 #include <QThread>
 #include <QDir>
@@ -101,25 +120,17 @@ void Panel::draw(QNanoPainter* p)
     // When resizing window, world coordinate is fixed given viewport anchor
     // If TOP_LEFT, the world coordinate at top left remains fixed
     // If CENTER, world coordinate at middle of viewport remains fixed
-    double origin_ox = camera.originPixelOffset().x;
-    double origin_oy = camera.originPixelOffset().y;
-
-    // Move to origin
-    p->translate(
-        origin_ox,
-        origin_oy
-    );
 
     /// Do transform
     p->translate(
-        camera.panPixelOffset().x,
-        camera.panPixelOffset().y
+        floor(camera.originPixelOffset().x + camera.panPixelOffset().x),
+        floor(camera.originPixelOffset().y + camera.panPixelOffset().y) 
     );
     
     p->rotate(camera.rotation);
     p->translate(
-        -camera.x * camera.zoom_x,
-        -camera.y * camera.zoom_y
+        floor(-camera.x * camera.zoom_x),
+        floor(-camera.y * camera.zoom_y)
     );
 
     p->scale(camera.zoom_x, camera.zoom_y);
@@ -536,7 +547,7 @@ void SimulationBase::_draw(QNanoPainter* p)
         p->save();
 
         // Move to panel position
-        p->translate(panel->x, panel->y);
+        p->translate(floor(panel->x), floor(panel->y));
 
         // Set default transform
         panel->camera.worldTransform();

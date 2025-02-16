@@ -1,3 +1,5 @@
+cd ..
+
 @echo off
 call qt-cmake -B build
 if %errorlevel% neq 0 exit /b %errorlevel%

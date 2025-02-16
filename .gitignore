@@ -55,5 +55,6 @@ compile_commands.json
 
 build/*
 build_fetched/*
+external/*
 dependencies/build/*
 dependencies/install/*

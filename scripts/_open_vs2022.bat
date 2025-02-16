@@ -1,3 +1,5 @@
+cd ..
+
 @echo off
 REM Set variables
 set BUILD_DIR=build
