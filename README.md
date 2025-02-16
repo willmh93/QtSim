@@ -1,4 +1,4 @@
-# Qt Simulation Framework / Personal Portfolio
+# <img src="resources/icon.png" alt="Icon" style="height:1em; vertical-align:middle;"> Qt Simulation Framework / Personal Portfolio
 
 &#x20;&#x20;
 
