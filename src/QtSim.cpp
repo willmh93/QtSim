@@ -82,7 +82,7 @@ QtSim::QtSim(QWidget *parent)
     // Set the splitter as the central widget
     setCentralWidget(mainSplitter);
 
-    auto& sim_factory_list = Simulation::simulationInfoList();
+    auto& sim_factory_list = SimulationBase::simulationInfoList();
     for (auto factory_info : sim_factory_list)
     {
         options->addSimListEntry(factory_info);
@@ -148,7 +148,7 @@ void QtSim::setSimulation(int sim_uid)
 
     active_sim_uid = sim_uid;
 
-    simulation = Simulation::findSimulationInfo(active_sim_uid)->creator();
+    simulation = SimulationBase::findSimulationInfo(active_sim_uid)->creator();
     simulation->configure(active_sim_uid, canvas, options);
 
     canvas->setSimulation(simulation);

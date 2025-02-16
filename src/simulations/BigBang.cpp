@@ -2,9 +2,21 @@
 
 SIM_DECLARE(BigBang, "Physics", "Space Engine", "Big Bang")
 
+/*CHILD_SORT("Physics",
+    "Space Engine",
+    "Experimental"
+)
+
+CHILD_SORT("Physics", "Space Engine",
+    "Big Bang",
+    "Earth Moon"
+)*/
+
+
+
 void BigBang::prepare()
 {
-    setLayout(1).constructAll<BigBangInstance>();
+    BigBang::makeInstances(1)->mountTo(newLayout());
 }
 
 /*void BigBangInstance::prepare()
@@ -132,7 +144,7 @@ void BigBangInstance::processScene()
         focus_rect = lerpRect(focus_rect, FRect(x1, y1, x2, y2), 0.1);
     }
 
-    ctx->camera.cameraToWorld(focus_rect);*/
+    ctx->camera.fitToViewport(focus_rect);*/
 }
 
 void BigBangInstance::draw(Panel* ctx)
@@ -144,4 +156,4 @@ void BigBangInstance::draw(Panel* ctx)
     ctx->strokeRect(r);*/
 }
 
-SIM_END
+SIM_END(BigBang)

@@ -25,8 +25,9 @@ public:
     Camera camera;
     QNanoPainter* painter;
     QTransform default_viewport_transform;
+    QNanoFont font;
 
-    DrawingContext()
+    DrawingContext() : font(QNanoFont::FontId::DEFAULT_FONT_NORMAL)
     {}
 
     Vec2 PT(double x, double y)
@@ -266,7 +267,8 @@ public:
 
     void setFont(QNanoFont font)
     {
-        painter->setFont(font);
+        this->font = font;
+        painter->setFont(this->font);
     }
 
     void fillText(const QString& txt, double px, double py)
@@ -315,6 +317,48 @@ public:
         fillText(txt, sharpX(pos.x), sharpY(pos.y));
     }
 
+    void fillScientificNumber(double v, Vec2 pos, float fontSize=12)
+    {
+        QString qTxt = QString("%1").arg(v);
+        int ePos = qTxt.indexOf("e");
+        if (ePos >= 0)
+        {
+            QString exponent_part = qTxt.mid(ePos+1);
+            int exponent = exponent_part.toInt();
+            QString mantissa_txt = qTxt.slice(0, ePos) + "x10";
+            QString exponent_txt = QString::number(exponent);
+
+            font.setPixelSize(fontSize);
+            float mantissaWidth = measureText(mantissa_txt).x;
+            fillTextSharp(mantissa_txt, pos);
+
+            pos.x += mantissaWidth;
+            pos.y -= fontSize * 0.5;
+
+            font.setPixelSize(fontSize * 0.7);
+            painter->setFont(font);
+            fillTextSharp(exponent_txt, pos);
+
+            font.setPixelSize(fontSize);
+            painter->setFont(font);
+        }
+        else
+        {
+            fillTextSharp(qTxt, pos);
+        }
+    }
+
+    FRect boundingBox(const QString& txt)
+    {
+        painter->save();
+        painter->resetTransform();
+        painter->transform(default_viewport_transform);
+        auto r = painter->textBoundingBox(txt, 0, 0);
+        painter->restore();
+
+        return r;
+    }
+
     Vec2 measureText(const QString& txt)
     {
         painter->save();
@@ -336,5 +380,9 @@ public:
         painter->setTextBaseline(align);
     }
 
-    void drawGraphGrid();
+    void drawGraphGrid(
+        double axis_opacity=0.3,
+        double grid_opacity=0.04, 
+        double text_opacity=0.4
+    );
 };

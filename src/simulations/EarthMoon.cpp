@@ -1,36 +1,60 @@
 #include "EarthMoon.h"
 
-SIM_DECLARE(EarthMoon, "Earth Moon")
+SIM_DECLARE(EarthMoon, "Physics", "Space Engine", "Earth Moon")
 
 void EarthMoon::prepare()
 {
-    SpaceEngine::prepare();
-    //sim_factory.push_back([]() {
-    //    return new Simulation();
-    //    });
+    auto& layout = newLayout();
 
-    
-    steps_per_frame = 30;
-    step_seconds = 10;// 1000000000000.0;
+    auto scene = makeInstance(LaunchConfig(true));
+
+    for (int i=0; i<1; i++)
+        layout << scene;
+
+
+    //layout << makeInstance(LaunchConfig(true));
+    //layout << makeInstance(LaunchConfig(false));
+
+    //makeInstance(LaunchConfig(true))->mountTo(layout);
+    //makeInstance(LaunchConfig(false))->mountTo(layout);
+
+    //EarthMoon::makeInstance()->mountToAll(layout);
+    //EarthMoon::makeInstances(2)->mountTo(layout);
+
+    //setLayout(1).constructAll<EarthMoon_Instance>();
+}
+
+void EarthMoon_Instance::instanceAttributes(Options* options)
+{
+
+    steps_per_frame = 60;
+    step_seconds = 8;// 1000000000000.0;
+    collision_substeps = 4;
+
     //timestep = 1 / step_seconds;
 
     // Starting values
     gravity = G;
-    start_world_size = moon_earth_orbit_radius * 2;// moon_earth_orbit_radius * 3;// solar_system_size;
-    start_particle_radius = particleRadiusForPlanet(earth_radius, 200);// / 10.0;// *magnify_particles;
+    world_size = moon_earth_orbit_radius * 2;// moon_earth_orbit_radius * 3;// solar_system_size;
+    
+    particle_bounce = 0.27;
+    // / 10.0;// *magnify_particles;
     //start_particle_mass = earth_mass / 100.0;
-    start_particle_speed = 0;// 29780;
+
+    //double particle_radius_step = particle_radius * 0.1;// particle_magnify;
+    //double particle_radius_min = particle_radius * 0.1 * particle_magnify;
+    //double particle_radius_max = particle_radius * 10 * particle_magnify;
 
     //collision_cell_size = start_particle_radius * 10;
     //collision_cell_size_min = collision_cell_size * 0.1;
     //collision_cell_size_max = collision_cell_size * 2;
     //collision_cell_size_step = collision_cell_size * 0.1;
 
-    collision_substeps = 5;
+    
     //particle_count = 2;
 
     // Set ranges
-    step_seconds_step = step_seconds * 0.1;
+    /*step_seconds_step = step_seconds * 0.1;
     step_seconds_min = 0;// step_seconds * 0.5;
     step_seconds_max = step_seconds * 10;
 
@@ -38,33 +62,39 @@ void EarthMoon::prepare()
     //particle_mass_min = 0.1 * start_particle_mass;
     //particle_mass_max = 10 * start_particle_mass;
 
-    particle_radius_step = earth_radius * particle_magnify;
-    particle_radius_min = earth_radius * 0.5 * particle_magnify;
-    particle_radius_max = earth_radius * 2 * particle_magnify;
+
 
     world_size_step = solar_system_size * 0.01;
     world_size_min = solar_system_size * 0.1;
-    world_size_max = solar_system_size * 10;
+    world_size_max = solar_system_size * 10;*/
 
-    options->slider("Particle Speed (m/s^2)", &start_particle_speed, 0.0, 100000000000.0, 100000.0);
-    //options->slider("Gravity", &G, 0.000000000001, 100, 0.001);
-    options->slider("Particle Radius (gm)", &start_particle_radius, particle_radius_min, particle_radius_max, particle_radius_step);
+
+    options->starting_slider("Earth Particles", &earth_particle_count, 10, 2000);
+    options->realtime_slider("Bounce Coefficient", &particle_bounce, 0.0, 1.0, 0.01);
+    options->starting_slider("Particle Speed (m/s^2)", &particle_speed, 0.0, 1e11, 1e5);
+    
+    //options->starting_checkbox("Show Moon", &show_moon);
+    //options->starting_slider("Particle Radius (gm)", &particle_radius, particle_radius_min, particle_radius_max, particle_radius_step);
     //options->slider("Particle Mass (zg)", &start_particle_mass, &particle_mass_min, &particle_mass_max, &particle_mass_step);
+
+    SpaceEngineInstance::instanceAttributes(options);
 }
 
-void EarthMoon::start()
+
+void EarthMoon_Instance::start()
 {
-    SpaceEngine::start();
+    SpaceEngineInstance::start();
 
     //double distance_to_neptune = 4495.1 * gigemeter;
 
+    double particle_radius = particleRadiusForPlanet(earth_radius, earth_particle_count);
     
     //auto earth = newParticle(0, 0, earth_radius, earth_density);
     //auto earth2 = newParticle(moon_earth_orbit_radius, 0, earth_radius, earth_density);
     //auto moon = newParticle(moon_earth_orbit_radius, 0, moon_radius, moon_density);
 
-    auto earth_particles = newPlanetFromParticleSize(0, 0, earth_radius, earth_density, start_particle_radius);
-    auto moon_particles = newPlanetFromParticleSize(moon_earth_orbit_radius, 0, moon_radius, moon_density, start_particle_radius);
+    auto earth_particles = newPlanetFromParticleSize(0, 0, earth_radius, earth_density, particle_radius);
+    auto moon_particles = newPlanetFromParticleSize(moon_earth_orbit_radius, 0, moon_radius, moon_density, particle_radius);
 
     //double earth_mass_error = earth_sum_mass / earth.mass;
     //double moon_mass_error = moon_sum_mass / moon.mass;
@@ -74,7 +104,9 @@ void EarthMoon::start()
     //addParticles(moon);
 
     addParticles(earth_particles);
-    addParticles(moon_particles);
+    
+    if (show_moon)
+        addParticles(moon_particles);
     //double earth_planet_mass = sumMass(earth_particles);
     //double moon_planet_mass = sumMass(moon_particles);
     /*int pc_2 = particle_count / 2;
@@ -112,4 +144,22 @@ void EarthMoon::start()
     
 }
 
-SIM_END
+void EarthMoon_Instance::mount(Panel* ctx)
+{
+    //camera->fitToViewport(-world_size, -world_size, world_size, world_size);
+    camera->fitToViewport(boundaries(particles).scaled(1.3), false);
+    focus_rect.set(boundaries(particles).scaled(1.3));
+}
+
+void EarthMoon_Instance::processPanel(Panel* ctx)
+{
+    focus_rect = lerpRect(focus_rect, boundaries(particles).scaled(1.3), 0.02);
+    camera->fitToViewport(focus_rect, false);
+}
+
+void EarthMoon_Instance::draw(Panel* ctx)
+{
+    SpaceEngineInstance::draw(ctx);
+}
+
+SIM_END(EarthMoon)

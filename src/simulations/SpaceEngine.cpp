@@ -4,7 +4,7 @@ SIM_BEG(SpaceEngine)
 
 void SpaceEngine::prepare()
 {
-    setLayout(1).constructAll<SpaceEngineInstance>();
+    makeInstances(1)->mountTo(newLayout());
 }
 
 void SpaceEngineInstance::instanceAttributes(Options* options)
@@ -143,7 +143,7 @@ void SpaceEngineInstance::destroy()
 
 void SpaceEngineInstance::processScene()
 {
-    if (cache->missing())
+    //if (cache->missing())
     {
         for (int i = 0; i < steps_per_frame; i++)
         {
@@ -160,7 +160,7 @@ void SpaceEngineInstance::processScene()
         }
     }
 
-    cache->apply(particles);
+    //cache->apply(particles);
 
  
     vector<vector<double>> density_map;
@@ -596,6 +596,71 @@ bool SpaceEngineInstance::checkAndResolveCollision(Particle* n0, Particle* n1)
     return true;
 }
 
+bool SpaceEngineInstance::checkAndResolveSpringCollision(Particle* n0, Particle* n1)
+{
+    double dx = n1->x - n0->x;
+    double dy = n1->y - n0->y;
+    double dist2 = dx * dx + dy * dy;
+    double rSum = n0->r + n1->r;
+
+    if (dist2 >= rSum * rSum) {
+        return false; // no collision
+    }
+
+    double dist = std::sqrt(dist2);
+    if (dist < 1e-12) {
+        // Prevent division by zero
+        // You could either skip or forcibly nudge them...
+        return false;
+    }
+
+    // 1) Compute the collision normal
+    double nx = dx / dist; // unit collision normal x
+    double ny = dy / dist; // unit collision normal y
+
+    // 2) Compute overlap
+    double overlap = rSum - dist;
+
+    // 3) Positionally correct so circles do not overlap
+    double m0 = n0->mass, m1 = n1->mass;
+    double invMassSum = 1.0 / (m0 + m1);
+
+    // how much to push each
+    double push0 = (m1 * invMassSum) * overlap;
+    double push1 = (m0 * invMassSum) * overlap;
+
+    // move n0 back along normal, n1 forward along normal
+    n0->sum_ox -= push0 * nx;
+    n0->sum_oy -= push0 * ny;
+    n1->sum_ox += push1 * nx;
+    n1->sum_oy += push1 * ny;
+
+    // 4) Now compute the relative velocity along that normal
+    double vxRel = n1->vx - n0->vx;
+    double vyRel = n1->vy - n0->vy;
+    double relDotN = (vxRel * nx + vyRel * ny);
+
+    // If they are already separating, no impulse needed
+    if (relDotN > 0) {
+        return true;
+    }
+
+    // 5) Compute impulse scalar with restitution
+    //   j = -(1 + e) * (v_rel . n) / (1/m0 + 1/m1)
+    double j = -(1.0 + particle_bounce) * relDotN / ((1.0 / m0) + (1.0 / m1));
+
+    // 6) Apply impulse to each velocity
+    double impulseX = j * nx;
+    double impulseY = j * ny;
+
+    n0->sum_delta_vx -= (impulseX / m0);
+    n0->sum_delta_vy -= (impulseY / m0);
+    n1->sum_delta_vx += (impulseX / m1);
+    n1->sum_delta_vy += (impulseY / m1);
+
+    return true;
+}
+
 void SpaceEngineInstance::processCollisions()
 {
     int len = particles.size();
@@ -624,15 +689,25 @@ void SpaceEngineInstance::processCollisions()
 
     buildUniformGrid(min_collision_cell_size, collision_grid);
 
+    
 
     for (int i = 0; i < collision_substeps; i++)
     {
+        for (int i = 0; i < len; i++)
+        {
+            Particle& p = particles[i];
+            p.sum_ox = 0;
+            p.sum_oy = 0;
+            p.sum_delta_vx = 0;
+            p.sum_delta_vy = 0;
+        }
+
         if (optimize_collisions)
         {
             // Optimized
             forEachCellAndNeighborsParticles(collision_grid, [&](Particle* a, Particle* b)
             {
-                checkAndResolveCollision(a, b);
+                checkAndResolveSpringCollision(a, b);
             });
         }
         else
@@ -644,11 +719,22 @@ void SpaceEngineInstance::processCollisions()
                 {
                     Particle* a = &particles[j];
                     Particle* b = &particles[q];
-                    checkAndResolveCollision(a, b);
+                    checkAndResolveSpringCollision(a, b);
                 }
             }
         }
+
+        for (int i = 0; i < len; i++)
+        {
+            Particle& p = particles[i];
+            p.x += p.sum_ox;
+            p.y += p.sum_oy;
+            p.vx += p.sum_delta_vx;
+            p.vy += p.sum_delta_vy;
+        }
     }
+
+    
 }
 
 void SpaceEngineInstance::draw(Panel*ctx)
@@ -658,10 +744,10 @@ void SpaceEngineInstance::draw(Panel*ctx)
     double right = world_size / 2;
     double bottom = world_size / 2;
 
-    density_bmp.draw(ctx,
-        left, top,
-        world_size, world_size
-    );
+    //density_bmp.draw(ctx,
+    //    left, top,
+    //    world_size, world_size
+    //);
 
     ctx->drawGraphGrid();
 
@@ -800,4 +886,4 @@ void SpaceEngineInstance::draw(Panel*ctx)
 }
 
 
-SIM_END
+SIM_END(SpaceEngine)

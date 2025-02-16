@@ -15,18 +15,29 @@ struct Particle : public Vec2
 
 struct Test_Instance : public SimulationInstance
 {
+    //using SimulationInstance::SimulationInstance;
+    //struct LaunchConfig
+    //{
+    //};
+
     bool transform_coordinates = true;
     bool scale_lines_text = true;
     bool rotate_text = true;
     double seed = 0;
 
+    double camera_x = 0;
+    double camera_y = 0;
+    double camera_rotation = 0;
+
+    Vec2 ball_pos = { 0, 0 };
+
     vector<Particle> particles;
 
-    Test_Instance()
+    /*Test_Instance(LaunchConfig &config)
     {
         // Args passed from Test.
         // Use initializer list for reference variables
-    }
+    }*/
 
     void instanceAttributes(Options* options) override;
 
@@ -37,13 +48,13 @@ struct Test_Instance : public SimulationInstance
     void processPanel(Panel* ctx) override;
     void draw(Panel* ctx) override;
 
-    //void mouseDown(MouseInfo mouse);
-    //void mouseUp(MouseInfo mouse);
-    //void mouseMove(MouseInfo mouse);
-    //void mouseWheel(MouseInfo mouse);
+    void mouseDown() override;
+    void mouseUp() override;
+    void mouseMove() override;
+    void mouseWheel() override;
 };
 
-struct Test : public Simulation
+struct Test : public Simulation<Test_Instance>
 {
     int panel_count = 1;
 
@@ -51,5 +62,5 @@ struct Test : public Simulation
     void prepare() override;
 };
 
-SIM_END
+SIM_END(Test)
 #endif

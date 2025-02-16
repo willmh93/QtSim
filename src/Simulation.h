@@ -31,26 +31,25 @@ using namespace std;
 #include "Options.h"
 
 
-
 // Provide macros for easy Simulation registration
 template<typename... Ts>
 std::vector<QString> VectorizeArgs(Ts&&... args) { return { QString::fromUtf8(std::forward<Ts>(args))... }; }
-
 
 #define SIM_BEG(cls) namespace NS_##cls {
 #define SIM_DECLARE(cls, ...) namespace NS_##cls { AutoRegisterSimulation<cls> register_##cls(VectorizeArgs(__VA_ARGS__));
 #define BASE_SIM(cls) using namespace NS_##cls; //typedef NS_##cls::Sim cls;
 //#define BASE_SIM(id) namespace NS_##id {
-#define SIM_END }
+#define SIM_END(cls) } using NS_##cls::cls;
 
-#define SIBLING_ORDER(...) AutoRegisterSimulationOrder register_order(VectorizeArgs(__VA_ARGS__));
+#define CHILD_SORT(...) AutoRegisterSimulationOrder register_order(VectorizeArgs(__VA_ARGS__));
 
 class QNanoPainter;
 class Canvas2D;
 
 class Layout;
 class Panel;
-class Simulation;
+class SimulationBase;
+
 
 class SimulationInstance
 {
@@ -65,22 +64,33 @@ protected:
 
     std::vector<Panel*> mounted_to_panels;
 
+    // Mounting to/from panel
+    void registerMount(Panel* panel);
+    void registerUnmount(Panel* panel);
+
+
 public:
 
+    std::shared_ptr<void> temporary_environment;
 
-    Simulation* main = nullptr;
+    struct LaunchConfig {};
+
+    //static_assert(has_launch_config<SimulationInstance>::value, "Derived class must define InternalClass");
+
+    SimulationBase* main = nullptr;
     Camera* camera = nullptr;
     CacheContext* cache = nullptr;
 
-    MouseInfo mouse;
+    MouseInfo *mouse;
 
     SimulationInstance() : gen(rd()) {}
+    SimulationInstance(LaunchConfig& info) : gen(rd()) {}
     virtual ~SimulationInstance() = default;
 
-    // Mounting to/from panel
-    void mountToPanel(Panel* panel);
-    void unmountFromPanel(Panel* panel);
-
+    void mountTo(Panel* panel);
+    void mountTo(Layout& panels);
+    void mountToAll(Layout& panels);
+    
     virtual void instanceAttributes(Options* options) {}
     virtual void start() {}
     virtual void mount(Panel *ctx) {}
@@ -90,11 +100,10 @@ public:
     virtual void processPanel(Panel* ctx) {}
     virtual void draw(Panel* ctx) = 0;
 
-    virtual void postProcess()
-    {
-        // Keep delta until entire frame processed and drawn
-        mouse.scroll_delta = 0;
-    }
+    virtual void mouseDown() {}
+    virtual void mouseUp() {}
+    virtual void mouseMove() {}
+    virtual void mouseWheel() {}
 
     void _destroy()
     {
@@ -117,8 +126,9 @@ class Panel : public DrawingContext
 {
 protected:
 
-    friend class Simulation;
+    friend class SimulationBase;
     friend class SimulationInstance;
+    friend class Layout;
 
     int panel_index;
     int panel_grid_x;
@@ -127,7 +137,6 @@ protected:
     Layout* layout;
     SimulationInstance* sim;
     Options* options;
-    Simulation* main;
 
     double x;
     double y;
@@ -135,8 +144,7 @@ protected:
 public:
 
     Panel(
-        Layout *layout, 
-        Simulation *main, 
+        Layout *layout,
         Options *options,
         int panel_index, 
         int grid_x,
@@ -157,7 +165,7 @@ public:
         qDebug() << "Instance constructed. Mounting to Panel: " << panel_index;
 
         sim = new T(std::forward<Args>(args)...);
-        sim->mountToPanel(this);
+        sim->registerMount(this);
         return dynamic_cast<T*>(sim);
     }
 
@@ -167,7 +175,7 @@ public:
         qDebug() << "Mounting existing instance to Panel: " << panel_index;
 
         sim = _sim;
-        sim->mountToPanel(this);
+        sim->registerMount(this);
         return _sim;
     }
 };
@@ -178,14 +186,16 @@ class Layout
 
 protected:
 
-    friend class Simulation;
+    friend class SimulationBase;
     friend class SimulationInstance;
 
-    Simulation* main;
     Options* options;
 
-    int panels_x;
-    int panels_y;
+    // If 0, panels expand in that direction. If both 0, expand whole grid.
+    int targ_panels_x = 0;
+    int targ_panels_y = 0;
+    int cols = 0;
+    int rows = 0;
 
     std::vector<SimulationInstance*> all_instances;
 
@@ -196,17 +206,23 @@ public:
 
     ~Layout()
     {
-        // Only invoked when you SWITCH simulation
+        // Only invoked when you switch simulation
         clear();
     }
 
     void clear()
     {
-        // Panels freed each time you call setLayout
+        // layout freed each time you call setLayout
         for (Panel* p : panels)
             delete p;
 
         panels.clear();
+    }
+
+    void setSize(int targ_panels_x, int targ_panels_y)
+    {
+        this->targ_panels_x = targ_panels_x;
+        this->targ_panels_y = targ_panels_y;
     }
 
     void add(
@@ -214,7 +230,7 @@ public:
         int _grid_x,
         int _grid_y)
     {
-        Panel* panel = new Panel(this, main, options, _panel_index, _grid_x, _grid_y);
+        Panel* panel = new Panel(this, options, _panel_index, _grid_x, _grid_y);
         panels.push_back(panel);
     }
 
@@ -226,16 +242,34 @@ public:
         return this;
     }
 
-    Panel* operator[](int i) { return panels[i]; }
+    Panel* operator[](int i) 
+    {
+        expandCheck(i+1);
+        return panels[i]; 
+    }
+
+    Layout& operator <<(SimulationInstance* instance)
+    {
+        instance->mountTo(*this);
+        return *this;
+    }
+
+    void resize(int panel_count);
+    void expandCheck(size_t count);
 
     iterator begin() { return panels.begin(); }
     iterator end() { return panels.end(); }
 
     const_iterator begin() const { return panels.begin(); }
     const_iterator end() const { return panels.end(); }
+
+    int count() const {
+        return static_cast<int>(panels.size());
+    }
+
 };
 
-class Simulation : public QObject
+class SimulationBase : public QObject
 {
     Q_OBJECT
 
@@ -250,8 +284,11 @@ class Simulation : public QObject
     bool allow_start_recording = true;
     bool record_on_start = false;
     bool recording = false;
+    bool window_capture = false;
     bool encoder_busy = false;
     bool encode_next_paint = false;
+    
+    QImage window_rgba_image;
     std::vector<GLubyte> frame_buffer; // Not changed until next process
     
     Canvas2D* canvas = nullptr;
@@ -289,12 +326,7 @@ public:
             SimulationInfo::INACTIVE 
         )));
     }
-
-    static void hintOrder(const std::vector<QString> &tree_nodes)
-    {
-
-    }
-
+    
     std::shared_ptr<SimulationInfo> getSimulationInfo()
     {
         return findSimulationInfo(sim_uid);
@@ -318,15 +350,20 @@ protected:
 
 public:
 
-    Layout& setLayout(int _panels_x, int _panels_y);
-    Layout& setLayout(int panel_count);
+    MouseInfo mouse;
+
+    Layout& newLayout();
+    Layout& newLayout(int _panels_x, int _panels_y);
+
 
     void configure(int sim_uid, Canvas2D *canvas, Options *options);
 
     int canvasWidth();  // Screen dimensions of canvas
     int canvasHeight(); // Screen dimensions of canvas
-    Vec2 surfaceSize(); // Dimensions of FBO (depends on whether recording or not)
     int getFrameTimeDelta() { return frame_dt; }
+
+    void updatePanelRects();
+    Vec2 surfaceSize(); // Dimensions of FBO (depends on whether recording or not)
 
     virtual void projectAttributes(Options* options) {}
 
@@ -344,121 +381,13 @@ public:
 
     virtual void postProcess();
 
-    virtual void mouseDown(MouseInfo mouse) {}
-    virtual void mouseUp(MouseInfo mouse) {}
-    virtual void mouseMove(MouseInfo mouse) {}
-    virtual void mouseWheel(MouseInfo mouse) {}
-
-    void _updateSimMouseInfo(int x, int y)
-    {
-        /*mouse.stage_x = x;
-        mouse.stage_y = y;
-
-        //if (focused_cam)
-        {
-            Vec2 wp = camera.toWorld(mouse.stage_x, mouse.stage_y);
-            mouse.world_x = wp.x;
-            mouse.world_y = wp.y;
-        }*/
-    }
-
-    void _mouseDown(int x, int y, Qt::MouseButton btn)
-    {
-        for (Panel* panel : panels)
-        {
-            double panel_mx = x - panel->x;
-            double panel_my = y - panel->y;
-
-            if (panel_mx >= 0 && panel_my >= 0 &&
-                panel_mx <= panel->width && panel_my <= panel->height)
-            {
-                Camera& cam = panel->camera;// panel->ctx.camera;
-                if (cam.panning_enabled && btn == Qt::MiddleButton)
-                {
-                    cam.panBegin(x, y);
-                }
-            }
-        }
-
-        /*if (focused_cam)
-        {
-            if (focused_cam->panning_enabled && btn == Qt::MiddleButton)
-            {
-                focused_cam->panBegin(x, y);
-            }
-        }
-
-        _updateSimMouseInfo(x, y);
-        mouseDown(mouse);*/
-    }
-
-    void _mouseUp(int x, int y, Qt::MouseButton btn)
-    {
-        for (Panel* panel : panels)
-        {
-            double panel_mx = x - panel->x;
-            double panel_my = y - panel->y;
-
-            if (panel_mx >= 0 && panel_my >= 0 &&
-                panel_mx <= panel->width && panel_my <= panel->height)
-            {
-                Camera& cam = panel->camera; ;// panel->ctx.camera;
-                if (cam.panning_enabled && btn == Qt::MiddleButton)
-                {
-                    cam.panEnd(x, y);
-                }
-            }
-        }
-
-        /*
-        _updateSimMouseInfo(x, y);
-        mouseUp(mouse);*/
-    }
-
-    void _mouseMove(int x, int y)
-    {
-        for (Panel* panel : panels)
-        {
-            double panel_mx = x - panel->x;
-            double panel_my = y - panel->y;
-
-            Camera& cam = panel->camera; ;// panel->ctx.camera;
-            if (cam.panning_enabled)
-                cam.panDrag(x, y);
-        }
-
-        /*
-        _updateSimMouseInfo(x, y);
-        mouseMove(mouse);*/
-    }
-
-    void _mouseWheel(int x, int y, int delta)
-    {
-        for (Panel* panel : panels)
-        {
-            double panel_mx = x - panel->x;
-            double panel_my = y - panel->y;
-
-            if (panel_mx >= 0 && panel_my >= 0 &&
-                panel_mx <= panel->width && panel_my <= panel->height)
-            {
-                Camera& cam = panel->camera; ;// panel->ctx.camera;
-                if (cam.zooming_enabled)
-                {
-                    cam.targ_zoom_x += (((double)delta) * cam.targ_zoom_x) / 1000.0;
-                    cam.targ_zoom_y = cam.targ_zoom_x;
-                }
-            }
-        }
-
-        /*
-        mouse.scroll_delta = delta;
-        mouseWheel(mouse);*/
-    }
-
+    void _mouseDown(int x, int y, Qt::MouseButton btn);
+    void _mouseUp(int x, int y, Qt::MouseButton btn);
+    void _mouseMove(int x, int y);
+    void _mouseWheel(int x, int y, int delta);
 
     void _draw(QNanoPainter* p);
-    void onPainted(const std::vector<GLubyte>& frame);
+    void onPainted(const std::vector<GLubyte>* frame);
 
     bool startRecording();
     void setRecordOnStart(bool b)
@@ -476,21 +405,76 @@ signals:
     void endRecording();
 };
 
+struct SimInstanceList : public std::vector<SimulationInstance*>
+{
+    void mountTo(Layout& panels)
+    {
+        for (size_t i = 0; i < size(); i++)
+            at(i)->mountTo(panels[i]);
+    }
+};
+
+// Subclass SimulationBase so Simulation contains instance type information
+template <typename T>
+class Simulation : public SimulationBase
+{
+public:
+    typedef T Instance;
+    typedef typename T::LaunchConfig LaunchConfig;
+
+    // Methods for spawning new instances
+
+    static Instance* makeInstance()
+    {
+        shared_ptr<LaunchConfig> config = make_shared<LaunchConfig>();
+        Instance* instance;
+
+        if constexpr (std::is_constructible_v<Instance, LaunchConfig&>)
+        {
+            instance = new Instance(*config);
+            instance->temporary_environment = config;
+        }
+        else
+            instance = new Instance();
+
+        return instance;
+    }
+
+    static Instance* makeInstance(LaunchConfig config)
+    {
+        shared_ptr<LaunchConfig> config_ptr = make_shared<LaunchConfig>(config);
+
+        Instance* instance = new Instance(*config_ptr);
+        instance->temporary_environment = config_ptr;
+        return instance;
+    }
+
+    static Instance* makeInstance(shared_ptr<LaunchConfig> config)
+    {
+        if (!config)
+            throw "Launch Config wasn't created";
+
+        Instance* instance = new Instance(*config);
+        instance->temporary_environment = config;
+        return instance;
+    }
+
+    static shared_ptr<SimInstanceList> makeInstances(int count)
+    {
+        auto ret = make_shared<SimInstanceList>();
+        for (int i = 0; i < count; i++)
+            ret->push_back(makeInstance());
+        return ret;
+    }
+};
+
 template <typename T>
 struct AutoRegisterSimulation
 {
     AutoRegisterSimulation(const std::vector<QString> &tree_path)
     {
-        Simulation::addSimulationInfo(tree_path, []() -> Simulation* {
-            return (Simulation*)(new T());
+        SimulationBase::addSimulationInfo(tree_path, []() -> SimulationBase* {
+            return (SimulationBase*)(new T());
         });
-    }
-};
-
-struct AutoRegisterSimulationOrder
-{
-    AutoRegisterSimulationOrder(const std::vector<QString> &node_names)
-    {
-        //Simulation::getOrderMap();
     }
 };

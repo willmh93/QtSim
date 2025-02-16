@@ -44,7 +44,10 @@ double getAngle(Vec2 a, Vec2 b)
     return (b - a).angle();
 }
 
-void DrawingContext::drawGraphGrid()
+void DrawingContext::drawGraphGrid(
+    double axis_opacity,
+    double grid_opacity, 
+    double text_opacity)
 {
     painter->save();
 
@@ -85,8 +88,7 @@ void DrawingContext::drawGraphGrid()
     camera.setTransformFilters(true, false, false);
 
     // Draw main axis lines
-    setStrokeStyle(255, 255, 255, 100);
-    setFillStyle(255, 255, 255, 100);
+    setStrokeStyle(255, 255, 255, static_cast<int>(255.0 * axis_opacity));
     setLineWidth(1);
 
     beginPath();
@@ -125,7 +127,7 @@ void DrawingContext::drawGraphGrid()
 
     // Draw gridlines
     {
-        setStrokeStyle(255, 255, 255, 10);
+        setStrokeStyle(255, 255, 255, static_cast<int>(255.0 * grid_opacity));
         beginPath();
 
         // X
@@ -154,7 +156,8 @@ void DrawingContext::drawGraphGrid()
         stroke();
     }
 
-    setStrokeStyle(255, 255, 255, 120);
+    setStrokeStyle(255, 255, 255, static_cast<int>(255.0 * axis_opacity));
+    setFillStyle(255, 255, 255, static_cast<int>(255.0 * text_opacity));
     beginPath();
 
     // Draw x-axis labels
@@ -172,7 +175,7 @@ void DrawingContext::drawGraphGrid()
 
         moveToSharp(stage_pos - x_perp_off);
         lineToSharp(stage_pos + x_perp_off);
-        fillTextSharp(txt, tick_anchor);
+        fillScientificNumber(wx, tick_anchor);
     }
 
     // Draw y-axis labels
@@ -190,7 +193,7 @@ void DrawingContext::drawGraphGrid()
 
         moveToSharp(stage_pos - y_perp_off);
         lineToSharp(stage_pos + y_perp_off);
-        fillTextSharp(txt, tick_anchor);
+        fillScientificNumber(wy, tick_anchor);
     }
 
     stroke();

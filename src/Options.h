@@ -112,6 +112,7 @@ public:
     //bool getRecordChecked();
     Size getRecordResolution();
     int getRecordFPS();
+    bool isWindowCapture();
 
     QString getProjectsDirectory();
 

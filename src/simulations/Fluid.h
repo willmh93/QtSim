@@ -45,7 +45,7 @@ struct FluidInstance : public SimulationInstance
     void spring(Particle* a, Particle* b, double restLength, double k, double damping, double deltaTime);
 };
 
-struct Fluid : public Simulation
+struct Fluid : public Simulation<FluidInstance>
 {
     int panel_count = 4;
 
@@ -56,5 +56,5 @@ struct Fluid : public Simulation
 };
 
 
-SIM_END
+SIM_END(Fluid)
 #endif

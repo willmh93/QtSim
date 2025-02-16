@@ -31,8 +31,8 @@ bool FFmpegWorker::startRecording()
 
     // Set codec parameters
     codec_context->bit_rate = 64000000; // 8mb/s kbps
-    codec_context->width = targ_w;
-    codec_context->height = targ_h;
+    codec_context->width = trimmed_targ_w;
+    codec_context->height = trimmed_targ_h;
     codec_context->time_base = { 1, fps };
     codec_context->framerate = { fps, 1 };
     codec_context->gop_size = 12; // Group of pictures
@@ -70,8 +70,8 @@ bool FFmpegWorker::startRecording()
         return false;
 
     frame->format = codec_context->pix_fmt;
-    frame->width = targ_w;
-    frame->height = targ_h;
+    frame->width = trimmed_targ_w;
+    frame->height = trimmed_targ_h;
     if (av_frame_get_buffer(frame, 32) < 0)
         return false;
 
@@ -119,13 +119,37 @@ bool FFmpegWorker::encodeFrame(uint8_t* data)
     //int src_linesize = src_w * 4;
     //memcpy(rgb_frame->data[0], data, src_h * src_w * 4);
 
-    int targ_y = 0;
-    for (int src_y = src_h - 1; src_y >= 0; src_y--)
+    int src_line_size = src_w * 4;
+    int targ_line_size = rgb_frame->linesize[0];
+
+    uint8_t* src_row;
+    uint8_t* targ_row;
+
+
+    if (flip)
     {
-        memcpy(rgb_frame->data[0] + targ_y * rgb_frame->linesize[0],
-            data + src_y * src_w * 4,
-            src_w * 4);
-        targ_y++;
+        int targ_y = 0;
+        for (int src_y = trimmed_targ_h - 1; src_y >= 0; src_y--)
+        {
+            // Copy row
+            src_row = data + (src_y * src_line_size);
+            targ_row = rgb_frame->data[0] + (targ_y * targ_line_size);
+
+            memcpy(targ_row, src_row, targ_line_size);
+
+            targ_y++;
+        }
+    }
+    else
+    {
+        for (int src_y = 0; src_y < trimmed_targ_h; src_y++)
+        {
+            // Copy row
+            src_row = data + (src_y * src_line_size);
+            targ_row = rgb_frame->data[0] + (src_y * targ_line_size);
+
+            memcpy(targ_row, src_row, targ_line_size);
+        }
     }
 
     // Convert RGB frame to YUV420P

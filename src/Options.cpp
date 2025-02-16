@@ -56,6 +56,7 @@ Options::Options(QWidget *parent)
     connect(ui.simTree->selectionModel(), &QItemSelectionModel::selectionChanged, this, &Options::selectionChanged);
     connect(ui.simTree, &QTreeView::doubleClicked, this, &Options::doubleClickSim);
     connect(ui.spinBox_fps, &QSpinBox::valueChanged, this, &Options::onChangeFPS);
+    //connect(ui.checkBox_windowCapture, &QCheckBox::checkStateChanged,)
 
     model.setHorizontalHeaderLabels({"Simulation Type"});
     rootItem = model.invisibleRootItem();
@@ -346,6 +347,11 @@ Size Options::getRecordResolution()
 int Options::getRecordFPS()
 {
     return ui.spinBox_fps->value();
+}
+
+bool Options::isWindowCapture()
+{
+    return ui.checkBox_windowCapture->isChecked();
 }
 
 QString Options::getProjectsDirectory()

@@ -58,7 +58,7 @@ def generate_simulation():
     # Derive filenames and header guard
     header_file = f"{class_name}.h"
     cpp_file = f"{class_name}.cpp"
-    header_guard = f"{class_name.upper()}_H"
+    #header_guard = f"{class_name.upper()}_H"
 
     # Read templates
     header_template = read_template("sim_header.h")
@@ -69,7 +69,7 @@ def generate_simulation():
 
     # Fill templates with values
     header_content = header_template.format(
-        HEADER_GUARD=header_guard,
+        #HEADER_GUARD=header_guard,
         CLASS_NAME=class_name
     )
     cpp_content = cpp_template.format(

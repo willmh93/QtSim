@@ -15,16 +15,43 @@ struct Particle : public Vec2
 
 struct CurvedSpaceInstance : public SimulationInstance
 {
+    struct LaunchConfig
+    {
+        double radius_mult;
+        double radius;
+        std::vector<double> big_arr;
+
+        LaunchConfig(double radius_mult = 1, double radius = 10) :
+            radius_mult(radius_mult),
+            radius(radius),
+            big_arr(big_arr)
+        {}
+    };
+
+    //static CurvedSpaceInstance* instantiateInstance(LaunchInfo& info)
+    //{
+    //    return new CurvedSpaceInstance(info.radius_mult, info.radius, info.big_arr);
+    //}
+
     vector<unique_ptr<Particle>> particles;
     double gravity = 0.5;
     double &radius_mult;
     double radius;
     bool custom_color = false;
 
-    CurvedSpaceInstance(double &radius_mult, double radius) :
-        radius_mult(radius_mult),
-        radius(radius)
+    std::vector<double>& big_arr;
+
+    CurvedSpaceInstance(LaunchConfig& info) :
+        radius_mult(info.radius_mult),
+        radius(info.radius),
+        big_arr(info.big_arr)
     {}
+
+    /*CurvedSpaceInstance(double &radius_mult, double radius,std::vector<double>& big_arr) :
+        radius_mult(radius_mult),
+        radius(radius),
+        big_arr(big_arr)
+    {}*/
 
     void gravitateSpace(double x, double y, double mass)
     {
@@ -60,15 +87,18 @@ struct CurvedSpaceInstance : public SimulationInstance
     void mouseDown(MouseInfo mouse);
 };
 
-struct CurvedSpace : public Simulation
+struct CurvedSpace : public Simulation<CurvedSpaceInstance>
 {
     int panel_count = 4;
-    double radius_mult = 1;
+    
+    shared_ptr<LaunchConfig> shared_config = make_shared<LaunchConfig>();
+
+    
 
     void prepare() override;
     void projectAttributes(Options* options) override;
     
 };
 
-SIM_END
+SIM_END(CurvedSpace)
 #endif

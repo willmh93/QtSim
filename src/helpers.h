@@ -11,6 +11,27 @@ double max(double a, double b);
 FRect lerpRect(const FRect& src, const FRect& targ, double factor);
 
 template<typename T>
+FRect boundaries(const std::vector<T>& points)
+{
+    double x1 = std::numeric_limits<double>::max();
+    double x2 = std::numeric_limits<double>::lowest();
+    double y1 = std::numeric_limits<double>::max();
+    double y2 = std::numeric_limits<double>::lowest();
+
+    size_t count = points.size();
+    for (size_t i = 0; i < count; ++i)
+    {
+        const T& p = points[i];
+        if (p.x < x1) x1 = p.x;
+        if (p.x > x2) x2 = p.x;
+        if (p.y < y1) y1 = p.y;
+        if (p.y > y2) y2 = p.y;
+    }
+
+    return FRect(x1, y1, x2, y2);
+}
+
+template<typename T>
 std::vector<std::unique_ptr<T>> allocDelaunayTriangleMesh(
     double x0,
     double y0,

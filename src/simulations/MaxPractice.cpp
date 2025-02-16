@@ -1,14 +1,11 @@
 #include "MaxPractice.h"
 
-
 SIM_DECLARE(MaxPractice, "Lessons", "Max Practice 1")
-SIBLING_ORDER("Physics", "Lessons")
 
 void MaxPractice::prepare()
 {
-    auto& layout = setLayout(panel_count);
-    for (Panel* panel : layout)
-        panel->construct<MaxPracticeInstance>();
+    auto& layout = newLayout();
+    makeInstances(panel_count)->mountTo(layout);
 }
 
 void MaxPractice::start()
@@ -137,4 +134,4 @@ void MaxPracticeInstance::draw(Panel* ctx)
     ctx->strokeRect(-world_size, -world_size, world_size*2, world_size*2);
 }
 
-SIM_END
+SIM_END(MaxPractice)

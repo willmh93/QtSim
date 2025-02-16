@@ -27,6 +27,10 @@ struct Ball
 
 struct MaxPracticeInstance : public SimulationInstance
 {
+    struct LaunchInfo
+    {
+    };
+
     //Ball ball;
 
     vector<Ball> balls;
@@ -44,7 +48,7 @@ struct MaxPracticeInstance : public SimulationInstance
 
 
 
-struct MaxPractice : public Simulation
+struct MaxPractice : public Simulation<MaxPracticeInstance>
 {
     int panel_count = 1;
 
@@ -52,5 +56,5 @@ struct MaxPractice : public Simulation
     void start();
 };
 
-SIM_END
+SIM_END(MaxPractice)
 #endif

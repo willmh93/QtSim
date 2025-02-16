@@ -1,7 +1,10 @@
 #include "Test.h"
+#include "CurvedSpace.h"
+#include "SpaceEngine.h"
+#include "EarthMoon.h"
 
 //SIM_SORT_KEY(0)
-SIM_DECLARE(Test, "Framework Tests", "Sim Test")
+SIM_DECLARE(Test, "Framework Tests", "Canvas Transforms")
 
 
 ///---------///
@@ -15,21 +18,54 @@ void Test::projectAttributes(Options* options)
 
 void Test::prepare()
 {
+
+    auto& panels = newLayout();
+    
     //setLayout(panel_count).constructAll<Test_Instance>(
     //    /// Constructor args for all instances
     //);
 
+    //construct<Test_Instance, 5>()->mountTo(panels);
+
+    // Unique instances
+    //construct<Test_Instance>()->mountTo(panels[0]);
+    //construct<Test_Instance>()->mountTo(panels[1]);
+
+    // Mirrored instance
+    //Test_Instance* scene_instance = new Test_Instance();
+    //scene_instance->mountTo(panels[0]);
+    //scene_instance->mountTo(panels[1]);
+
+    //auto &env1 = new NS_CurvedSpace::CurvedSpace();
+
+
     /// Or alternatively, set up each instance manually
-    //auto& panels = setLayout(2);
+    //construct<Test_Instance>()->mountTo(panels[0]);
+    //construct<Test_Instance>()->mountTo(panels[1]);
+
+
+    //CurvedSpace::makeInstance(2)->mountTo(panels[0]);
+    //CurvedSpace::makeInstance()->mountTo(panels[1]);
+
+
+    //auto env1 = make_shared<CurvedSpace::LaunchConfig>(3, 10);
+
+    //CurvedSpace::makeInstance(env1)
+    //    ->mountTo(panels[0]);
+
+    EarthMoon::makeInstance()->mountTo(panels[0]);
+    Test::makeInstance()->mountTo(panels[1]);
+    
+
+    //CurvedSpace::makeDefaultInstance();
+
+    //CurvedSpace::makeUniqueInstance();
+
+    //makeDefaultInstance<CurvedSpace>();
+
+    //construct<NS_CurvedSpace::CurvedSpace>();// ->mountTo(panels[1]);
+
     //panels[0]->construct<CurvedSpaceInstance>(config_A);
-    //panels[1]->construct<CurvedSpaceInstance>(config_B);
-
-    // Mirroring
-    Test_Instance* scene_instance = new Test_Instance();
-    auto& panels = setLayout(2);
-    panels[0]->mountInstance(scene_instance);
-    panels[1]->mountInstance(scene_instance);
-
     //panels[1]->construct<CurvedSpaceInstance>(config_B);
 
 }
@@ -50,9 +86,9 @@ void Test_Instance::instanceAttributes(Options* options)
     options->realtime_checkbox("Transform coordinates", &transform_coordinates); // updated in realtime
     options->realtime_checkbox("Scale Lines & Text", &scale_lines_text); // updated in realtime
     options->realtime_checkbox("Rotate Text", &rotate_text); // updated in realtime
-    options->realtime_slider("Camera Rotatation", &camera->rotation, 0.0, M_PI*2.0, 0.0001); // updated in realtime
-    options->realtime_slider("Camera X", &camera->x, -500.0, 500.0, 1.0); // updated in realtime
-    options->realtime_slider("Camera Y", &camera->y, -500.0, 500.0, 1.0); // updated in realtime
+    options->realtime_slider("Camera Rotatation", &camera_rotation, 0.0, M_PI*2.0, 0.0001); // updated in realtime
+    options->realtime_slider("Camera X", &camera_x, -500.0, 500.0, 1.0); // updated in realtime
+    options->realtime_slider("Camera Y", &camera_y, -500.0, 500.0, 1.0); // updated in realtime
 }
 
 void Test_Instance::start()
@@ -72,7 +108,13 @@ void Test_Instance::start()
 void Test_Instance::mount(Panel* panel)
 {
     // Initialize panel
-    camera->setOriginViewportAnchor(Anchor::CENTER);
+    if (panel->panelIndex() == 0)
+        //camera->setOriginViewportAnchor(Anchor::CENTER);
+        camera->setOriginViewportAnchor(Anchor::TOP_LEFT);
+    else
+        camera->setOriginViewportAnchor(Anchor::CENTER);
+
+    //camera->fitToViewport(0, 0, 300, 300);
 }
 
 void Test_Instance::destroy()
@@ -96,16 +138,28 @@ void Test_Instance::processScene()
 
 void Test_Instance::processPanel(Panel* ctx)
 {
-    // Process panel update
-    camera->rotation = sin(seed) * M_PI_2;
-    camera->setZoom(1.0 + sin(seed+M_PI_2) * 0.5);
-    camera->x = cos(seed + M_PI * 0.75) * 300;
-    camera->y = sin(seed + M_PI * 0.75) * 150;
+    //if (ctx->panelIndex() == 1)
+    //{
+    //    // Process panel update
+    //    camera->rotation = sin(seed) * M_PI_2;
+    //    camera->setZoom(1.0 + sin(seed + M_PI_2) * 0.5);
+    //    camera->x = cos(seed + M_PI * 0.75) * 300;
+    //    camera->y = sin(seed + M_PI * 0.75) * 150;
+    //
+    //    //camera->rotation += 0.1 * M_PI / 180.0;
+    //    camera->transform_coordinates = transform_coordinates;
+    //    camera->scale_lines_text = scale_lines_text;
+    //    camera->rotate_text = rotate_text;
+    //}
+    //else
+    {
+        camera->x = camera_x;
+        camera->y = camera_y;
+        camera->rotation = camera_rotation;
+    }
 
-    //camera->rotation += 0.1 * M_PI / 180.0;
-    camera->transform_coordinates = transform_coordinates;
-    camera->scale_lines_text = scale_lines_text;
-    camera->rotate_text = rotate_text;
+    //ball_pos.x = mouse->world_x;
+    //ball_pos.y = mouse->world_y;
 }
 
 void Test_Instance::draw(Panel* ctx)
@@ -198,13 +252,30 @@ void Test_Instance::draw(Panel* ctx)
     ctx->circle(camera->x, camera->y, 5);
     ctx->fill();
     ctx->fillText("Camera", Vec2(camera->x, camera->y) + Offset(20, 20));
+
+    ctx->setFillStyle(0, 255, 255);
+    ctx->beginPath();
+    ctx->circle(ball_pos, 10);
+    ctx->fill();
 }
 
 /// User Interaction
 
-//void Test_Instance::mouseDown(MouseInfo mouse) {}
-//void Test_Instance::mouseUp(MouseInfo mouse) {}
-//void Test_Instance::mouseMove(MouseInfo mouse) {}
-//void Test_Instance::mouseWheel(MouseInfo mouse) {}
+void Test_Instance::mouseDown() 
+{
+    //ball_pos.x = mouse.world_x;
+    //ball_pos.y = mouse.world_y;
+}
+void Test_Instance::mouseUp()
+{
+    //ball_pos.x = mouse.world_x;
+    //ball_pos.y = mouse.world_y;
+}
+void Test_Instance::mouseMove()
+{
+    ball_pos.x = mouse->world_x;
+    ball_pos.y = mouse->world_y;
+}
+void Test_Instance::mouseWheel() {}
 
-SIM_END
+SIM_END(Test)

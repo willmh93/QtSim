@@ -16,9 +16,9 @@ struct BigBangInstance : public SpaceEngineInstance
     void draw(Panel* ctx) override;
 };
 
-struct BigBang : public SpaceEngine
+struct BigBang : public SpaceEngineTemplate<BigBangInstance>
 {
     void prepare() override;
 };
 
-SIM_END
+SIM_END(BigBang)

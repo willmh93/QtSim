@@ -40,12 +40,12 @@ public:
     double viewport_w = 0;
     double viewport_h = 0;
 
-    double origin_ratio_x = 0.5;
-    double origin_ratio_y = 0.5;
+    double focal_anchor_x = 0.5;
+    double focal_anchor_y = 0.5;
 
     double pan_mult = 1.0;
-    int pan_down_x = 0;
-    int pan_down_y = 0;
+    int pan_down_mx = 0;
+    int pan_down_my = 0;
     double pan_beg_x = 0;
     double pan_beg_y = 0;
     bool panning = false;
@@ -106,8 +106,8 @@ public:
 
     void setOriginViewportAnchor(double ax, double ay)
     {
-        origin_ratio_x = ax;
-        origin_ratio_y = ay;
+        focal_anchor_x = ax;
+        focal_anchor_y = ay;
     }
 
     void setOriginViewportAnchor(Anchor anchor)
@@ -115,14 +115,34 @@ public:
         switch (anchor)
         {
         case Anchor::TOP_LEFT:
-            origin_ratio_x = 0;
-            origin_ratio_y = 0;
+            focal_anchor_x = 0;
+            focal_anchor_y = 0;
             break;
         case Anchor::CENTER:
-            origin_ratio_x = 0.5;
-            origin_ratio_y = 0.5;
+            focal_anchor_x = 0.5;
+            focal_anchor_y = 0.5;
             break;
         }
+    }
+
+    void setStagePanX(int px)
+    {
+        pan_x = px / zoom_x;
+    }
+
+    void setStagePanY(int py)
+    {
+        pan_y = py / zoom_x;
+    }
+
+    double getStagePanX()
+    {
+        return pan_x * zoom_x;
+    }
+
+    double getStagePanY()
+    {
+        return pan_x * zoom_x;
     }
 
     void setZoom(double zoom)
@@ -132,8 +152,8 @@ public:
     }
 
     void cameraToViewport(double left, double top, double right, double bottom);
-    void cameraToWorld(double left, double top, double right, double bottom, bool stretch=false);
-    void cameraToWorld(const FRect &r, bool stretch = false);
+    void fitToViewport(double left, double top, double right, double bottom, bool stretch=false);
+    void fitToViewport(const FRect &r, bool stretch = false);
 
     void originToCenterViewport();
 
@@ -180,6 +200,10 @@ public:
     {
         return toWorldOffset({ stage_ox, stage_oy });
     }
+
+    Vec2 originPixelOffset();
+    Vec2 originWorldOffset();
+    Vec2 panPixelOffset();
 
     Vec2 toWorld(const Vec2& pt);
     Vec2 toWorld(double x, double y);

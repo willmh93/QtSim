@@ -30,7 +30,9 @@ struct Particle : public Serializable
     std::vector<Bond*> bonds;
 
     double x, y; // m
+    double sum_ox, sum_oy;
     double vx, vy; // m/s^2
+    double sum_delta_vx, sum_delta_vy; // m/s^2
     double mass;// = 1; // Kg
     double r;// = 5;
     //double pressure = 0;
@@ -156,8 +158,6 @@ struct ParticleGrid : public std::unordered_map<CellCoord, CellData, CellCoordHa
 
 struct SpaceEngineInstance : public SimulationInstance
 {
-    //Camera cam;
-
     // Constants
     const double G = 6.67430e-11;
     const double kilometer = 1000;
@@ -241,6 +241,8 @@ struct SpaceEngineInstance : public SimulationInstance
 
     // Collisions
     inline bool checkAndResolveCollision(Particle* n0, Particle* n1);
+    inline bool checkAndResolveSpringCollision(Particle* n0, Particle* n1);
+    
     void processCollisions();
 
     // Particle grid
@@ -517,9 +519,18 @@ struct SpaceEngineInstance : public SimulationInstance
 
 };
 
-struct SpaceEngine : public Simulation
+template<typename T>
+struct SpaceEngineTemplate : public Simulation<T>
+{
+    //void prepare() override
+    //{
+    //    setLayout(1).constructAll<T>();
+    //}
+};
+
+struct SpaceEngine : public SpaceEngineTemplate<SpaceEngineInstance>
 {
     void prepare() override;
 };
 
-SIM_END
+SIM_END(SpaceEngine)

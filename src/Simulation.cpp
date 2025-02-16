@@ -1,3 +1,4 @@
+#include <QMainWindow>
 #include <QThread>
 #include <QDir>
 #include <QRegularExpression>
@@ -5,11 +6,9 @@
 #include "Simulation.h"
 #include "Canvas2D.h"
 
-
-void SimulationInstance::mountToPanel(Panel* panel)
+void SimulationInstance::registerMount(Panel* panel)
 {
     options = panel->options;
-    main = panel->main;
     camera = &panel->camera;
 
     mounted_to_panels.push_back(panel);
@@ -22,7 +21,7 @@ void SimulationInstance::mountToPanel(Panel* panel)
         panel->layout->all_instances.push_back(this);
 }
 
-void SimulationInstance::unmountFromPanel(Panel* panel)
+void SimulationInstance::registerUnmount(Panel* panel)
 {
     std::vector<SimulationInstance*>& all_instances = panel->layout->all_instances;
 
@@ -43,17 +42,24 @@ void SimulationInstance::unmountFromPanel(Panel* panel)
     }
 }
 
+void SimulationInstance::mountTo(Panel* panel)
+{
+    panel->mountInstance(this);
+}
 
-Panel::Panel(
-    Layout* layout, 
-    Simulation *main,
-    Options* options,
-    int panel_index, 
-    int grid_x,
-    int grid_y
-) :
+void SimulationInstance::mountTo(Layout& panels)
+{
+    panels[panels.count()]->mountInstance(this);
+}
+
+void SimulationInstance::mountToAll(Layout& panels)
+{
+    for (Panel* panel : panels)
+        panel->mountInstance(this);
+}
+
+Panel::Panel(Layout* layout, Options* options, int panel_index, int grid_x, int grid_y) :
     layout(layout),
-    main(main),
     options(options),
     panel_index(panel_index), 
     panel_grid_x(grid_x),
@@ -67,7 +73,7 @@ Panel::~Panel()
     if (sim)
     {
         // Unmount sim from panel
-        sim->unmountFromPanel(this);
+        sim->registerUnmount(this);
 
         // If sim is no longer mounted to any panels, it's safe to destroy
         if (sim->mounted_to_panels.size() == 0)
@@ -92,25 +98,24 @@ void Panel::draw(QNanoPainter* p)
     // Take snapshot of default transformation
     default_viewport_transform = p->currentTransform();
 
-    // Move origin relative to viewport.
-    // When resizing window, origin is fixed to width/height ratio
-    double viewport_cx = (width / 2.0);
-    double viewport_cy = (height / 2.0);
-    double origin_ox = (width * (camera.origin_ratio_x - 0.5) * camera.zoom_x);
-    double origin_oy = (height * (camera.origin_ratio_y - 0.5) * camera.zoom_y);
+    // When resizing window, world coordinate is fixed given viewport anchor
+    // If TOP_LEFT, the world coordinate at top left remains fixed
+    // If CENTER, world coordinate at middle of viewport remains fixed
+    double origin_ox = camera.originPixelOffset().x;
+    double origin_oy = camera.originPixelOffset().y;
 
     // Move to origin
     p->translate(
-        viewport_cx + origin_ox,
-        viewport_cy + origin_oy
+        origin_ox,
+        origin_oy
     );
 
     /// Do transform
     p->translate(
-        (camera.pan_x * camera.zoom_x),
-        (camera.pan_y * camera.zoom_y)
+        camera.panPixelOffset().x,
+        camera.panPixelOffset().y
     );
-
+    
     p->rotate(camera.rotation);
     p->translate(
         -camera.x * camera.zoom_x,
@@ -124,38 +129,88 @@ void Panel::draw(QNanoPainter* p)
     sim->draw(this);
 }
 
+/// Layout
 
-
-Layout& Simulation::setLayout(int panels_x, int panels_y)
+void Layout::resize(int panel_count)
 {
-    panels.main = this;
+    if (targ_panels_x <= 0 || targ_panels_y <= 0)
+    {
+        // Spread proportionally
+        rows = sqrt(panel_count);
+        cols = panel_count / rows;
+    }
+    else if (targ_panels_y <= 0)
+    {
+        // Expand down
+        cols = targ_panels_x;
+        rows = (int)ceil((float)panel_count / (float)cols);
+    }
+    else if (targ_panels_x <= 0)
+    {
+        // Expand right
+        rows = targ_panels_y;
+        cols = (int)ceil((float)panel_count / (float)rows);
+    }
+
+    // Expand rows down by default if not perfect fit
+    if (panel_count > rows * cols)
+        rows++;
+
+    int count = (cols * rows);
+
+    for (int y = 0; y < rows; y++)
+    {
+        for (int x = 0; x < cols; x++)
+        {
+            int i = (y * cols) + x;
+            if (i >= panel_count)
+            {
+                goto break_nested;
+            }
+
+            if (i < panels.size())
+            {
+                panels[i]->panel_grid_x = x;
+                panels[i]->panel_grid_y = y;
+            }
+            else
+            {
+                Panel* panel = new Panel(this, options, i, x, y);
+                panels.push_back(panel);
+            }
+        }
+    }
+    break_nested:;
+
+    // todo: Unmount remaining panel sims
+}
+
+void Layout::expandCheck(size_t count)
+{
+    if (count > panels.size())
+        resize(count);
+}
+
+
+/// SimulationBase
+
+Layout& SimulationBase::newLayout() 
+{
+    panels.clear();
+    return panels;
+}
+
+Layout& SimulationBase::newLayout(int targ_panels_x, int targ_panels_y)
+{
     panels.options = options;
 
     panels.clear();
-    panels.panels_x = panels_x;
-    panels.panels_y = panels_y;
-
-    int count = (panels_x * panels_y);
-    for (int y = 0; y < panels_y; y++)
-    {
-        for (int x = 0; x < panels_x; x++)
-        {
-            int i = (y * panels_x) + x;
-            panels.add(i, x, y);
-        }
-    }
+    panels.setSize(targ_panels_x, targ_panels_y);
 
     return panels;
 }
 
-Layout& Simulation::setLayout(int panel_count)
-{
-    int panels_y = sqrt(panel_count);
-    int panels_x = panel_count / panels_y;
-    return setLayout(panels_x, panels_y);
-}
-
-void Simulation::configure(int _sim_uid, Canvas2D* _canvas, Options* _options)
+void SimulationBase::configure(int _sim_uid, Canvas2D* _canvas, Options* _options)
 {
     sim_uid = _sim_uid;
     canvas = _canvas;
@@ -165,7 +220,7 @@ void Simulation::configure(int _sim_uid, Canvas2D* _canvas, Options* _options)
     paused = false;
 }
 
-inline void Simulation::_prepare()
+void SimulationBase::_prepare()
 {
     panels.clear();
 
@@ -180,7 +235,7 @@ inline void Simulation::_prepare()
         panel->sim->instanceAttributes(options);
 }
 
-void Simulation::_start()
+void SimulationBase::_start()
 {
     if (paused)
     {
@@ -189,7 +244,13 @@ void Simulation::_start()
         return;
     }
 
+    // Prepare layout
     _prepare();
+
+    // Update layout rects
+    updatePanelRects();
+
+    // Call SimulationBase::start()
     start();
 
     cache.init("cache.bin");
@@ -198,12 +259,16 @@ void Simulation::_start()
     for (SimulationInstance* instance : panels.all_instances)
     {
         instance->cache = &cache;
+        instance->mouse = &mouse;
         instance->start();
     }
 
     // Mount to panels
     for (Panel* panel : panels)
-       panel->sim->mount(panel);
+    {
+        panel->sim->camera = &panel->camera;
+        panel->sim->mount(panel);
+    }
 
     if (record_on_start)
         startRecording();
@@ -213,7 +278,7 @@ void Simulation::_start()
     started = true;
 }
 
-void Simulation::_stop()
+void SimulationBase::_stop()
 {
     stop();
     cache.finalize();
@@ -225,24 +290,44 @@ void Simulation::_stop()
     started = false;
 }
 
-void Simulation::_destroy()
+void SimulationBase::_destroy()
 {
     setSimulationInfoState(SimulationInfo::INACTIVE);
     destroy();
 }
 
-void Simulation::_pause()
+void SimulationBase::_pause()
 {
     paused = true;
 }
 
-Vec2 Simulation::surfaceSize()
+void SimulationBase::updatePanelRects()
+{
+    Vec2 surface_size = surfaceSize();
+
+    // Update panel sizes
+    double panel_width = surface_size.x / panels.cols;
+    double panel_height = surface_size.y / panels.rows;
+
+    // Update panel rects
+    for (Panel* panel : panels)
+    {
+        panel->x = panel->panel_grid_x * panel_width;
+        panel->y = panel->panel_grid_y * panel_height;
+        panel->width = panel_width - 1;
+        panel->height = panel_height - 1;
+        panel->camera.viewport_w = panel_width - 1;
+        panel->camera.viewport_h = panel_height - 1;
+    }
+}
+
+Vec2 SimulationBase::surfaceSize()
 {
     double w;
     double h;
 
     // Determine surface size to draw to (depends on if recording or not)
-    if (!recording)
+    if (!recording || window_capture)
     {
         w = canvasWidth();
         h = canvasHeight();
@@ -258,24 +343,9 @@ Vec2 Simulation::surfaceSize()
     return Vec2(w, h);
 }
 
-void Simulation::_process()
+void SimulationBase::_process()
 {
-    Vec2 surface_size = surfaceSize();
-
-    // Update panel sizes
-    double panel_width = surface_size.x / panels.panels_x;
-    double panel_height = surface_size.y / panels.panels_y;
-
-    // Update panel rects
-    for (Panel* panel : panels)
-    {
-        panel->x = panel->panel_grid_x * panel_width;
-        panel->y = panel->panel_grid_y * panel_height;
-        panel->width = panel_width - 1;
-        panel->height = panel_height - 1;
-        panel->camera.viewport_w = panel_width - 1;
-        panel->camera.viewport_h = panel_height - 1;
-    }
+    updatePanelRects();
 
     // Determine whether to process simulation this frame or not (depends on recording status)
     bool attaching_encoder = (recording && !ffmpeg_worker->isInitialized());
@@ -283,14 +353,38 @@ void Simulation::_process()
     {
         dt_timer.start();
 
+        for (Panel* panel : panels)
+        {
+            double panel_mx = mouse.client_x - panel->x;
+            double panel_my = mouse.client_y - panel->y;
+
+            if (panel_mx >= 0 && panel_my >= 0 &&
+                panel_mx <= panel->width && panel_my <= panel->height)
+            {
+                Camera& cam = panel->camera;
+
+                Vec2 world_mouse = cam.toWorld(panel_mx, panel_my);
+                mouse.panel = panel;
+                mouse.stage_x = panel_mx;
+                mouse.stage_y = panel_my;
+                mouse.world_x = world_mouse.x;
+                mouse.world_y = world_mouse.y;
+            }
+        }
+
         // Process each instance scene
         for (SimulationInstance* instance : panels.all_instances)
+        {
+            //instance->updateMouseInfo();
+            instance->mouse = &mouse;
             instance->processScene();
+        }
 
         // Allow simulation to handle process on each Panel
         for (Panel* panel : panels)
         {
             panel->camera.panProcess();
+            panel->sim->camera = &panel->camera;
             panel->sim->processPanel(panel);
         }
         
@@ -301,13 +395,130 @@ void Simulation::_process()
     }
 }
 
-void Simulation::postProcess()
+void SimulationBase::postProcess()
 {
-    for (Panel* panel : panels)
-        panel->sim->postProcess();
+    // Keep delta until entire frame processed and drawn
+    mouse.scroll_delta = 0;
+
+    //for (Panel* panel : panels)
+    //    panel->sim->postProcess();
 }
 
-void Simulation::_draw(QNanoPainter* p)
+void SimulationBase::_mouseDown(int x, int y, Qt::MouseButton btn)
+{
+    for (Panel* panel : panels)
+    {
+        double panel_mx = x - panel->x;
+        double panel_my = y - panel->y;
+
+        if (panel_mx >= 0 && panel_my >= 0 &&
+            panel_mx <= panel->width && panel_my <= panel->height)
+        {
+            Camera& cam = panel->camera;
+            if (cam.panning_enabled && btn == Qt::MiddleButton)
+                cam.panBegin(x, y);
+
+            Vec2 world_mouse = cam.toWorld(panel_mx, panel_my);
+            mouse.panel = panel;
+            mouse.btn = btn;
+            mouse.stage_x = panel_mx;
+            mouse.stage_y = panel_my;
+            mouse.world_x = world_mouse.x;
+            mouse.world_y = world_mouse.y;
+            panel->sim->mouseDown();
+        }
+    }
+}
+
+void SimulationBase::_mouseUp(int x, int y, Qt::MouseButton btn)
+{
+    for (Panel* panel : panels)
+    {
+        double panel_mx = x - panel->x;
+        double panel_my = y - panel->y;
+
+        if (panel_mx >= 0 && panel_my >= 0 &&
+            panel_mx <= panel->width && panel_my <= panel->height)
+        {
+            Camera& cam = panel->camera;
+            if (cam.panning_enabled && btn == Qt::MiddleButton)
+                cam.panEnd(x, y);
+
+            Vec2 world_mouse = cam.toWorld(panel_mx, panel_my);
+            mouse.panel = panel;
+            mouse.btn = btn;
+            mouse.stage_x = panel_mx;
+            mouse.stage_y = panel_my;
+            mouse.world_x = world_mouse.x;
+            mouse.world_y = world_mouse.y;
+        }
+    }
+
+    for (SimulationInstance* instance : panels.all_instances)
+        instance->mouseDown();
+}
+
+void SimulationBase::_mouseMove(int x, int y)
+{
+    mouse.client_x = x;
+    mouse.client_y = y;
+
+    for (Panel* panel : panels)
+    {
+        double panel_mx = x - panel->x;
+        double panel_my = y - panel->y;
+        Camera& cam = panel->camera;
+
+        if (panel_mx >= 0 && panel_my >= 0 &&
+            panel_mx <= panel->width && panel_my <= panel->height)
+        {
+            Vec2 world_mouse = cam.toWorld(panel_mx, panel_my);
+            mouse.panel = panel;
+            mouse.stage_x = panel_mx;
+            mouse.stage_y = panel_my;
+            mouse.world_x = world_mouse.x;
+            mouse.world_y = world_mouse.y;
+            panel->sim->mouseMove();
+        }
+
+        if (cam.panning_enabled)
+            cam.panDrag(x, y);
+    }
+}
+
+void SimulationBase::_mouseWheel(int x, int y, int delta)
+{
+    for (Panel* panel : panels)
+    {
+        double panel_mx = x - panel->x;
+        double panel_my = y - panel->y;
+
+        if (panel_mx >= 0 && panel_my >= 0 &&
+            panel_mx <= panel->width && panel_my <= panel->height)
+        {
+            Camera& cam = panel->camera;
+
+            if (cam.zooming_enabled)
+            {
+                cam.targ_zoom_x += (((double)delta) * cam.targ_zoom_x) / 1000.0;
+                cam.targ_zoom_y = cam.targ_zoom_x;
+
+                /// todo: With zoom/pan easing, handle this every frame, check if pixel pos changes
+            }
+
+            Vec2 world_mouse = cam.toWorld(panel_mx, panel_my);
+            mouse.panel = panel;
+            mouse.stage_x = panel_mx;
+            mouse.stage_y = panel_my;
+            mouse.world_x = world_mouse.x;
+            mouse.world_y = world_mouse.y;
+            mouse.scroll_delta = delta;
+            panel->sim->mouseWheel();
+        }
+    }
+}
+
+void SimulationBase::_draw(QNanoPainter* p)
 {
     Vec2 surface_size = surfaceSize();
 
@@ -330,6 +541,7 @@ void Simulation::_draw(QNanoPainter* p)
         // Set default transform
         panel->camera.worldTransform();
         
+        panel->sim->camera = &panel->camera;
         panel->draw(p);
 
         p->restore();
@@ -344,7 +556,7 @@ void Simulation::_draw(QNanoPainter* p)
         p->beginPath();
 
         // Draw vert line
-        if (panel->panel_grid_x < panels.panels_x - 1)
+        if (panel->panel_grid_x < panels.cols - 1)
         {
             double line_x = floor(panel->x + panel->width) + 0.5;
             p->moveTo(line_x, panel->y);
@@ -352,7 +564,7 @@ void Simulation::_draw(QNanoPainter* p)
         }
 
         // Draw horiz line
-        if (panel->panel_grid_y < panels.panels_y - 1)
+        if (panel->panel_grid_y < panels.rows - 1)
         {
             double line_y = floor(panel->y + panel->height) + 0.5;
             p->moveTo(panel->x + panel->width + 1, line_y);
@@ -363,20 +575,39 @@ void Simulation::_draw(QNanoPainter* p)
     }
 }
 
-void Simulation::onPainted(const std::vector<GLubyte> &frame)
+void SimulationBase::onPainted(const std::vector<GLubyte> *frame)
 {
     if (!recording)
         return;
 
     if (encode_next_paint)
     {
-        frame_buffer = frame;
-        encodeFrame(frame_buffer.data());
-        encode_next_paint = false;
+        if (window_capture)
+        {
+            // Capture window
+            QScreen* screen = QGuiApplication::primaryScreen();
+            if (!screen)
+                throw "No screen detected";
+
+            QMainWindow* mainWindow = qobject_cast<QMainWindow*>(options->topLevelWidget());
+            QImage window_image = screen->grabWindow(mainWindow->winId()).toImage();
+            window_rgba_image = window_image.convertToFormat(QImage::Format_RGBA8888);
+            
+            encodeFrame(window_rgba_image.bits());
+            encode_next_paint = false;
+        }
+        else
+        {
+            // Capture canvas offscreen surface
+            frame_buffer = std::move(*frame);
+
+            encodeFrame(frame_buffer.data());
+            encode_next_paint = false;
+        }
     }
 }
 
-bool Simulation::startRecording()
+bool SimulationBase::startRecording()
 {
     if (recording)
         throw "Error, already recording...";
@@ -419,13 +650,25 @@ bool Simulation::startRecording()
     );
 
     // Get record options
-    Size record_resolution = options->getRecordResolution();
+    window_capture = options->isWindowCapture();
     int record_fps = options->getRecordFPS();
+    Size record_resolution;
 
-    // Tell canvas to render to offscreen FBO with given resolution
-    canvas->render_to_offscreen = true;
-    canvas->offscreen_w = record_resolution.x;
-    canvas->offscreen_h = record_resolution.y;
+    // If custom resolution, tell canvas to render to offscreen FBO with given resolution
+    // If window capture, render viewport like normal, but set up record resolution to window size
+    if (window_capture)
+    {
+        auto* mainWindow = options->topLevelWidget();
+        record_resolution = mainWindow->size();
+    }
+    else
+    {
+        record_resolution = options->getRecordResolution();
+
+        canvas->render_to_offscreen = true;
+        canvas->offscreen_w = record_resolution.x;
+        canvas->offscreen_h = record_resolution.y;
+    }
 
     // Prepare worker/thread
     ffmpeg_worker = new FFmpegWorker();
@@ -438,14 +681,15 @@ bool Simulation::startRecording()
         record_resolution.y, // src size
         record_resolution.x, // dest size
         record_resolution.y, // dest size
-        record_fps
+        record_fps,
+        !window_capture // flip
     );
 
     // When the thread is opened, initialize FFMpeg
     connect(ffmpeg_thread, &QThread::started, ffmpeg_worker, &FFmpegWorker::startRecording);
 
     // Listen for frame updates, forward pixel data to FFmpeg encoder
-    connect(this, &Simulation::frameReady, ffmpeg_worker, &FFmpegWorker::encodeFrame);
+    connect(this, &SimulationBase::frameReady, ffmpeg_worker, &FFmpegWorker::encodeFrame);
 
     // When the frame is succesfully encoded, permit processing the next frame
     connect(ffmpeg_worker, &FFmpegWorker::frameFlushed, ffmpeg_worker, [this]()
@@ -454,7 +698,7 @@ bool Simulation::startRecording()
     });
 
     // Wait for "end recording" onClicked signal, then signal FFmpeg worker to finish up
-    connect(this, &Simulation::endRecording, ffmpeg_worker, &FFmpegWorker::finalizeRecording);
+    connect(this, &SimulationBase::endRecording, ffmpeg_worker, &FFmpegWorker::finalizeRecording);
 
     // Gracefully shut down worker/thread once FFmpeg finalizes encoding
     connect(ffmpeg_worker, &FFmpegWorker::onFinalized, ffmpeg_worker, [this]()
@@ -475,26 +719,26 @@ bool Simulation::startRecording()
     return true;
 }
 
-bool Simulation::encodeFrame(uint8_t* data)
+bool SimulationBase::encodeFrame(uint8_t* data)
 {
     encoder_busy = true;
     emit frameReady(data);
     return true;
 }
 
-void Simulation::finalizeRecording()
+void SimulationBase::finalizeRecording()
 {
     recording = false;
     canvas->render_to_offscreen = false;
     emit endRecording();
 }
 
-int Simulation::canvasWidth()
+int SimulationBase::canvasWidth()
 {
     return canvas->width();
 }
 
-int Simulation::canvasHeight()
+int SimulationBase::canvasHeight()
 {
     return canvas->height();
 }

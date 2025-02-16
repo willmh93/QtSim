@@ -12,11 +12,14 @@ void Fluid::projectAttributes(Options* options)
 
 void Fluid::prepare()
 {
-    auto& layout = setLayout(panel_count);
-    for (Panel* panel : layout)
-    {
-        panel->construct<FluidInstance>();
-    }
+    auto& layout = newLayout();
+    Fluid::makeInstances(panel_count)->mountTo(layout);
+
+    //auto& layout = setLayout(panel_count);
+    //for (Panel* panel : layout)
+    //{
+    //    panel->construct<FluidInstance>();
+    //}
 }
 
 void FluidInstance::instanceAttributes(Options* options)
@@ -223,4 +226,4 @@ void FluidInstance::spring(Particle* a, Particle* b, double restLength, double k
 
 
 
-SIM_END
+SIM_END(Fluid)

@@ -2,8 +2,8 @@
 #include <QPoint>
 #include <QRectF>
 
-class Simulation;
-using CreatorFunc = std::function<Simulation*()>;
+class SimulationBase;
+using CreatorFunc = std::function<SimulationBase*()>;
 
 struct SimulationInfo
 {
@@ -29,9 +29,12 @@ struct SimulationInfo
     {}
 };
 
-
+class Panel;
 struct MouseInfo
 {
+    Panel* panel = nullptr;
+    double client_x = 0;
+    double client_y = 0;
     double stage_x = 0;
     double stage_y = 0;
     double world_x = 0;
@@ -392,9 +395,25 @@ struct FRect
         set(_x1, _y1, _x2, _y2);
     }
 
+    FRect(const QRectF& r)
+    {
+        x1 = r.left();
+        y1 = r.top();
+        x2 = r.right();
+        y2 = r.bottom();
+    }
+
     FRect(const Vec2 &a, const Vec2 &b)
     {
         set(a, b);
+    }
+
+    void set(const FRect &r)
+    {
+        x1 = r.x1;
+        y1 = r.y1;
+        x2 = r.x2;
+        y2 = r.y2;
     }
 
     void set(double _x1, double _y1, double _x2, double _y2)
@@ -422,6 +441,17 @@ struct FRect
     {
         return (x >= x1 && y >= y1 && x <= x2 && y <= y2);
     }
+
+    FRect scaled(double mult)
+    {
+        double cx = (x1 + x2) * 0.5;
+        double cy = (y1 + y2) * 0.5;
+        x1 = cx + (x1 - cx) * mult;
+        y1 = cy + (y1 - cy) * mult;
+        x2 = cx + (x2 - cx) * mult;
+        y2 = cy + (y2 - cy) * mult;
+        return FRect(x1, y1, x2, y2);
+    }
 };
 
 struct Size
@@ -429,10 +459,17 @@ struct Size
     int x;
     int y;
 
-    Size(int _x, int _y)
+    Size(int _x=0, int _y=0)
     {
         x = _x;
         y = _y;
+    }
+
+    Size& operator =(const QSize& size)
+    {
+        x = size.width();
+        y = size.height();
+        return *this;
     }
 };
 

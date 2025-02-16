@@ -23,53 +23,99 @@ void Camera::cameraToViewport(
     y = (port_h / 2) / zoom_y;
 }
 
-void Camera::cameraToWorld(double left, double top, double right, double bottom, bool stretch)
+void Camera::fitToViewport(double left, double top, double right, double bottom, bool stretch)
 {
     double world_w = right - left;
     double world_h = bottom - top;
     rotation = 0;
+    pan_x = 0;
+    pan_y = 0;
 
     if (stretch)
     {
-        x = left + (viewport_w / 2) / zoom_x;
-        y = top + (viewport_h / 2) / zoom_y;
-        zoom_x = (viewport_w / world_w);
-        zoom_y = (viewport_h / world_h);
+        targ_zoom_x = zoom_x = (viewport_w / world_w);
+        targ_zoom_y = zoom_y = (viewport_h / world_h);
+
+        Vec2 _originWorldOffset = originWorldOffset();
+        x = left + _originWorldOffset.x; /*+ (viewport_w / 2) / zoom_x*/;
+        y = top + _originWorldOffset.y; /*+ (viewport_h / 2) / zoom_y*/;
     }
     else
     {
         double aspect_view = viewport_w / viewport_h;
         double aspect_rect = world_w / world_h;
 
+        Vec2 stage_rect_tl;
+
         if (aspect_rect > aspect_view)
         {
             // Shrink Height, gap top and bottom
             zoom_x = zoom_y = (viewport_w / world_w);
-            pan_x = 0;
-            pan_y = ((viewport_h - (world_h * zoom_y)) / 2.0) / zoom_y;
+            targ_zoom_x = zoom_x;
+            targ_zoom_y = zoom_y;
+
+            Vec2 _originWorldOffset = originWorldOffset();
+
+            double world_ox = 0;
+            double world_oy = ((viewport_h - (world_h * zoom_y)) / 2.0) / zoom_y;
+
+            x = _originWorldOffset.x + left - world_ox;
+            y = _originWorldOffset.y + top - world_oy;
         }
         else
         {
             // Shrink Width, gap left and right
             zoom_x = zoom_y = (viewport_h / world_h);
-            pan_x = ((viewport_w - (world_w * zoom_x)) / 2.0) / zoom_x;
-            pan_y = 0;
+            targ_zoom_x = zoom_x;
+            targ_zoom_y = zoom_y;
+
+            Vec2 _originWorldOffset = originWorldOffset();
+
+            double world_ox = ((viewport_w - (world_w * zoom_x)) / 2.0) / zoom_x;
+            double world_oy = 0;
+
+            x = _originWorldOffset.x + left - world_ox;
+            y = _originWorldOffset.y + top - world_oy;
         }
 
-        x = (left + (viewport_w / 2) / zoom_x);
-        y = (top + (viewport_h / 2) / zoom_y);
+        //x = (left + (viewport_w / 2) / zoom_x);
+        //y = (top + (viewport_h / 2) / zoom_y);
     }
 }
 
-void Camera::cameraToWorld(const FRect& r, bool stretch)
+void Camera::fitToViewport(const FRect& r, bool stretch)
 {
-    cameraToWorld(r.x1, r.y1, r.x2, r.y2, stretch);
+    fitToViewport(r.x1, r.y1, r.x2, r.y2, stretch);
 }
 
 void Camera::originToCenterViewport()
 {
     x = 0;
     y = 0;
+}
+
+Vec2 Camera::originPixelOffset()
+{
+    double viewport_cx = (panel->width / 2.0);
+    double viewport_cy = (panel->height / 2.0);
+
+    return Vec2(
+         viewport_cx +  panel->width * (focal_anchor_x - 0.5),// * zoom_x,
+         viewport_cy +  panel->height * (focal_anchor_y - 0.5)// * zoom_y
+    );
+}
+
+Vec2 Camera::originWorldOffset()
+{
+    return originPixelOffset() / Vec2(zoom_x, zoom_y);
+}
+
+Vec2 Camera::panPixelOffset()
+{
+    return Vec2(
+        pan_x * zoom_x,
+        pan_y * zoom_y
+    );
 }
 
 Vec2 Camera::toWorld(const Vec2& pt)
@@ -81,17 +127,16 @@ Vec2 Camera::toWorld(const Vec2& pt)
     double cos_r = cos(rotation);
     double sin_r = sin(rotation);
 
-    double viewport_cx = (panel->width / 2.0);
-    double viewport_cy = (panel->height / 2.0);
+    
 
-    double origin_ox = (panel->width * (origin_ratio_x - 0.5) * zoom_x);
-    double origin_oy = (panel->height * (origin_ratio_y - 0.5) * zoom_y);
+    double origin_ox = originPixelOffset().x;//(panel->width * (focal_anchor_x - 0.5) * zoom_x);
+    double origin_oy = originPixelOffset().y;//(panel->height * (focal_anchor_y - 0.5) * zoom_y);
 
-    px -= viewport_cx + origin_ox;
-    py -= viewport_cy + origin_oy;
+    px -= origin_ox;
+    py -= origin_oy;
 
-    px -= (pan_x * zoom_x);
-    py -= (pan_y * zoom_y);
+    px -= panPixelOffset().x; //pan_x * zoom_x;
+    py -= panPixelOffset().y; //pan_y * zoom_y;
 
     double world_x = (px * cos_r + py * sin_r);
     double world_y = (py * cos_r - px * sin_r);
@@ -126,10 +171,8 @@ Vec2 Camera::toStage(const Vec2& pt)
     double cos_r = cos(rotation);
     double sin_r = sin(rotation);
 
-    double viewport_cx = (panel->width / 2.0);
-    double viewport_cy = (panel->height / 2.0);
-    double origin_ox   = (panel->width * (origin_ratio_x - 0.5) * zoom_x);
-    double origin_oy   = (panel->height * (origin_ratio_y - 0.5) * zoom_y);
+    double origin_ox   = originPixelOffset().x;//(panel->width * (focal_anchor_x - 0.5) * zoom_x);
+    double origin_oy   = originPixelOffset().y;//(panel->height * (focal_anchor_y - 0.5) * zoom_y);
 
     /// Do transform
 
@@ -142,11 +185,11 @@ Vec2 Camera::toStage(const Vec2& pt)
     double ret_x = (px * cos_r - py * sin_r);
     double ret_y = (py * cos_r + px * sin_r);
 
-    ret_x += (pan_x * zoom_x);
-    ret_y += (pan_y * zoom_y);
+    ret_x += panPixelOffset().x;//pan_x * zoom_x;
+    ret_y += panPixelOffset().y;//pan_y * zoom_y;
 
-    ret_x += viewport_cx + origin_ox;
-    ret_y += viewport_cy + origin_oy;
+    ret_x += origin_ox;
+    ret_y += origin_oy;
 
     return { ret_x, ret_y };
 }
@@ -180,8 +223,8 @@ FRect Camera::toStageRect(const Vec2& pt1, const Vec2& pt2)
 
 void Camera::panBegin(int _x, int _y)
 {
-    pan_down_x = _x;
-    pan_down_y = _y;
+    pan_down_mx = _x;
+    pan_down_my = _y;
     pan_beg_x = targ_pan_x;
     pan_beg_y = targ_pan_y;
     panning = true;
@@ -191,16 +234,16 @@ void Camera::panDrag(int _x, int _y)
 {
     if (panning)
     {
-        int dx = _x - pan_down_x;
-        int dy = _y - pan_down_y;
-        targ_pan_x = pan_beg_x + (double)dx * (pan_mult / zoom_x);
-        targ_pan_y = pan_beg_y + (double)dy * (pan_mult / zoom_y);
+        int dx = _x - pan_down_mx;
+        int dy = _y - pan_down_my;
+        targ_pan_x = pan_beg_x + (double)(dx / zoom_x) * pan_mult;
+        targ_pan_y = pan_beg_y + (double)(dy / zoom_y) * pan_mult;
     }
 }
 
 void Camera::panProcess()
 {
-    double ease = 0.1;
+    double ease = 1;// 0.1;
     pan_x += (targ_pan_x - pan_x) * ease;
     pan_y += (targ_pan_y - pan_y) * ease;
     zoom_x += (targ_zoom_x - zoom_x) * ease;

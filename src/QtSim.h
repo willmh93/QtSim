@@ -39,7 +39,7 @@ private:
     Canvas2D* canvas = nullptr;
     Toolbar* toolbar = nullptr;
 
-    Simulation* simulation;
+    SimulationBase* simulation;
     int active_sim_uid;
 
     void setSimulation(int sim_uid);
