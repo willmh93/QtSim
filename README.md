@@ -1,16 +1,20 @@
-# Qt Simulation Portfolio
+# Qt Simulation Framework / Personal Portfolio
 
 &#x20;&#x20;
 
-A collection of physics-based simulations and interactive experiments designed in Qt.
+A cross-platform (Windows, Linux) framework for building and recording 2D simulations.
+
+- UI developed in Qt
+- Uses https://github.com/QUItCoding/qnanopainter (NanoVG wrapper) for high-performance Canvas drawing.
+- FFmpeg for video encoding
+
+Included are physics, biology and chemistry simulations, as well as other experiments.
 
 ## Features
 
-- **Custom Qt Components** - Tailored UI/UX using Qt Widgets & QML.
-- **Physics Engine** - Lightweight physics simulation for realistic object interactions.
-- **3D Rendering** - OpenGL/QtQuick-based visualizations.
-- **Minimal Dependencies** - Only core Qt modules and essential libraries.
-- **High Performance** - Optimized for real-time execution.
+- **Custom Qt Components** - 2D viewport (NanoVG). Custom spline graph input
+- **Various Templates** - Physics / Biology / Chemistry templates
+- **Personal simulation projects**
 
 ## Screenshots
 
@@ -20,7 +24,7 @@ A collection of physics-based simulations and interactive experiments designed i
 
 ### Prerequisites
 
-- **Qt 6.x or later** (Qt Creator recommended)
+- **Qt 6.x or later** (Qt Creator)
 - **CMake 3.16+**
 - **Compiler:** MSVC, Clang, or GCC
 
@@ -29,46 +33,40 @@ A collection of physics-based simulations and interactive experiments designed i
 1. Clone the repository:
 
    ```sh
-   git clone https://github.com/yourusername/qt-simulation-portfolio.git
+   git clone https://github.com/willmh93/QtSim.git
    cd qt-simulation-portfolio
    ```
-
-2. Configure and build the project:
-
-   ```sh
-   mkdir build && cd build
-   cmake .. -DCMAKE_BUILD_TYPE=Release
-   make -j$(nproc)  # Use 'nmake' or 'cmake --build .' on Windows
-   ```
-
-3. Run the application:
+2. (If windows)
+   Extract included FFmpeg dlls into: ``external\ffmpeg\windows\bin``
+   
+3. Build the project:
 
    ```sh
-   ./qt-simulation-portfolio
+   cmake -B build
    ```
 
 ## Project Structure
 
 ```
-qt-simulation-portfolio/
-├── src/              # Source code
-│   ├── core/         # Simulation core logic
-│   ├── ui/           # Qt-based UI components
-│   ├── physics/      # Physics engine
-│   ├── renderer/     # OpenGL rendering (if applicable)
-│   ├── main.cpp      # Entry point
-├── assets/           # Textures, models, and assets
-├── CMakeLists.txt    # Build system
-├── README.md         # Project documentation
-└── LICENSE           # License information
+QtSim/
+├── src/
+│   └── simulations/    # Auto-included Simulations
+├── resources/
+├── external/
+│   └── ffmpeg/
+│       └── windows/
+│           ├── bin/
+│           │   └── FFmpeg_dlls.7z  # (extract in-place)
+│           ├── include/
+│           ├── lib/
+├── scripts
+│   ├── new_sim.py      # Python helper for creating simulation
+│   └── rename_sim.py   # Python helper for renaming simulation
+├── templates
+├── CMakeLists.txt      # Build system
+├── README.md           # Project documentation
+└── LICENSE             # License information
 ```
-
-## Simulations Included
-
-- **Rigid Body Dynamics** – Collision handling and object interactions.
-- **Particle Systems** – Fluid and gas-like behaviors.
-- **Spring-Mass Systems** – Realistic elasticity modeling.
-- **Electromagnetism** – Visualizing electromagnetic fields.
 
 ## Contributing
 
