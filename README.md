@@ -8,13 +8,13 @@ A cross-platform (Windows, Linux) framework for building and recording 2D simula
 - Uses https://github.com/QUItCoding/qnanopainter (NanoVG wrapper) for high-performance Canvas drawing.
 - FFmpeg for video encoding
 
-Included are physics, biology and chemistry simulations, as well as other experiments.
+Included are Physics, Biology and Chemistry simulations, as well as other experiments.
 
 ## Features
 
 - **Custom Qt Components** - 2D viewport (NanoVG). Custom spline graph input
 - **Various Templates** - Physics / Biology / Chemistry templates
-- **Personal simulation projects**
+- **Personal Projects**
 
 ## Screenshots
 
@@ -33,10 +33,9 @@ Included are physics, biology and chemistry simulations, as well as other experi
 
    ```sh
    git clone https://github.com/willmh93/QtSim.git
-   cd qt-simulation-portfolio
+   cd QtSim
    ```
-2. (If windows)
-   Extract included FFmpeg dlls into: ``external\ffmpeg\windows\bin``
+2. (Windows) Extract FFmpeg_dlls.7z into: ``external\ffmpeg\windows\bin``
    
 3. Build the project:
 
