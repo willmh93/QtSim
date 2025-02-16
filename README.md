@@ -12,8 +12,22 @@ Included are Physics, Biology and Chemistry simulations, as well as other experi
 
 ## Features
 
-- **Custom Qt Components** - 2D viewport (NanoVG). Custom spline graph input
-- **Various Templates** - Physics / Biology / Chemistry templates
+- **Simulation Framework**
+- - Layouts supporting multiple viewports / scenes
+  - Custom Attribute Input List, for rapid prototyping (for starting conditions, or realtime feedback), e.g.
+  - ```options->starting_slider("Particle Count", &particle_count, 10, 1000); # Slider only 'updates particle_count' on simulation start```
+  - ```options->realtime_checkbox("Optimize Collisions", &optimize_collisions); # Updates 'optimize_collisions' boolean in realtime```
+- **x264 Video Recording**
+- - Custom resolution / FPS (uses offscreen FBO for rendering)
+  - Window Capture (optional)
+- **Custom Components**
+- - 2D viewport (uses qnanopainter/NanoVG wrapper)
+     - Support for Camera rotation
+     - Conversion between Stage/World coordinates
+     - Easy switching between World-Transform and Stage-Transform (useful for UI/Labels)
+     - Viewport anchor (when zooming or resizing viewport)
+  - Custom Spline Graph input component
+- **Various Templates** - Physics / Biology / Chemistry templates to build on
 - **Personal Projects**
 
 ## Screenshots
