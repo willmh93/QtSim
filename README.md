@@ -1,4 +1,4 @@
-# Qt Simulation Framework / Personal Portfolio
+# <img src="resources/icon.png" alt="Icon" style="height:1em; vertical-align:middle;"> Qt Simulation Framework
 
 &#x20;&#x20;
 
@@ -23,7 +23,7 @@ Included are some Physics, Biology and Chemistry simulations experiments
      - Easy switching between World-Transform and Stage-Transform (useful for UI / labeling)
      - Viewport anchor (when zooming or resizing viewport)
   - **AttributeList** - List of inputs (sliders, checboxes, etc) designed for rapid prototyping. e.g.
-    ```
+    ```cpp
     options->starting_slider("Particle Count", &particle_count, 10, 1000);
     options->realtime_checkbox("Optimize Collisions", &optimize_collisions);
     ```
@@ -42,31 +42,35 @@ Included are some Physics, Biology and Chemistry simulations experiments
 - **Windows or Linux OS**
 - **Qt 6.8.x or later** (Qt Creator)
 - **CMake 3.16+**
-- **Python 3.12** *(optional but recommended for creating new simulations from templates)*
+- **Python 3.12**
 - **Compiler:** MSVC or GCC
 
 ## Installation
 
-1. Clone the repository:
+1. **Make sure Qt Creator is installed**
+   - https://www.qt.io/download-qt-installer-oss
+   - If using **Visual Studio**, add to your Environment PATH: ```C:\Qt\6.8.2\msvc2022_64\bin``` *(replace with your version)*
+
+3. **Clone the repository**
 
    ```sh
    git clone https://github.com/willmh93/QtSim.git
    cd QtSim
    ```
-2. Open project in Qt Creator
-    - Select target kit (**MinGW 64-bit**, or **MSVC2022 64-bit** if Visual Studio build)
+4. **Open project in Qt Creator**
+    - Select target kit
     - Click **Configure**
     - Wait for CMake to fetch dependencies and create project files
 
-3. If using Visual Studio:
-   - Run Generator (QtCreator Menu: **Build** --> **Run Generator**)
+5. Create Visual Studio Solution *(Optional - Requires MSVC2022 64-bit kit)*
+   - Run Generator (QtCreator: **Build** ─ **Run Generator**)
    - Open **build/Desktop_Qt_6_8_x_MSVC2022-Debug/qtc_Visual_Studio_17_2022/QtSim.sln**
      
-4. Compile and run!
+6. **Compile and Run!**
    
 ## Simulation Tutorial
 
-### Creating a new simulation
+### Creating a new Simulation project
   - **Run Python Script**
     - ```python scripts/new_sim.py```
     - Enter Class Name        (e.g. **"Explosion"**)
@@ -76,23 +80,33 @@ Included are some Physics, Biology and Chemistry simulations experiments
     src/simulations/Explosion.h
     src/simulations/Explosion.cpp
     ```
-  - When you run the application, your simulation should appear in the TreeView in the top-left corner
-### Creating your Scene and rendering it
-- Your **Scene** can override these various methods
+  - When you run the application, your simulation **"Explosion"** should appear in the TreeView in the top-left corner
+### Creating your Project / Scene and rendering it
+- Your generated **Project** class can override these methods
+    ```cpp
+    void Explosion_Project::projectPrepare();
+    void Explosion_Project::projectStart();
+    void Explosion_Project::projectStop();
+    void Explosion_Project::projectDestroy();
     ```
-    virtual void instanceAttributes(Options* options)
-    virtual void startScene()
-    virtual void onMount(Viewport *ctx)
-    virtual void stopScene()
-    virtual void destroyScene()
-    virtual void processScene()
-    virtual void processViewport(Viewport* ctx)
-    virtual void drawViewport(Viewport* ctx)
-    
-    virtual void mouseDown() {}
-    virtual void mouseUp() {}
-    virtual void mouseMove() {}
-    virtual void mouseWheel() {}
+- Your generated **Scene** class can override these methods
+    ```cpp
+    void Explosion_Scene::sceneAttributes(Options* options);
+    void Explosion_Scene::sceneStart();
+    void Explosion_Scene::sceneMounted(Viewport *ctx);
+    void Explosion_Scene::sceneStop();
+    void Explosion_Scene::sceneDestroy();
+    void Explosion_Scene::sceneProcess();
+
+    // May be called multiple times on a single Scene if mounted to multiple Viewports
+    void Explosion_Scene::viewportProcess(Viewport* ctx);
+    void Explosion_Scene::viewportDraw(Viewport* ctx);
+
+    // Handle Mouse Events (only invoked on Viewport mouse interaction)
+    void Explosion_Scene::mouseDown();
+    void Explosion_Scene::mouseUp();
+    void Explosion_Scene::mouseMove();
+    void Explosion_Scene::mouseWheel();
     ```
 
 ## Key Files / Directories
