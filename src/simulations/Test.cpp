@@ -53,8 +53,13 @@ void Test::projectPrepare()
     //CurvedSpace::createScene(env1)
     //    ->mountTo(viewports[0]);
 
-    EarthMoon::createScene()->mountTo(viewports[0]);
-    Test::createScene()->mountTo(viewports[1]);
+    //EarthMoon::createScene()->mountTo(viewports[0]);
+    //Test::createScene()->mountTo(viewports[1]);
+
+    Layout& layout = newLayout();
+
+    for (int i=0; i< viewport_count; i++)
+        layout << Test::createScene();
    
 
 
@@ -109,10 +114,10 @@ void Test_Scene::sceneStart()
 void Test_Scene::sceneMounted(Viewport* viewport)
 {
     // Initialize viewport
-    if (viewport->viewportIndex() == 0)
-        //camera->setOriginViewportAnchor(Anchor::CENTER);
-        camera->setOriginViewportAnchor(Anchor::TOP_LEFT);
-    else
+    //if (viewport->viewportIndex() == 0)
+    //    //camera->setOriginViewportAnchor(Anchor::CENTER);
+    //    camera->setOriginViewportAnchor(Anchor::TOP_LEFT);
+    //else
         camera->setOriginViewportAnchor(Anchor::CENTER);
 
     //camera->focusWorldRect(0, 0, 300, 300);
@@ -181,7 +186,9 @@ void Test_Scene::viewportDraw(Viewport* ctx)
 
     // Draw scene
     //ctx->scaleGraphics(scale_graphics);
-    ctx->drawWorldAxis();
+
+    //ctx->drawWorldAxis();
+
     /*ctx->setLineWidth(10);
     ctx->beginPath();
     ctx->moveTo(0, 0);
@@ -200,7 +207,7 @@ void Test_Scene::viewportDraw(Viewport* ctx)
 
     //ctx->beginWorldTransform();
 
-
+   
 
     camera->setTransformFilters(
         transform_coordinates,
@@ -209,12 +216,14 @@ void Test_Scene::viewportDraw(Viewport* ctx)
     );
 
     ctx->setFillStyle(255, 0, 255);
-    ctx->beginPath();
+    
     for (Particle& p : particles)
     {
+        ctx->beginPath();
         ctx->circle(p.x, p.y, 2);
+        ctx->fill();
     }
-    ctx->fill();
+    
 
     ctx->setFillStyle(255, 255, 255);
     ctx->strokeRect(-100, -100, 200, 200);
