@@ -4,21 +4,21 @@
 SIM_BEG(BigBang)
 BASE_SIM(SpaceEngine)
 
-struct BigBangInstance : public SpaceEngineInstance
+struct BigBangScene : public SpaceEngineScene
 {
     int particle_count;
 
     bool focus_rect_initialized = false;
     FRect focus_rect;
 
-    void start() override;
-    void processScene() override;
-    void draw(Panel* ctx) override;
+    void sceneStart() override;
+    void sceneProcess() override;
+    void viewportDraw(Viewport* ctx) override;
 };
 
-struct BigBang : public SpaceEngineTemplate<BigBangInstance>
+struct BigBang : public SpaceEngineTemplate<BigBangScene>
 {
-    void prepare() override;
+    void projectPrepare() override;
 };
 
 SIM_END(BigBang)

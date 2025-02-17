@@ -1,6 +1,6 @@
 #ifndef TEST_H
 #define TEST_H
-#include "Simulation.h"
+#include "Project.h"
 
 
 SIM_BEG(Test)
@@ -13,9 +13,9 @@ struct Particle : public Vec2
     {}
 };
 
-struct Test_Instance : public SimulationInstance
+struct Test_Scene : public Scene
 {
-    //using SimulationInstance::SimulationInstance;
+    //using Scene::Scene;
     //struct LaunchConfig
     //{
     //};
@@ -33,20 +33,20 @@ struct Test_Instance : public SimulationInstance
 
     vector<Particle> particles;
 
-    /*Test_Instance(LaunchConfig &config)
+    /*Test_Scene(LaunchConfig &config)
     {
         // Args passed from Test.
         // Use initializer list for reference variables
     }*/
 
-    void instanceAttributes(Options* options) override;
+    void sceneAttributes(Options* options) override;
+    void sceneStart() override;
+    void sceneMounted(Viewport *viewport) override;
+    void sceneDestroy() override;
+    void sceneProcess() override;
 
-    void start() override;
-    void mount(Panel *panel) override;
-    void destroy() override;
-    void processScene() override;
-    void processPanel(Panel* ctx) override;
-    void draw(Panel* ctx) override;
+    void viewportProcess(Viewport* ctx) override;
+    void viewportDraw(Viewport* ctx) override;
 
     void mouseDown() override;
     void mouseUp() override;
@@ -54,12 +54,12 @@ struct Test_Instance : public SimulationInstance
     void mouseWheel() override;
 };
 
-struct Test : public Simulation<Test_Instance>
+struct Test : public Project<Test_Scene>
 {
-    int panel_count = 1;
+    int viewport_count = 1;
 
     void projectAttributes(Options* options) override;
-    void prepare() override;
+    void projectPrepare() override;
 };
 
 SIM_END(Test)

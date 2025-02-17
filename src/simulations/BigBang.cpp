@@ -14,12 +14,12 @@ CHILD_SORT("Physics", "Space Engine",
 
 
 
-void BigBang::prepare()
+void BigBang::projectPrepare()
 {
-    BigBang::makeInstances(1)->mountTo(newLayout());
+    BigBang::makeScenes(1)->mountTo(newLayout());
 }
 
-/*void BigBangInstance::prepare()
+/*void BigBangScene::projectPrepare()
 {
 
     world_size_min = 100;
@@ -38,13 +38,13 @@ void BigBang::prepare()
     step_seconds_min = 0;// step_seconds * 0.5;
     step_seconds_max = step_seconds * 10;
 
-    SpaceEngineInstance::prepare();
+    SpaceEngineScene::projectPrepare();
 
     
 
 }*/
 
-void BigBangInstance::start()
+void BigBangScene::sceneStart()
 {
     //world_size_min = 100;
     //world_size_max = 10000;
@@ -63,7 +63,7 @@ void BigBangInstance::start()
     //step_seconds_min = 0;// step_seconds * 0.5;
     //step_seconds_max = step_seconds * 10;
 
-    SpaceEngineInstance::start();
+    SpaceEngineScene::sceneStart();
 
     auto universe_particles = newPlanetFromParticleCount(0, 0, 50, world_size, particle_count);
 
@@ -117,9 +117,9 @@ void BigBangInstance::start()
     
 }
 
-void BigBangInstance::processScene()
+void BigBangScene::sceneProcess()
 {
-    SpaceEngineInstance::processScene();
+    SpaceEngineScene::sceneProcess();
 
     double x1 = std::numeric_limits<double>::max();
     double x2 = std::numeric_limits<double>::lowest();
@@ -144,12 +144,12 @@ void BigBangInstance::processScene()
         focus_rect = lerpRect(focus_rect, FRect(x1, y1, x2, y2), 0.1);
     }
 
-    ctx->camera.fitToViewport(focus_rect);*/
+    ctx->camera.focusWorldRect(focus_rect);*/
 }
 
-void BigBangInstance::draw(Panel* ctx)
+void BigBangScene::viewportDraw(Viewport* ctx)
 {
-    SpaceEngineInstance::draw(ctx);
+    SpaceEngineScene::viewportDraw(ctx);
     /*FRect r = ctx->camera.toStageRect(-world_size / 2, -world_size / 2, world_size / 2, world_size / 2);
 
     ctx->setStrokeStyle(255,255,255);

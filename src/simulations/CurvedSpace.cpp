@@ -5,76 +5,76 @@ SIM_DECLARE(CurvedSpace, "Physics", "Experimental", "Space Curvature")
 
 void CurvedSpace::projectAttributes(Options* options)
 {
-    options->realtime_slider("Panel Count", &panel_count, 1, 36, 1);
+    options->realtime_slider("Viewport Count", &viewport_count, 1, 36, 1);
     options->realtime_slider("Start Radius Mult", &shared_config->radius_mult, 0.1, 2.0, 0.1); // Never add same pointer twice
 }
 
-void CurvedSpace::prepare()
+void CurvedSpace::projectPrepare()
 {
-    auto &panels = newLayout();
+    auto &viewports = newLayout();
 
     shared_config->big_arr.resize(10000, 5.0);
 
 
-    //makeInstance(shared_config)->mountTo(panels[0]);
-    //makeInstance(shared_config)->mountTo(panels[1]);
+    //createScene(shared_config)->mountTo(viewports[0]);
+    //createScene(shared_config)->mountTo(viewports[1]);
 
-    panels << makeInstance(shared_config);
-    panels << makeInstance(shared_config);
-    panels << makeInstance(shared_config);
-    panels << makeInstance(shared_config);
-    panels << makeInstance(shared_config);
+    viewports << createScene(shared_config);
+    viewports << createScene(shared_config);
+    viewports << createScene(shared_config);
+    viewports << createScene(shared_config);
+    viewports << createScene(shared_config);
 
     shared_config->radius_mult = 0.3;
 
-    //construct<Instance>(shared_config)->mountTo(panels[0]);
-    //construct<Instance>(shared_config)->mountTo(panels[1]);
+    //construct<Scene>(shared_config)->mountTo(viewports[0]);
+    //construct<Scene>(shared_config)->mountTo(viewports[1]);
 
-    //setLayout(panel_count).constructAll<CurvedSpaceInstance>(radius_mult, 10);
-    //setLayout(panel_count).
+    //setLayout(viewport_count).constructAll<CurvedSpaceScene>(radius_mult, 10);
+    //setLayout(viewport_count).
 
     //setLayout(2);
-    //panels[0]->construct<CurvedSpaceInstance>(radius_mult, 10);
-    //panels[1]->construct<CurvedSpaceInstance>(radius_mult, 20);
-    //panels[2]->construct<CurvedSpaceInstance>(radius_mult, 30);
-    //panels[3]->construct<CurvedSpaceInstance>(radius_mult, 40);
+    //viewports[0]->construct<CurvedSpaceScene>(radius_mult, 10);
+    //viewports[1]->construct<CurvedSpaceScene>(radius_mult, 20);
+    //viewports[2]->construct<CurvedSpaceScene>(radius_mult, 30);
+    //viewports[3]->construct<CurvedSpaceScene>(radius_mult, 40);
 
-    //panels[1]->construct<NS_Fluid::FluidInstance>();
+    //viewports[1]->construct<NS_Fluid::FluidScene>();
 }
 
 
 
-void CurvedSpaceInstance::instanceAttributes(Options* options)
+void CurvedSpaceScene::sceneAttributes(Options* options)
 {
     options->realtime_slider("Gravity", &gravity, 0.0, 1.0, 0.1);
     options->starting_checkbox("Custom Color", &custom_color);
 }
 
 
-/// Simulation Instance Logic
+/// Project Scene Logic
 
-void CurvedSpaceInstance::start()
+void CurvedSpaceScene::sceneStart()
 {
     //main->options->realtime_slider("Gravity", &gravity, 0.0, 1.0, 0.1);
     //radius = radius_mult * radius;
     particles = allocDelaunayTriangleMesh<Particle>(0, 0, 400, 400, 20);
-    //qDebug() << "Instance Constructed: " << panel->panel_index;
+    //qDebug() << "Scene Constructed: " << viewport->viewport_index;
 }
 
-void CurvedSpaceInstance::destroy()
+void CurvedSpaceScene::sceneDestroy()
 {
-    //qDebug() << "Instance Destroyed: " << panel->panel_index;
+    //qDebug() << "Scene Destroyed: " << viewport->viewport_index;
 }
 
-void CurvedSpaceInstance::processScene()
+void CurvedSpaceScene::sceneProcess()
 {
-    //instances[ctx.panel_index].process(ctx);
+    //scenes[ctx.viewport_index].process(ctx);
     //cam.setCamera(camera);
     //active_context->camera.x += 1.0;
     camera->rotation += (gravity / 180.0 * M_PI);
 }
 
-void CurvedSpaceInstance::draw(Panel* ctx)
+void CurvedSpaceScene::viewportDraw(Viewport* ctx)
 {
     srand(0);
 
@@ -98,7 +98,7 @@ void CurvedSpaceInstance::draw(Panel* ctx)
 }
 
 
-void CurvedSpaceInstance::mouseDown(MouseInfo mouse)
+void CurvedSpaceScene::mouseDown(MouseInfo mouse)
 {
     gravitateSpace(mouse.world_x, mouse.world_y, 1000000);
 }

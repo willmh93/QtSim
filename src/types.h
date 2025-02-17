@@ -2,10 +2,10 @@
 #include <QPoint>
 #include <QRectF>
 
-class SimulationBase;
-using CreatorFunc = std::function<SimulationBase*()>;
+class ProjectBase;
+using CreatorFunc = std::function<ProjectBase*()>;
 
-struct SimulationInfo
+struct ProjectInfo
 {
     enum State
     {
@@ -19,7 +19,7 @@ struct SimulationInfo
     int sim_uid;
     State state;
 
-    SimulationInfo(
+    ProjectInfo(
         std::vector<QString> path,
         CreatorFunc creator=nullptr, 
         int sim_uid=-100, 
@@ -29,10 +29,10 @@ struct SimulationInfo
     {}
 };
 
-class Panel;
+class Viewport;
 struct MouseInfo
 {
-    Panel* panel = nullptr;
+    Viewport* viewport = nullptr;
     double client_x = 0;
     double client_y = 0;
     double stage_x = 0;

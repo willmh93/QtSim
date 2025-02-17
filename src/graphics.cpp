@@ -18,7 +18,7 @@
  */
 
 #include "graphics.h"
-#include "Simulation.h"
+#include "Project.h"
 
 #include "qnanopainter.h"
 #include <QOpenGLFunctions>

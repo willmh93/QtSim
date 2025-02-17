@@ -2,12 +2,12 @@
 #include "Options.h"
 SIM_BEG(SpaceEngine)
 
-void SpaceEngine::prepare()
+void SpaceEngine::projectPrepare()
 {
-    makeInstances(1)->mountTo(newLayout());
+    makeScenes(1)->mountTo(newLayout());
 }
 
-void SpaceEngineInstance::instanceAttributes(Options* options)
+void SpaceEngineScene::sceneAttributes(Options* options)
 {
     //camera.enable();
 
@@ -70,7 +70,7 @@ void SpaceEngineInstance::instanceAttributes(Options* options)
 }
 
 
-void SpaceEngineInstance::start()
+void SpaceEngineScene::sceneStart()
 {
     //world_size = start_world_size;
     bmp_scale = world_size / density_bmp_size;
@@ -84,7 +84,7 @@ void SpaceEngineInstance::start()
     //particles = start_particles;
 }
 
-void SpaceEngineInstance::destroy()
+void SpaceEngineScene::sceneDestroy()
 {
     particles.clear();
 }
@@ -141,7 +141,7 @@ void SpaceEngineInstance::destroy()
     }
 }*/
 
-void SpaceEngineInstance::processScene()
+void SpaceEngineScene::sceneProcess()
 {
     //if (cache->missing())
     {
@@ -214,7 +214,7 @@ void SpaceEngineInstance::processScene()
     }
 }
 
-void SpaceEngineInstance::buildUniformGrid(double cellSize, ParticleGrid& grid)
+void SpaceEngineScene::buildUniformGrid(double cellSize, ParticleGrid& grid)
 {
     grid.clear();
     grid.reserve(particles.size());
@@ -238,7 +238,7 @@ void SpaceEngineInstance::buildUniformGrid(double cellSize, ParticleGrid& grid)
     }
 }
 
-void SpaceEngineInstance::processParticlePairGravity(Particle* n0, Particle* n1)
+void SpaceEngineScene::processParticlePairGravity(Particle* n0, Particle* n1)
 {
     double dx = n1->x - n0->x;
     double dy = n1->y - n0->y;
@@ -285,7 +285,7 @@ inline float fastSqrt(float number) {
     return number * y; // Since y is approximately 1/sqrt(number), multiply to get sqrt(number)
 }
 
-void SpaceEngineInstance::processCellPairGravity(CellData& c0, CellData& c1)
+void SpaceEngineScene::processCellPairGravity(CellData& c0, CellData& c1)
 {
     //double dx = c1.cx - c0.cx;
     //double dy = c1.cy - c0.cy;
@@ -365,7 +365,7 @@ void SpaceEngineInstance::processCellPairGravity(CellData& c0, CellData& c1)
 }
 
 
-void SpaceEngineInstance::processGravity()
+void SpaceEngineScene::processGravity()
 {
     int len = particles.size();
 
@@ -531,7 +531,7 @@ void SpaceEngineInstance::processGravity()
 }
 
 // Return true if a collision was resolved, false if not
-bool SpaceEngineInstance::checkAndResolveCollision(Particle* n0, Particle* n1)
+bool SpaceEngineScene::checkAndResolveCollision(Particle* n0, Particle* n1)
 {
     double dx = n1->x - n0->x;
     double dy = n1->y - n0->y;
@@ -596,7 +596,7 @@ bool SpaceEngineInstance::checkAndResolveCollision(Particle* n0, Particle* n1)
     return true;
 }
 
-bool SpaceEngineInstance::checkAndResolveSpringCollision(Particle* n0, Particle* n1)
+bool SpaceEngineScene::checkAndResolveSpringCollision(Particle* n0, Particle* n1)
 {
     double dx = n1->x - n0->x;
     double dy = n1->y - n0->y;
@@ -661,7 +661,7 @@ bool SpaceEngineInstance::checkAndResolveSpringCollision(Particle* n0, Particle*
     return true;
 }
 
-void SpaceEngineInstance::processCollisions()
+void SpaceEngineScene::processCollisions()
 {
     int len = particles.size();
 
@@ -737,7 +737,7 @@ void SpaceEngineInstance::processCollisions()
     
 }
 
-void SpaceEngineInstance::draw(Panel*ctx)
+void SpaceEngineScene::viewportDraw(Viewport*ctx)
 {
     double left = -world_size / 2;
     double top = -world_size / 2;
@@ -749,7 +749,7 @@ void SpaceEngineInstance::draw(Panel*ctx)
     //    world_size, world_size
     //);
 
-    ctx->drawGraphGrid();
+    ctx->drawWorldAxis();
 
     //density_bmp.draw(p, 
     //    cam.toStage(left, top), 

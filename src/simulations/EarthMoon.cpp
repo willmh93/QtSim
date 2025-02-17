@@ -2,29 +2,29 @@
 
 SIM_DECLARE(EarthMoon, "Physics", "Space Engine", "Earth Moon")
 
-void EarthMoon::prepare()
+void EarthMoon::projectPrepare()
 {
     auto& layout = newLayout();
 
-    auto scene = makeInstance(LaunchConfig(true));
+    auto scene = createScene(LaunchConfig(true));
 
     for (int i=0; i<1; i++)
         layout << scene;
 
 
-    //layout << makeInstance(LaunchConfig(true));
-    //layout << makeInstance(LaunchConfig(false));
+    //layout << createScene(LaunchConfig(true));
+    //layout << createScene(LaunchConfig(false));
 
-    //makeInstance(LaunchConfig(true))->mountTo(layout);
-    //makeInstance(LaunchConfig(false))->mountTo(layout);
+    //createScene(LaunchConfig(true))->mountTo(layout);
+    //createScene(LaunchConfig(false))->mountTo(layout);
 
-    //EarthMoon::makeInstance()->mountToAll(layout);
-    //EarthMoon::makeInstances(2)->mountTo(layout);
+    //EarthMoon::createScene()->mountToAll(layout);
+    //EarthMoon::makeScenes(2)->mountTo(layout);
 
-    //setLayout(1).constructAll<EarthMoon_Instance>();
+    //setLayout(1).constructAll<EarthMoon_Scene>();
 }
 
-void EarthMoon_Instance::instanceAttributes(Options* options)
+void EarthMoon_Scene::sceneAttributes(Options* options)
 {
 
     steps_per_frame = 60;
@@ -77,13 +77,13 @@ void EarthMoon_Instance::instanceAttributes(Options* options)
     //options->starting_slider("Particle Radius (gm)", &particle_radius, particle_radius_min, particle_radius_max, particle_radius_step);
     //options->slider("Particle Mass (zg)", &start_particle_mass, &particle_mass_min, &particle_mass_max, &particle_mass_step);
 
-    SpaceEngineInstance::instanceAttributes(options);
+    SpaceEngineScene::sceneAttributes(options);
 }
 
 
-void EarthMoon_Instance::start()
+void EarthMoon_Scene::sceneStart()
 {
-    SpaceEngineInstance::start();
+    SpaceEngineScene::sceneStart();
 
     //double distance_to_neptune = 4495.1 * gigemeter;
 
@@ -144,22 +144,22 @@ void EarthMoon_Instance::start()
     
 }
 
-void EarthMoon_Instance::mount(Panel* ctx)
+void EarthMoon_Scene::sceneMounted(Viewport* ctx)
 {
-    //camera->fitToViewport(-world_size, -world_size, world_size, world_size);
-    camera->fitToViewport(boundaries(particles).scaled(1.3), false);
+    //camera->focusWorldRect(-world_size, -world_size, world_size, world_size);
+    camera->focusWorldRect(boundaries(particles).scaled(1.3), false);
     focus_rect.set(boundaries(particles).scaled(1.3));
 }
 
-void EarthMoon_Instance::processPanel(Panel* ctx)
+void EarthMoon_Scene::viewportProcess(Viewport* ctx)
 {
     focus_rect = lerpRect(focus_rect, boundaries(particles).scaled(1.3), 0.02);
-    camera->fitToViewport(focus_rect, false);
+    camera->focusWorldRect(focus_rect, false);
 }
 
-void EarthMoon_Instance::draw(Panel* ctx)
+void EarthMoon_Scene::viewportDraw(Viewport* ctx)
 {
-    SpaceEngineInstance::draw(ctx);
+    SpaceEngineScene::viewportDraw(ctx);
 }
 
 SIM_END(EarthMoon)

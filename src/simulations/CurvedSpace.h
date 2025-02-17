@@ -1,6 +1,6 @@
 #ifndef CURVEDSPACE_H
 #define CURVEDSPACE_H
-#include "Simulation.h"
+#include "Project.h"
 
 SIM_BEG(CurvedSpace)
 
@@ -13,7 +13,7 @@ struct Particle : public Vec2
     {}
 };
 
-struct CurvedSpaceInstance : public SimulationInstance
+struct CurvedSpaceScene : public Scene
 {
     struct LaunchConfig
     {
@@ -28,9 +28,9 @@ struct CurvedSpaceInstance : public SimulationInstance
         {}
     };
 
-    //static CurvedSpaceInstance* instantiateInstance(LaunchInfo& info)
+    //static CurvedSpaceScene* instantiateScene(LaunchInfo& info)
     //{
-    //    return new CurvedSpaceInstance(info.radius_mult, info.radius, info.big_arr);
+    //    return new CurvedSpaceScene(info.radius_mult, info.radius, info.big_arr);
     //}
 
     vector<unique_ptr<Particle>> particles;
@@ -41,13 +41,13 @@ struct CurvedSpaceInstance : public SimulationInstance
 
     std::vector<double>& big_arr;
 
-    CurvedSpaceInstance(LaunchConfig& info) :
+    CurvedSpaceScene(LaunchConfig& info) :
         radius_mult(info.radius_mult),
         radius(info.radius),
         big_arr(info.big_arr)
     {}
 
-    /*CurvedSpaceInstance(double &radius_mult, double radius,std::vector<double>& big_arr) :
+    /*CurvedSpaceScene(double &radius_mult, double radius,std::vector<double>& big_arr) :
         radius_mult(radius_mult),
         radius(radius),
         big_arr(big_arr)
@@ -76,26 +76,26 @@ struct CurvedSpaceInstance : public SimulationInstance
         }
     }
 
-    void instanceAttributes(Options* options) override;
+    void sceneAttributes(Options* options) override;
 
-    //void prepare();
-    void start() override;
-    void destroy() override;
-    void processScene() override;
-    void draw(Panel* ctx) override;
+    //void projectPrepare();
+    void sceneStart() override;
+    void sceneDestroy() override;
+    void sceneProcess() override;
+    void viewportDraw(Viewport* ctx) override;
 
     void mouseDown(MouseInfo mouse);
 };
 
-struct CurvedSpace : public Simulation<CurvedSpaceInstance>
+struct CurvedSpace : public Project<CurvedSpaceScene>
 {
-    int panel_count = 4;
+    int viewport_count = 4;
     
     shared_ptr<LaunchConfig> shared_config = make_shared<LaunchConfig>();
 
     
 
-    void prepare() override;
+    void projectPrepare() override;
     void projectAttributes(Options* options) override;
     
 };

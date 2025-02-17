@@ -1,5 +1,5 @@
 #pragma once
-#include "Simulation.h"
+#include "Project.h"
 #include <QOpenGLFunctions>
 
 SIM_BEG(SpaceEngine)
@@ -156,7 +156,7 @@ struct ParticleGrid : public std::unordered_map<CellCoord, CellData, CellCoordHa
     }
 };
 
-struct SpaceEngineInstance : public SimulationInstance
+struct SpaceEngineScene : public Scene
 {
     // Constants
     const double G = 6.67430e-11;
@@ -226,11 +226,11 @@ struct SpaceEngineInstance : public SimulationInstance
     bool optimize_gravity = true;
     bool optimize_collisions = true;
 
-    void instanceAttributes(Options* options) override;
-    void start() override;
-    void destroy() override;
-    void processScene() override;
-    void draw(Panel* ctx) override;
+    void sceneAttributes(Options* options) override;
+    void sceneStart() override;
+    void sceneDestroy() override;
+    void sceneProcess() override;
+    void viewportDraw(Viewport* ctx) override;
 
     
 
@@ -520,17 +520,17 @@ struct SpaceEngineInstance : public SimulationInstance
 };
 
 template<typename T>
-struct SpaceEngineTemplate : public Simulation<T>
+struct SpaceEngineTemplate : public Project<T>
 {
-    //void prepare() override
+    //void projectPrepare() override
     //{
     //    setLayout(1).constructAll<T>();
     //}
 };
 
-struct SpaceEngine : public SpaceEngineTemplate<SpaceEngineInstance>
+struct SpaceEngine : public SpaceEngineTemplate<SpaceEngineScene>
 {
-    void prepare() override;
+    void projectPrepare() override;
 };
 
 SIM_END(SpaceEngine)

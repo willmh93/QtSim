@@ -8,7 +8,7 @@
 #include "ui_Options.h"
 #include "AttributeList.h"
 
-//#include "Simulations/simulation_types.h"
+//#include "Projects/project_types.h"
 #include "types.h"
 
 class DynamicIconDelegate : public QStyledItemDelegate {
@@ -22,9 +22,9 @@ public:
 class SimTreeItem : public QStandardItem
 {
 public:
-    std::shared_ptr<SimulationInfo> sim_info;
+    std::shared_ptr<ProjectInfo> sim_info;
 
-    SimTreeItem(const QString& label, std::shared_ptr<SimulationInfo> sim_info)
+    SimTreeItem(const QString& label, std::shared_ptr<ProjectInfo> sim_info)
         : QStandardItem(label), sim_info(sim_info)
     {}
 };
@@ -99,10 +99,10 @@ public:
     //AttributeItem* number(const QString& name, double min, double max, double step, std::function<void(double)> on_change = nullptr);
     AttributeItem* combo(const QString& name, const std::vector<QString> &items=std::vector<QString>(), std::function<void(int)> on_change = nullptr);
 
-    void addSimListEntry(const std::shared_ptr<SimulationInfo>& info);
-    void addSimListEntry(SimulationInfo info)
+    void addSimListEntry(const std::shared_ptr<ProjectInfo>& info);
+    void addSimListEntry(ProjectInfo info)
     {
-        addSimListEntry(std::make_shared<SimulationInfo>(info));
+        addSimListEntry(std::make_shared<ProjectInfo>(info));
     }
 
     void clearAttributeList();
@@ -118,10 +118,10 @@ public:
 
 signals:
 
-    void onChooseSimulation(int sim_uid);
-    void onForceStartBeginSimulation(int sim_uid);
-    void onStartSimulation();
-    void onStopSimulation();
+    void onChooseProject(int sim_uid);
+    void onForceStartBeginProject(int sim_uid);
+    void onStartProject();
+    void onStopProject();
     void onChangeFPS(int fps);
 
 protected slots:

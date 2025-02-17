@@ -22,90 +22,90 @@
 #include <QDir>
 #include <QRegularExpression>
 
-#include "Simulation.h"
+#include "Project.h"
 #include "Canvas2D.h"
 
-void SimulationInstance::registerMount(Panel* panel)
+void Scene::registerMount(Viewport* viewport)
 {
-    options = panel->options;
-    camera = &panel->camera;
+    options = viewport->options;
+    camera = &viewport->camera;
 
-    mounted_to_panels.push_back(panel);
-    qDebug() << "Mounted to Panel: " << panel->panelIndex();
+    mounted_to_viewports.push_back(viewport);
+    qDebug() << "Mounted to Viewport: " << viewport->viewportIndex();
 
-    std::vector<SimulationInstance*>& all_instances = panel->layout->all_instances;
+    std::vector<Scene*>& all_scenes = viewport->layout->all_scenes;
 
-    // Only add instance to list if it's not already in the layout (mounted to another panel)
-    if (std::find(all_instances.begin(), all_instances.end(), this) == all_instances.end())
-        panel->layout->all_instances.push_back(this);
+    // Only add scene to list if it's not already in the layout (mounted to another viewport)
+    if (std::find(all_scenes.begin(), all_scenes.end(), this) == all_scenes.end())
+        viewport->layout->all_scenes.push_back(this);
 }
 
-void SimulationInstance::registerUnmount(Panel* panel)
+void Scene::registerUnmount(Viewport* viewport)
 {
-    std::vector<SimulationInstance*>& all_instances = panel->layout->all_instances;
+    std::vector<Scene*>& all_scenes = viewport->layout->all_scenes;
 
-    // Only remove instance from list if the layout includes it (which it should)
-    auto instance_it = std::find(all_instances.begin(), all_instances.end(), this);
-    if (instance_it != all_instances.end())
+    // Only remove scene from list if the layout includes it (which it should)
+    auto scene_it = std::find(all_scenes.begin(), all_scenes.end(), this);
+    if (scene_it != all_scenes.end())
     {
-        qDebug() << "Erasing simulation instance from panel: " << panel->panelIndex();
-        all_instances.erase(instance_it);
+        qDebug() << "Erasing project scene from viewport: " << viewport->viewportIndex();
+        all_scenes.erase(scene_it);
     }
 
-    // Only unmount from panel if the layout includes the panel (which it should)
-    auto panel_it = std::find(mounted_to_panels.begin(), mounted_to_panels.end(), panel);
-    if (panel_it != mounted_to_panels.end())
+    // Only unmount from viewport if the layout includes the viewport (which it should)
+    auto viewport_it = std::find(mounted_to_viewports.begin(), mounted_to_viewports.end(), viewport);
+    if (viewport_it != mounted_to_viewports.end())
     {
-        qDebug() << "Unmounting instance from panel: " << panel->panelIndex();
-        mounted_to_panels.erase(panel_it);
+        qDebug() << "Unmounting scene from viewport: " << viewport->viewportIndex();
+        mounted_to_viewports.erase(viewport_it);
     }
 }
 
-void SimulationInstance::mountTo(Panel* panel)
+void Scene::mountTo(Viewport* viewport)
 {
-    panel->mountInstance(this);
+    viewport->mountScene(this);
 }
 
-void SimulationInstance::mountTo(Layout& panels)
+void Scene::mountTo(Layout& viewports)
 {
-    panels[panels.count()]->mountInstance(this);
+    viewports[viewports.count()]->mountScene(this);
 }
 
-void SimulationInstance::mountToAll(Layout& panels)
+void Scene::mountToAll(Layout& viewports)
 {
-    for (Panel* panel : panels)
-        panel->mountInstance(this);
+    for (Viewport* viewport : viewports)
+        viewport->mountScene(this);
 }
 
-Panel::Panel(Layout* layout, Options* options, int panel_index, int grid_x, int grid_y) :
+Viewport::Viewport(Layout* layout, Options* options, int viewport_index, int grid_x, int grid_y) :
     layout(layout),
     options(options),
-    panel_index(panel_index), 
-    panel_grid_x(grid_x),
-    panel_grid_y(grid_y)
+    viewport_index(viewport_index), 
+    viewport_grid_x(grid_x),
+    viewport_grid_y(grid_y)
 {
-    camera.panel = this;
+    camera.viewport = this;
 }
 
-Panel::~Panel()
+Viewport::~Viewport()
 {
-    if (sim)
+    if (scene)
     {
-        // Unmount sim from panel
-        sim->registerUnmount(this);
+        // Unmount sim from viewport
+        scene->registerUnmount(this);
 
-        // If sim is no longer mounted to any panels, it's safe to destroy
-        if (sim->mounted_to_panels.size() == 0)
+        // If sim is no longer mounted to any viewports, it's safe to destroy
+        if (scene->mounted_to_viewports.size() == 0)
         {
-            qDebug() << "Unmounted instance is mounted to no other panels. Destroying instance";
-            sim->_destroy();
-            delete sim;
+            qDebug() << "Unmounted scene is mounted to no other viewports. Destroying scene";
+            scene->_destroy();
+            delete scene;
         }
     }
-    qDebug() << "Panel destroyed: " << panel_index;
+    qDebug() << "Viewport destroyed: " << viewport_index;
 }
 
-void Panel::draw(QNanoPainter* p)
+void Viewport::draw(QNanoPainter* p)
 {
     // Attach QNanoPainter for viewport draw operations
     painter = p;
@@ -135,36 +135,36 @@ void Panel::draw(QNanoPainter* p)
 
     p->scale(camera.zoom_x, camera.zoom_y);
 
-    // Draw mounted simulation to this viewport
-    sim->camera = &camera;
-    sim->draw(this);
+    // Draw mounted project to this viewport
+    scene->camera = &camera;
+    scene->viewportDraw(this);
 }
 
 /// Layout
 
-void Layout::resize(int panel_count)
+void Layout::resize(int viewport_count)
 {
-    if (targ_panels_x <= 0 || targ_panels_y <= 0)
+    if (targ_viewports_x <= 0 || targ_viewports_y <= 0)
     {
         // Spread proportionally
-        rows = sqrt(panel_count);
-        cols = panel_count / rows;
+        rows = sqrt(viewport_count);
+        cols = viewport_count / rows;
     }
-    else if (targ_panels_y <= 0)
+    else if (targ_viewports_y <= 0)
     {
         // Expand down
-        cols = targ_panels_x;
-        rows = (int)ceil((float)panel_count / (float)cols);
+        cols = targ_viewports_x;
+        rows = (int)ceil((float)viewport_count / (float)cols);
     }
-    else if (targ_panels_x <= 0)
+    else if (targ_viewports_x <= 0)
     {
         // Expand right
-        rows = targ_panels_y;
-        cols = (int)ceil((float)panel_count / (float)rows);
+        rows = targ_viewports_y;
+        cols = (int)ceil((float)viewport_count / (float)rows);
     }
 
     // Expand rows down by default if not perfect fit
-    if (panel_count > rows * cols)
+    if (viewport_count > rows * cols)
         rows++;
 
     int count = (cols * rows);
@@ -174,54 +174,54 @@ void Layout::resize(int panel_count)
         for (int x = 0; x < cols; x++)
         {
             int i = (y * cols) + x;
-            if (i >= panel_count)
+            if (i >= viewport_count)
             {
                 goto break_nested;
             }
 
-            if (i < panels.size())
+            if (i < viewports.size())
             {
-                panels[i]->panel_grid_x = x;
-                panels[i]->panel_grid_y = y;
+                viewports[i]->viewport_grid_x = x;
+                viewports[i]->viewport_grid_y = y;
             }
             else
             {
-                Panel* panel = new Panel(this, options, i, x, y);
-                panels.push_back(panel);
+                Viewport* viewport = new Viewport(this, options, i, x, y);
+                viewports.push_back(viewport);
             }
         }
     }
     break_nested:;
 
-    // todo: Unmount remaining panel sims
+    // todo: Unmount remaining viewport sims
 }
 
 void Layout::expandCheck(size_t count)
 {
-    if (count > panels.size())
+    if (count > viewports.size())
         resize(count);
 }
 
 
-/// SimulationBase
+/// ProjectBase
 
-Layout& SimulationBase::newLayout() 
+Layout& ProjectBase::newLayout() 
 {
-    panels.clear();
-    return panels;
+    viewports.clear();
+    return viewports;
 }
 
-Layout& SimulationBase::newLayout(int targ_panels_x, int targ_panels_y)
+Layout& ProjectBase::newLayout(int targ_viewports_x, int targ_viewports_y)
 {
-    panels.options = options;
+    viewports.options = options;
 
-    panels.clear();
-    panels.setSize(targ_panels_x, targ_panels_y);
+    viewports.clear();
+    viewports.setSize(targ_viewports_x, targ_viewports_y);
 
-    return panels;
+    return viewports;
 }
 
-void SimulationBase::configure(int _sim_uid, Canvas2D* _canvas, Options* _options)
+void ProjectBase::configure(int _sim_uid, Canvas2D* _canvas, Options* _options)
 {
     sim_uid = _sim_uid;
     canvas = _canvas;
@@ -231,22 +231,22 @@ void SimulationBase::configure(int _sim_uid, Canvas2D* _canvas, Options* _option
     paused = false;
 }
 
-void SimulationBase::_prepare()
+void ProjectBase::_projectPrepare()
 {
-    panels.clear();
+    viewports.clear();
 
     options->clearAllPointers();
     projectAttributes(options);
 
     // Prepare project and create layout
-    // Note: This is where old panels get replaced
-    prepare();
+    // Note: This is where old viewports get replaced
+    projectPrepare();
 
-    for (Panel* panel : this->panels)
-        panel->sim->instanceAttributes(options);
+    for (Viewport* viewport : this->viewports)
+        viewport->scene->sceneAttributes(options);
 }
 
-void SimulationBase::_start()
+void ProjectBase::_projectStart()
 {
     if (paused)
     {
@@ -256,83 +256,83 @@ void SimulationBase::_start()
     }
 
     // Prepare layout
-    _prepare();
+    _projectPrepare();
 
     // Update layout rects
-    updatePanelRects();
+    updateViewportRects();
 
-    // Call SimulationBase::start()
-    start();
+    // Call ProjectBase::projectStart()
+    projectStart();
 
     cache.init("cache.bin");
 
-    // Start simulation instances
-    for (SimulationInstance* instance : panels.all_instances)
+    // Start project scenes
+    for (Scene* scene : viewports.all_scenes)
     {
-        instance->cache = &cache;
-        instance->mouse = &mouse;
-        instance->start();
+        scene->cache = &cache;
+        scene->mouse = &mouse;
+        scene->sceneStart();
     }
 
-    // Mount to panels
-    for (Panel* panel : panels)
+    // Mount to viewports
+    for (Viewport* viewport : viewports)
     {
-        panel->sim->camera = &panel->camera;
-        panel->sim->mount(panel);
+        viewport->scene->camera = &viewport->camera;
+        viewport->scene->sceneMounted(viewport);
     }
 
     if (record_on_start)
         startRecording();
 
-    setSimulationInfoState(SimulationInfo::ACTIVE);
+    setProjectInfoState(ProjectInfo::ACTIVE);
 
     started = true;
 }
 
-void SimulationBase::_stop()
+void ProjectBase::_projectStop()
 {
-    stop();
+    projectStop();
     cache.finalize();
 
     if (recording)
         finalizeRecording();
 
-    setSimulationInfoState(SimulationInfo::INACTIVE);
+    setProjectInfoState(ProjectInfo::INACTIVE);
     started = false;
 }
 
-void SimulationBase::_destroy()
+void ProjectBase::_projectDestroy()
 {
-    setSimulationInfoState(SimulationInfo::INACTIVE);
-    destroy();
+    setProjectInfoState(ProjectInfo::INACTIVE);
+    projectDestroy();
 }
 
-void SimulationBase::_pause()
+void ProjectBase::_projectPause()
 {
     paused = true;
 }
 
-void SimulationBase::updatePanelRects()
+void ProjectBase::updateViewportRects()
 {
     Vec2 surface_size = surfaceSize();
 
-    // Update panel sizes
-    double panel_width = surface_size.x / panels.cols;
-    double panel_height = surface_size.y / panels.rows;
+    // Update viewport sizes
+    double viewport_width = surface_size.x / viewports.cols;
+    double viewport_height = surface_size.y / viewports.rows;
 
-    // Update panel rects
-    for (Panel* panel : panels)
+    // Update viewport rects
+    for (Viewport* viewport : viewports)
     {
-        panel->x = panel->panel_grid_x * panel_width;
-        panel->y = panel->panel_grid_y * panel_height;
-        panel->width = panel_width - 1;
-        panel->height = panel_height - 1;
-        panel->camera.viewport_w = panel_width - 1;
-        panel->camera.viewport_h = panel_height - 1;
+        viewport->x = viewport->viewport_grid_x * viewport_width;
+        viewport->y = viewport->viewport_grid_y * viewport_height;
+        viewport->width = viewport_width - 1;
+        viewport->height = viewport_height - 1;
+        viewport->camera.viewport_w = viewport_width - 1;
+        viewport->camera.viewport_h = viewport_height - 1;
     }
 }
 
-Vec2 SimulationBase::surfaceSize()
+Vec2 ProjectBase::surfaceSize()
 {
     double w;
     double h;
@@ -354,49 +354,49 @@ Vec2 SimulationBase::surfaceSize()
     return Vec2(w, h);
 }
 
-void SimulationBase::_process()
+void ProjectBase::_projectProcess()
 {
-    updatePanelRects();
+    updateViewportRects();
 
-    // Determine whether to process simulation this frame or not (depends on recording status)
+    // Determine whether to process project this frame or not (depends on recording status)
     bool attaching_encoder = (recording && !ffmpeg_worker->isInitialized());
     if (!attaching_encoder && !encoder_busy && !paused)
     {
         dt_timer.start();
 
-        for (Panel* panel : panels)
+        for (Viewport* viewport : viewports)
         {
-            double panel_mx = mouse.client_x - panel->x;
-            double panel_my = mouse.client_y - panel->y;
+            double viewport_mx = mouse.client_x - viewport->x;
+            double viewport_my = mouse.client_y - viewport->y;
 
-            if (panel_mx >= 0 && panel_my >= 0 &&
-                panel_mx <= panel->width && panel_my <= panel->height)
+            if (viewport_mx >= 0 && viewport_my >= 0 &&
+                viewport_mx <= viewport->width && viewport_my <= viewport->height)
             {
-                Camera& cam = panel->camera;
+                Camera& cam = viewport->camera;
 
-                Vec2 world_mouse = cam.toWorld(panel_mx, panel_my);
-                mouse.panel = panel;
-                mouse.stage_x = panel_mx;
-                mouse.stage_y = panel_my;
+                Vec2 world_mouse = cam.toWorld(viewport_mx, viewport_my);
+                mouse.viewport = viewport;
+                mouse.stage_x = viewport_mx;
+                mouse.stage_y = viewport_my;
                 mouse.world_x = world_mouse.x;
                 mouse.world_y = world_mouse.y;
             }
         }
 
-        // Process each instance scene
-        for (SimulationInstance* instance : panels.all_instances)
+        // Process each scene scene
+        for (Scene* scene : viewports.all_scenes)
         {
-            //instance->updateMouseInfo();
-            instance->mouse = &mouse;
-            instance->processScene();
+            //scene->updateMouseInfo();
+            scene->mouse = &mouse;
+            scene->sceneProcess();
         }
 
-        // Allow simulation to handle process on each Panel
-        for (Panel* panel : panels)
+        // Allow project to handle process on each Viewport
+        for (Viewport* viewport : viewports)
         {
-            panel->camera.panProcess();
-            panel->sim->camera = &panel->camera;
-            panel->sim->processPanel(panel);
+            viewport->camera.panProcess();
+            viewport->scene->camera = &viewport->camera;
+            viewport->scene->viewportProcess(viewport);
         }
         
         frame_dt = dt_timer.elapsed();
@@ -406,90 +406,90 @@ void SimulationBase::_process()
     }
 }
 
-void SimulationBase::postProcess()
+void ProjectBase::postProcess()
 {
     // Keep delta until entire frame processed and drawn
     mouse.scroll_delta = 0;
 
-    //for (Panel* panel : panels)
-    //    panel->sim->postProcess();
+    //for (Viewport* viewport : viewports)
+    //    viewport->scene->postProcess();
 }
 
-void SimulationBase::_mouseDown(int x, int y, Qt::MouseButton btn)
+void ProjectBase::_mouseDown(int x, int y, Qt::MouseButton btn)
 {
-    for (Panel* panel : panels)
+    for (Viewport* viewport : viewports)
     {
-        double panel_mx = x - panel->x;
-        double panel_my = y - panel->y;
+        double viewport_mx = x - viewport->x;
+        double viewport_my = y - viewport->y;
 
-        if (panel_mx >= 0 && panel_my >= 0 &&
-            panel_mx <= panel->width && panel_my <= panel->height)
+        if (viewport_mx >= 0 && viewport_my >= 0 &&
+            viewport_mx <= viewport->width && viewport_my <= viewport->height)
         {
-            Camera& cam = panel->camera;
+            Camera& cam = viewport->camera;
             if (cam.panning_enabled && btn == Qt::MiddleButton)
                 cam.panBegin(x, y);
 
-            Vec2 world_mouse = cam.toWorld(panel_mx, panel_my);
-            mouse.panel = panel;
+            Vec2 world_mouse = cam.toWorld(viewport_mx, viewport_my);
+            mouse.viewport = viewport;
             mouse.btn = btn;
-            mouse.stage_x = panel_mx;
-            mouse.stage_y = panel_my;
+            mouse.stage_x = viewport_mx;
+            mouse.stage_y = viewport_my;
             mouse.world_x = world_mouse.x;
             mouse.world_y = world_mouse.y;
-            panel->sim->mouseDown();
+            viewport->scene->mouseDown();
         }
     }
 }
 
-void SimulationBase::_mouseUp(int x, int y, Qt::MouseButton btn)
+void ProjectBase::_mouseUp(int x, int y, Qt::MouseButton btn)
 {
-    for (Panel* panel : panels)
+    for (Viewport* viewport : viewports)
     {
-        double panel_mx = x - panel->x;
-        double panel_my = y - panel->y;
+        double viewport_mx = x - viewport->x;
+        double viewport_my = y - viewport->y;
 
-        if (panel_mx >= 0 && panel_my >= 0 &&
-            panel_mx <= panel->width && panel_my <= panel->height)
+        if (viewport_mx >= 0 && viewport_my >= 0 &&
+            viewport_mx <= viewport->width && viewport_my <= viewport->height)
         {
-            Camera& cam = panel->camera;
+            Camera& cam = viewport->camera;
             if (cam.panning_enabled && btn == Qt::MiddleButton)
                 cam.panEnd(x, y);
 
-            Vec2 world_mouse = cam.toWorld(panel_mx, panel_my);
-            mouse.panel = panel;
+            Vec2 world_mouse = cam.toWorld(viewport_mx, viewport_my);
+            mouse.viewport = viewport;
             mouse.btn = btn;
-            mouse.stage_x = panel_mx;
-            mouse.stage_y = panel_my;
+            mouse.stage_x = viewport_mx;
+            mouse.stage_y = viewport_my;
             mouse.world_x = world_mouse.x;
             mouse.world_y = world_mouse.y;
         }
     }
 
-    for (SimulationInstance* instance : panels.all_instances)
-        instance->mouseDown();
+    for (Scene* scene : viewports.all_scenes)
+        scene->mouseDown();
 }
 
-void SimulationBase::_mouseMove(int x, int y)
+void ProjectBase::_mouseMove(int x, int y)
 {
     mouse.client_x = x;
     mouse.client_y = y;
 
-    for (Panel* panel : panels)
+    for (Viewport* viewport : viewports)
     {
-        double panel_mx = x - panel->x;
-        double panel_my = y - panel->y;
-        Camera& cam = panel->camera;
+        double viewport_mx = x - viewport->x;
+        double viewport_my = y - viewport->y;
+        Camera& cam = viewport->camera;
 
-        if (panel_mx >= 0 && panel_my >= 0 &&
-            panel_mx <= panel->width && panel_my <= panel->height)
+        if (viewport_mx >= 0 && viewport_my >= 0 &&
+            viewport_mx <= viewport->width && viewport_my <= viewport->height)
         {
-            Vec2 world_mouse = cam.toWorld(panel_mx, panel_my);
-            mouse.panel = panel;
-            mouse.stage_x = panel_mx;
-            mouse.stage_y = panel_my;
+            Vec2 world_mouse = cam.toWorld(viewport_mx, viewport_my);
+            mouse.viewport = viewport;
+            mouse.stage_x = viewport_mx;
+            mouse.stage_y = viewport_my;
             mouse.world_x = world_mouse.x;
             mouse.world_y = world_mouse.y;
-            panel->sim->mouseMove();
+            viewport->scene->mouseMove();
         }
 
         if (cam.panning_enabled)
@@ -497,17 +497,17 @@ void SimulationBase::_mouseMove(int x, int y)
     }
 }
 
-void SimulationBase::_mouseWheel(int x, int y, int delta)
+void ProjectBase::_mouseWheel(int x, int y, int delta)
 {
-    for (Panel* panel : panels)
+    for (Viewport* viewport : viewports)
     {
-        double panel_mx = x - panel->x;
-        double panel_my = y - panel->y;
+        double viewport_mx = x - viewport->x;
+        double viewport_my = y - viewport->y;
 
-        if (panel_mx >= 0 && panel_my >= 0 &&
-            panel_mx <= panel->width && panel_my <= panel->height)
+        if (viewport_mx >= 0 && viewport_my >= 0 &&
+            viewport_mx <= viewport->width && viewport_my <= viewport->height)
         {
-            Camera& cam = panel->camera;
+            Camera& cam = viewport->camera;
 
             if (cam.zooming_enabled)
             {
@@ -517,19 +517,19 @@ void SimulationBase::_mouseWheel(int x, int y, int delta)
                 /// todo: With zoom/pan easing, handle this every frame, check if pixel pos changes
             }
 
-            Vec2 world_mouse = cam.toWorld(panel_mx, panel_my);
-            mouse.panel = panel;
-            mouse.stage_x = panel_mx;
-            mouse.stage_y = panel_my;
+            Vec2 world_mouse = cam.toWorld(viewport_mx, viewport_my);
+            mouse.viewport = viewport;
+            mouse.stage_x = viewport_mx;
+            mouse.stage_y = viewport_my;
             mouse.world_x = world_mouse.x;
             mouse.world_y = world_mouse.y;
             mouse.scroll_delta = delta;
-            panel->sim->mouseWheel();
+            viewport->scene->mouseWheel();
         }
     }
 }
 
-void SimulationBase::_draw(QNanoPainter* p)
+void ProjectBase::_draw(QNanoPainter* p)
 {
     Vec2 surface_size = surfaceSize();
 
@@ -539,54 +539,54 @@ void SimulationBase::_draw(QNanoPainter* p)
     p->setFillStyle({ 255,255,255 });
     p->setStrokeStyle({ 255,255,255 });
 
-    // Draw each panel
+    // Draw each viewport
     int i = 0;
-    for (Panel* panel : panels)
+    for (Viewport* viewport : viewports)
     {
-        p->setClipRect(panel->x, panel->y, panel->width, panel->height);
+        p->setClipRect(viewport->x, viewport->y, viewport->width, viewport->height);
         p->save();
 
-        // Move to panel position
-        p->translate(floor(panel->x), floor(panel->y));
+        // Move to viewport position
+        p->translate(floor(viewport->x), floor(viewport->y));
 
         // Set default transform
-        panel->camera.worldTransform();
+        viewport->camera.worldTransform();
         
-        panel->sim->camera = &panel->camera;
-        panel->draw(p);
+        viewport->scene->camera = &viewport->camera;
+        viewport->draw(p);
 
         p->restore();
         p->resetClipping();
     }
 
-    // Draw panel splitters
-    for (Panel* panel : panels)
+    // Draw viewport splitters
+    for (Viewport* viewport : viewports)
     {
         p->setLineWidth(6);
         p->setStrokeStyle("#2E2E3E");
         p->beginPath();
 
         // Draw vert line
-        if (panel->panel_grid_x < panels.cols - 1)
+        if (viewport->viewport_grid_x < viewports.cols - 1)
         {
-            double line_x = floor(panel->x + panel->width) + 0.5;
-            p->moveTo(line_x, panel->y);
-            p->lineTo(line_x, panel->y + panel->height + 1);
+            double line_x = floor(viewport->x + viewport->width) + 0.5;
+            p->moveTo(line_x, viewport->y);
+            p->lineTo(line_x, viewport->y + viewport->height + 1);
         }
 
         // Draw horiz line
-        if (panel->panel_grid_y < panels.rows - 1)
+        if (viewport->viewport_grid_y < viewports.rows - 1)
         {
-            double line_y = floor(panel->y + panel->height) + 0.5;
-            p->moveTo(panel->x + panel->width + 1, line_y);
-            p->lineTo(panel->x, line_y);
+            double line_y = floor(viewport->y + viewport->height) + 0.5;
+            p->moveTo(viewport->x + viewport->width + 1, line_y);
+            p->lineTo(viewport->x, line_y);
         }
 
         p->stroke();
     }
 }
 
-void SimulationBase::onPainted(const std::vector<GLubyte> *frame)
+void ProjectBase::onPainted(const std::vector<GLubyte> *frame)
 {
     if (!recording)
         return;
@@ -618,7 +618,7 @@ void SimulationBase::onPainted(const std::vector<GLubyte> *frame)
     }
 }
 
-bool SimulationBase::startRecording()
+bool ProjectBase::startRecording()
 {
     if (recording)
         throw "Error, already recording...";
@@ -628,7 +628,7 @@ bool SimulationBase::startRecording()
 
     // Determine save paths
     QString projects_dir = options->getProjectsDirectory();
-    QString project_dir = QDir::toNativeSeparators(projects_dir + "/" + getSimulationInfo()->path.back());
+    QString project_dir = QDir::toNativeSeparators(projects_dir + "/" + getProjectInfo()->path.back());
     QString project_videos_dir = QDir::toNativeSeparators(project_dir + "/recordings");
 
     // Recursively create folders
@@ -700,7 +700,7 @@ bool SimulationBase::startRecording()
     connect(ffmpeg_thread, &QThread::started, ffmpeg_worker, &FFmpegWorker::startRecording);
 
     // Listen for frame updates, forward pixel data to FFmpeg encoder
-    connect(this, &SimulationBase::frameReady, ffmpeg_worker, &FFmpegWorker::encodeFrame);
+    connect(this, &ProjectBase::frameReady, ffmpeg_worker, &FFmpegWorker::encodeFrame);
 
     // When the frame is succesfully encoded, permit processing the next frame
     connect(ffmpeg_worker, &FFmpegWorker::frameFlushed, ffmpeg_worker, [this]()
@@ -709,7 +709,7 @@ bool SimulationBase::startRecording()
     });
 
     // Wait for "end recording" onClicked signal, then signal FFmpeg worker to finish up
-    connect(this, &SimulationBase::endRecording, ffmpeg_worker, &FFmpegWorker::finalizeRecording);
+    connect(this, &ProjectBase::endRecording, ffmpeg_worker, &FFmpegWorker::finalizeRecording);
 
     // Gracefully shut down worker/thread once FFmpeg finalizes encoding
     connect(ffmpeg_worker, &FFmpegWorker::onFinalized, ffmpeg_worker, [this]()
@@ -730,26 +730,26 @@ bool SimulationBase::startRecording()
     return true;
 }
 
-bool SimulationBase::encodeFrame(uint8_t* data)
+bool ProjectBase::encodeFrame(uint8_t* data)
 {
     encoder_busy = true;
     emit frameReady(data);
     return true;
 }
 
-void SimulationBase::finalizeRecording()
+void ProjectBase::finalizeRecording()
 {
     recording = false;
     canvas->render_to_offscreen = false;
     emit endRecording();
 }
 
-int SimulationBase::canvasWidth()
+int ProjectBase::canvasWidth()
 {
     return canvas->width();
 }
 
-int SimulationBase::canvasHeight()
+int ProjectBase::canvasHeight()
 {
     return canvas->height();
 }

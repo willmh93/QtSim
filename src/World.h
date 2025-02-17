@@ -8,13 +8,13 @@ struct WorldObject
     double y;
 };
 
-class Panel;
+class Viewport;
 class Camera
 {
 
 public:
 
-    Panel* panel = nullptr;
+    Viewport* viewport = nullptr;
 
     //bool enabled = true;
     bool panning_enabled = true;
@@ -40,8 +40,8 @@ public:
     double viewport_w = 0;
     double viewport_h = 0;
 
-    double focal_anchor_x = 0.5;
-    double focal_anchor_y = 0.5;
+    double focal_anchor_x = 0.0;
+    double focal_anchor_y = 0.0;
 
     double pan_mult = 1.0;
     int pan_down_mx = 0;
@@ -152,8 +152,8 @@ public:
     }
 
     void cameraToViewport(double left, double top, double right, double bottom);
-    void fitToViewport(double left, double top, double right, double bottom, bool stretch=false);
-    void fitToViewport(const FRect &r, bool stretch = false);
+    void focusWorldRect(double left, double top, double right, double bottom, bool stretch=false);
+    void focusWorldRect(const FRect &r, bool stretch = false);
 
     void originToCenterViewport();
 

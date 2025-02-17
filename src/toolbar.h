@@ -29,7 +29,7 @@ signals:
     void onPlayPressed();
     void onStopPressed();
     void onPausePressed();
-    void onToggleRecordSimulation(bool b);
+    void onToggleRecordProject(bool b);
 
 private:
     Ui::Toolbar *ui;

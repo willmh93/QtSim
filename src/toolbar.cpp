@@ -112,7 +112,7 @@ Toolbar::Toolbar(QWidget *parent)
     connect(ui->recordBtn, &QToolButton::clicked, this, [this]()
     {
         //setBtnIconColor(ui->recordBtn, ui->recordBtn->isChecked() ? Qt::red : Qt::white);
-        emit onToggleRecordSimulation(ui->recordBtn->isChecked());
+        emit onToggleRecordProject(ui->recordBtn->isChecked());
 
         //if (ui->recordBtn->isChecked())
         //    ui->recordBtn->setStyleSheet("background-color: qlineargradient(x1:0,y1:0,x2:1,y2:1, stop:0 #AA2000, stop:1 #300500);");

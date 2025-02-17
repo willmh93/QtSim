@@ -1,65 +1,79 @@
 #include "{CLASS_NAME}.h"
-SIM_DECLARE({CLASS_NAME}, "{SIM_NAME}")
+SIM_DECLARE({CLASS_NAME}_Project, "My Projects", "{SIM_NAME}")
 
-// Shared variables (available to all instances)
+/// Project ///
 
-void {CLASS_NAME}::projectAttributes()
+void {CLASS_NAME}_Project::projectAttributes(Options* options)
 {{
-    options->realtime_slider("Panel Count", &panel_count, 1, 36, 1);
+    options->realtime_slider("Panel Count", &panel_count, 1, 16, 1);
 }}
 
-void {CLASS_NAME}::prepare()
+void {CLASS_NAME}_Project::projectPrepare()
 {{
-    setLayout(panel_count).constructAll<{CLASS_NAME}_Instance>(
-        /// Constructor args for all instances
-    );
+    auto& layout = newLayout();
 
-    /// Or alternatively, set up each instance manually
-    //auto& panels = setLayout(2);
-    //panels[0]->construct<CurvedSpaceInstance>(config_A);
-    //panels[1]->construct<CurvedSpaceInstance>(config_B);
+    // Create separate instances of our Scene and add them to Layout
+    for (int i = 0; i < panel_count; ++i)
+        layout << {CLASS_NAME}_Project::createScene();
 
+    // Or create a single instance of our Scene and view on multiple Viewports
+    //auto* scene = Explosion_Project::createScene();
+    //for (int i = 0; i < panel_count; ++i)
+    //    layout << scene;
 }}
 
-/// Instance ///
+/// Scene ///
 
-void {CLASS_NAME}_Instance::instanceAttributes()
+void {CLASS_NAME}_Scene::sceneAttributes(Options* options)
 {{
-    // starting_checkbox,   realtime_checkbox
-    // starting_combo,      realtime_combo
-    // starting_spin_int    realtime_spin_int
-    // starting_spin_double starting_spin_double
+    // Only updated on sceneStart()
 
-    //options->realtime_slider("Instance Var 1", &var1, 0.0, 1.0, 0.1); // updated in realtime
-    //options->starting_slider("Instance Var 2", &var2, 0.0, 1.0, 0.1); // only updated on restart
+    //options->starting_checkbox("Starting Flag", &var1);                
+    //options->starting_slider("Starting Double", &var3, 0.0, 1.0, 0.1);
+
+    // Updated in realtime
+
+    //options->realtime_slider("Realtime Double", &var2, 0.0, 1.0, 0.1); 
+    
 }}
 
-void {CLASS_NAME}_Instance::start()
+void {CLASS_NAME}_Scene::sceneStart()
 {{
-    // Initialize instance
+    // Initialize Scene
 }}
 
-void {CLASS_NAME}_Instance::destroy()
+void {CLASS_NAME}_Scene::sceneDestroy()
 {{
-    // Destroy instance
+    // Destroy Scene
 }}
 
-void {CLASS_NAME}_Instance::process(DrawingContext* ctx)
+void {CLASS_NAME}_Scene::sceneMounted(Viewport* viewport)
 {{
-    // Process update
+    // Initialize viewport (after sceneStart)
+    camera->setOriginViewportAnchor(Anchor::CENTER);
+    //camera->focusWorldRect(0, 0, 300, 300);
 }}
 
-void {CLASS_NAME}_Instance::draw(DrawingContext* ctx)
+void {CLASS_NAME}_Scene::sceneProcess()
 {{
-    // Draw instance
-    ctx->strokeRect(-200, -200, 200, 200);
+    // Process Scene update
+}}
+
+void {CLASS_NAME}_Scene::viewportProcess(Viewport* ctx)
+{{
+    // Process Viewports running this Scene
+}}
+
+void {CLASS_NAME}_Scene::viewportDraw(Viewport* ctx)
+{{
+    // Draw Scene to Viewport
 }}
 
 /// User Interaction
 
-//void {CLASS_NAME}_Instance::mouseDown(MouseInfo mouse) {{}}
-//void {CLASS_NAME}_Instance::mouseUp(MouseInfo mouse) {{}}
-//void {CLASS_NAME}_Instance::mouseMove(MouseInfo mouse) {{}}
-//void {CLASS_NAME}_Instance::mouseWheel(MouseInfo mouse) {{}}
+void {CLASS_NAME}_Scene::mouseDown() {{}}
+void {CLASS_NAME}_Scene::mouseUp() {{}}
+void {CLASS_NAME}_Scene::mouseMove() {{}}
+void {CLASS_NAME}_Scene::mouseWheel() {{}}
 
-SIM_END
+SIM_END({CLASS_NAME}_Project)

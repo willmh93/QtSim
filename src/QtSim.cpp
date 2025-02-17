@@ -31,7 +31,7 @@ QtSim::QtSim(QWidget *parent)
         menuBar->setStyleSheet("color: rgb(255,255,255);");
 
         // Create File menu
-        QMenu* fileMenu = menuBar->addMenu("Simulation");
+        QMenu* fileMenu = menuBar->addMenu("Project");
 
         // Add actions to the File menu
         //QAction* newAction = new QAction("New", this);
@@ -62,17 +62,17 @@ QtSim::QtSim(QWidget *parent)
         QStatusBar* statusBar = new QStatusBar(this);
         statusBar->setStyleSheet("color: rgb(255,255,255);");
 
-        statusBar->showMessage("No simulation active");
+        statusBar->showMessage("No project active");
         setStatusBar(statusBar);
     }
 
     active_sim_uid = -1;
-    simulation = nullptr;
+    project = nullptr;
 
     // Create the main splitter
     QSplitter* mainSplitter = new QSplitter(Qt::Horizontal, this);
 
-    // Add two OpenGL panels
+    // Add two OpenGL viewports
     options = new Options(this);
     canvas = new Canvas2D(this);
 
@@ -92,7 +92,7 @@ QtSim::QtSim(QWidget *parent)
     options->setSizePolicy(QSizePolicy::Policy::Minimum, QSizePolicy::Policy::Minimum);
     mainSplitter->setSizePolicy(QSizePolicy::Policy::Minimum, QSizePolicy::Policy::Minimum);
 
-    // Set initial sizes of the splitter panels
+    // Set initial sizes of the splitter viewports
     options->setBaseSize({ 150, 100 });
     mainSplitter->setStretchFactor(0, 0);
     mainSplitter->setStretchFactor(1, 1);
@@ -100,43 +100,43 @@ QtSim::QtSim(QWidget *parent)
     // Set the splitter as the central widget
     setCentralWidget(mainSplitter);
 
-    auto& sim_factory_list = SimulationBase::simulationInfoList();
+    auto& sim_factory_list = ProjectBase::projectInfoList();
     for (auto factory_info : sim_factory_list)
     {
         options->addSimListEntry(factory_info);
     }
-    options->addSimListEntry(SimulationInfo({ "3D" }));
-    options->addSimListEntry(SimulationInfo({ "Javascript" }));
-    options->addSimListEntry(SimulationInfo({ "Python" }));
+    options->addSimListEntry(ProjectInfo({ "3D" }));
+    options->addSimListEntry(ProjectInfo({ "Javascript" }));
+    options->addSimListEntry(ProjectInfo({ "Python" }));
 
     // Handle Sim Treeview signals
-    connect(options, &Options::onChooseSimulation, this, &QtSim::setSimulation);
-    connect(options, &Options::onForceStartBeginSimulation, this, [this](int type)
+    connect(options, &Options::onChooseProject, this, &QtSim::setProject);
+    connect(options, &Options::onForceStartBeginProject, this, [this](int type)
     {
-        setSimulation(type);
-        startSelectedSimulation();
+        setProject(type);
+        startSelectedProject();
     });
 
     // Handle FPS change
     connect(options, &Options::onChangeFPS, this, &QtSim::setFPS);
 
     // Handle Toolbar signals
-    connect(toolbar, &Toolbar::onPlayPressed, this, &QtSim::startSelectedSimulation);
-    connect(toolbar, &Toolbar::onStopPressed, this, &QtSim::stopSelectedSimulation);
-    connect(toolbar, &Toolbar::onPausePressed, this, &QtSim::pauseSelectedSimulation);
-    connect(toolbar, &Toolbar::onToggleRecordSimulation, this, &QtSim::toggleRecordSelectedSimulation);
+    connect(toolbar, &Toolbar::onPlayPressed, this, &QtSim::startSelectedProject);
+    connect(toolbar, &Toolbar::onStopPressed, this, &QtSim::stopSelectedProject);
+    connect(toolbar, &Toolbar::onPausePressed, this, &QtSim::pauseSelectedProject);
+    connect(toolbar, &Toolbar::onToggleRecordProject, this, &QtSim::toggleRecordSelectedProject);
 
     // Setup main frame timer
     timer = new QTimer(this);
     connect(timer, &QTimer::timeout, this, [this]()
     {
-        if (simulation && simulation->started)
+        if (project && project->started)
         {
-            simulation->_process();
+            project->_projectProcess();
             canvas->update();
 
-            if (!simulation->paused)
-                simulation->postProcess();
+            if (!project->paused)
+                project->postProcess();
         }
     });
 
@@ -155,23 +155,23 @@ void QtSim::resizeEvent(QResizeEvent * event)
     }*/
 }
 
-void QtSim::setSimulation(int sim_uid)
+void QtSim::setProject(int sim_uid)
 {
-    if (simulation)
+    if (project)
     {
         options->clearAttributeList();
-        simulation->_destroy();
-        delete simulation;
+        project->_projectDestroy();
+        delete project;
     }
 
     active_sim_uid = sim_uid;
 
-    simulation = SimulationBase::findSimulationInfo(active_sim_uid)->creator();
-    simulation->configure(active_sim_uid, canvas, options);
+    project = ProjectBase::findProjectInfo(active_sim_uid)->creator();
+    project->configure(active_sim_uid, canvas, options);
 
-    canvas->setSimulation(simulation);
+    canvas->setProject(project);
 
-    simulation->_prepare();
+    project->_projectPrepare();
     options->updateListUI();
     toolbar->setButtonStates(false, true, false, true);
 }
@@ -182,59 +182,59 @@ void QtSim::setFPS(int fps)
     timer->setInterval(delay);
 }
 
-void QtSim::startSelectedSimulation()
+void QtSim::startSelectedProject()
 {
-    if (!simulation)
+    if (!project)
         return;
 
-    simulation->_destroy();
-    simulation->_start();
+    project->_projectDestroy();
+    project->_projectStart();
     toolbar->setButtonStates(true, false, true, true);
 }
 
-void QtSim::stopSelectedSimulation()
+void QtSim::stopSelectedProject()
 {
-    if (!simulation)
+    if (!project)
         return;
 
-    simulation->destroy();
-    simulation->_stop();
+    project->_projectDestroy();
+    project->_projectStop();
 
     toolbar->setRecordingUI(false);
     toolbar->setButtonStates(false, true, false, true);
 }
 
-void QtSim::pauseSelectedSimulation()
+void QtSim::pauseSelectedProject()
 {
-    if (!simulation)
+    if (!project)
         return;
 
-    simulation->_pause();
+    project->_projectPause();
 }
 
-void QtSim::toggleRecordSelectedSimulation(bool b)
+void QtSim::toggleRecordSelectedProject(bool b)
 {
-    if (simulation)
+    if (project)
     {
         if (b)
         {
-            if (simulation->started)
+            if (project->started)
             {
                 // If already started, immediately start recording
-                if (simulation->startRecording())
+                if (project->startRecording())
                     toolbar->setRecordingUI(true);
             }
             else
             {
-                // Indicate to simulation that recording will begin on simulation start
-                simulation->setRecordOnStart(true);
+                // Indicate to project that recording will begin on project start
+                project->setRecordOnStart(true);
                 toolbar->setRecordingUI(true);
             }
         }
         else
         {
-            simulation->finalizeRecording();
-            simulation->setRecordOnStart(false);
+            project->finalizeRecording();
+            project->setRecordOnStart(false);
 
             toolbar->setRecordingUI(false);
         }

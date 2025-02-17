@@ -65,7 +65,7 @@ Options::Options(QWidget *parent)
     connect(ui.spinBox_fps, &QSpinBox::valueChanged, this, &Options::onChangeFPS);
     //connect(ui.checkBox_windowCapture, &QCheckBox::checkStateChanged,)
 
-    model.setHorizontalHeaderLabels({"Simulation Type"});
+    model.setHorizontalHeaderLabels({"Project Type"});
     rootItem = model.invisibleRootItem();
 
     ui.project_dir_input->setText(QDir::toNativeSeparators(getDesktopPath() + "/QtSims"));
@@ -77,7 +77,7 @@ Options::~Options()
 {
 }
 
-void Options::addSimListEntry(const std::shared_ptr<SimulationInfo>& info)
+void Options::addSimListEntry(const std::shared_ptr<ProjectInfo>& info)
 {
     auto& path = info->path;
 
@@ -126,7 +126,7 @@ void Options::selectionChanged(const QItemSelection& selected, const QItemSelect
 
         if (item->sim_info && item->sim_info->sim_uid >= 0)
         {
-            emit onChooseSimulation(item->sim_info->sim_uid);
+            emit onChooseProject(item->sim_info->sim_uid);
             return;
         }
     }
@@ -137,7 +137,7 @@ void Options::doubleClickSim(const QModelIndex& index)
     SimTreeItem* item = dynamic_cast<SimTreeItem*>(model.itemFromIndex(index));
     if (item->sim_info && item->sim_info->sim_uid >= 0)
     {
-        emit onForceStartBeginSimulation(item->sim_info->sim_uid);
+        emit onForceStartBeginProject(item->sim_info->sim_uid);
         return;
     }
 }
@@ -399,7 +399,7 @@ void DynamicIconDelegate::paint(
     const QStandardItemModel* standardModel = qobject_cast<const QStandardItemModel*>(model);
     SimTreeItem* item = dynamic_cast<SimTreeItem*>(standardModel->itemFromIndex(index));
 
-    std::shared_ptr<SimulationInfo>& sim_info = item->sim_info;
+    std::shared_ptr<ProjectInfo>& sim_info = item->sim_info;
 
     if (sim_info && sim_info->sim_uid >= 0)
     {
@@ -410,9 +410,9 @@ void DynamicIconDelegate::paint(
 
         switch (sim_info->state)
         {
-        case SimulationInfo::INACTIVE: iconColor = Qt::darkGray; break;
-        case SimulationInfo::ACTIVE: iconColor = Qt::green; break;
-        case SimulationInfo::RECORDING: iconColor = Qt::red; break;
+        case ProjectInfo::INACTIVE: iconColor = Qt::darkGray; break;
+        case ProjectInfo::ACTIVE: iconColor = Qt::green; break;
+        case ProjectInfo::RECORDING: iconColor = Qt::red; break;
         }
 
         // Set up font metrics to measure text width

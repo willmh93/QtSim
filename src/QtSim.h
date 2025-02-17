@@ -9,7 +9,7 @@
 #include <QAction>
 #include <QMessageBox>
 
-#include "Simulation.h"
+#include "Project.h"
 #include "Canvas2D.h"
 //#include "SimSelector.h"
 #include "Options.h"
@@ -39,16 +39,16 @@ private:
     Canvas2D* canvas = nullptr;
     Toolbar* toolbar = nullptr;
 
-    SimulationBase* simulation;
+    ProjectBase* project;
     int active_sim_uid;
 
-    void setSimulation(int sim_uid);
+    void setProject(int sim_uid);
     void setFPS(int fps);
 
-    void startSelectedSimulation();
-    void stopSelectedSimulation();
-    void pauseSelectedSimulation();
-    void toggleRecordSelectedSimulation(bool b);
+    void startSelectedProject();
+    void stopSelectedProject();
+    void pauseSelectedProject();
+    void toggleRecordSelectedProject(bool b);
 
     private slots:
 

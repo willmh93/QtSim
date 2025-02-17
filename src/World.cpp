@@ -1,5 +1,5 @@
 #include "World.h"
-#include "Simulation.h"
+#include "Project.h"
 #include <cmath>
 
 // Scale world to fit viewport rect
@@ -23,7 +23,7 @@ void Camera::cameraToViewport(
     y = (port_h / 2) / zoom_y;
 }
 
-void Camera::fitToViewport(double left, double top, double right, double bottom, bool stretch)
+void Camera::focusWorldRect(double left, double top, double right, double bottom, bool stretch)
 {
     double world_w = right - left;
     double world_h = bottom - top;
@@ -83,9 +83,9 @@ void Camera::fitToViewport(double left, double top, double right, double bottom,
     }
 }
 
-void Camera::fitToViewport(const FRect& r, bool stretch)
+void Camera::focusWorldRect(const FRect& r, bool stretch)
 {
-    fitToViewport(r.x1, r.y1, r.x2, r.y2, stretch);
+    focusWorldRect(r.x1, r.y1, r.x2, r.y2, stretch);
 }
 
 void Camera::originToCenterViewport()
@@ -96,12 +96,12 @@ void Camera::originToCenterViewport()
 
 Vec2 Camera::originPixelOffset()
 {
-    double viewport_cx = (panel->width / 2.0);
-    double viewport_cy = (panel->height / 2.0);
+    double viewport_cx = (viewport->width / 2.0);
+    double viewport_cy = (viewport->height / 2.0);
 
     return Vec2(
-         viewport_cx +  panel->width * (focal_anchor_x - 0.5),// * zoom_x,
-         viewport_cy +  panel->height * (focal_anchor_y - 0.5)// * zoom_y
+         viewport_cx +  viewport->width * (focal_anchor_x - 0.5),// * zoom_x,
+         viewport_cy +  viewport->height * (focal_anchor_y - 0.5)// * zoom_y
     );
 }
 
@@ -129,8 +129,8 @@ Vec2 Camera::toWorld(const Vec2& pt)
 
     
 
-    double origin_ox = originPixelOffset().x;//(panel->width * (focal_anchor_x - 0.5) * zoom_x);
-    double origin_oy = originPixelOffset().y;//(panel->height * (focal_anchor_y - 0.5) * zoom_y);
+    double origin_ox = originPixelOffset().x;//(viewport->width * (focal_anchor_x - 0.5) * zoom_x);
+    double origin_oy = originPixelOffset().y;//(viewport->height * (focal_anchor_y - 0.5) * zoom_y);
 
     px -= origin_ox;
     py -= origin_oy;
@@ -171,8 +171,8 @@ Vec2 Camera::toStage(const Vec2& pt)
     double cos_r = cos(rotation);
     double sin_r = sin(rotation);
 
-    double origin_ox   = originPixelOffset().x;//(panel->width * (focal_anchor_x - 0.5) * zoom_x);
-    double origin_oy   = originPixelOffset().y;//(panel->height * (focal_anchor_y - 0.5) * zoom_y);
+    double origin_ox   = originPixelOffset().x;//(viewport->width * (focal_anchor_x - 0.5) * zoom_x);
+    double origin_oy   = originPixelOffset().y;//(viewport->height * (focal_anchor_y - 0.5) * zoom_y);
 
     /// Do transform
 

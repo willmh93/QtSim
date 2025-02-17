@@ -18,7 +18,7 @@
  */
 
 #include "Canvas2D.h"
-#include "Simulation.h"
+#include "Project.h"
 
 Canvas2D::Canvas2D(QWidget* parent)
     : QNanoWidget(parent)
@@ -32,33 +32,33 @@ Canvas2D::~Canvas2D()
 
 void Canvas2D::mousePressEvent(QMouseEvent* event)
 {
-    if (!sim) return;
+    if (!scene) return;
     QPointF mousePos = event->position();
-    sim->_mouseDown(mousePos.x(), mousePos.y(), event->button());
+    scene->_mouseDown(mousePos.x(), mousePos.y(), event->button());
     update();
 }
 
 void Canvas2D::mouseReleaseEvent(QMouseEvent* event)
 {
-    if (!sim) return;
+    if (!scene) return;
     QPointF mousePos = event->position();
-    sim->_mouseUp(mousePos.x(), mousePos.y(), event->button());
+    scene->_mouseUp(mousePos.x(), mousePos.y(), event->button());
     update();
 }
 
 void Canvas2D::mouseMoveEvent(QMouseEvent* event)
 {
-    if (!sim) return;
+    if (!scene) return;
     QPointF mousePos = event->position();
-    sim->_mouseMove(mousePos.x(), mousePos.y());
+    scene->_mouseMove(mousePos.x(), mousePos.y());
     update();
 }
 
 void Canvas2D::wheelEvent(QWheelEvent* event)
 {
-    if (!sim) return;
+    if (!scene) return;
     QPointF mousePos = event->position();
-    sim->_mouseWheel(mousePos.x(), mousePos.y(), event->angleDelta().y());
+    scene->_mouseWheel(mousePos.x(), mousePos.y(), event->angleDelta().y());
     update();
 }
 
@@ -79,18 +79,18 @@ void Canvas2D::paint(QNanoPainter* p)
     p->beginFrame(vw*scaleFactor, vh*scaleFactor);
     p->scale(scaleFactor);
 
-    if (!sim || !sim->started)
+    if (!scene || !scene->started)
     {
         p->setFillStyle({ 10,10,15 });
         p->fillRect(0, 0, vw, vh);
     }
     
-    if (sim && sim->started)
+    if (scene && scene->started)
     {
         if (!render_to_offscreen)
         {
-            sim->_draw(p);
-            sim->onPainted(nullptr);
+            scene->_draw(p);
+            scene->onPainted(nullptr);
         }
         else
         {
@@ -117,13 +117,13 @@ void Canvas2D::paint(QNanoPainter* p)
                 off_x = (vw - (offscreen_w * scale_x)) / 2.0;
             }
 
-            // Draw simulation to offscreen painter
+            // Draw project to offscreen painter
             auto offscreen_painter = offscreen_nano_painter.begin(offscreen_w, offscreen_h, true);
-            sim->_draw(offscreen_painter);
+            scene->_draw(offscreen_painter);
             offscreen_nano_painter.end();
 
-            // Provide simulation with frame pixels
-            sim->onPainted(&offscreen_nano_painter.getPixels());
+            // Provide project with frame pixels
+            scene->onPainted(&offscreen_nano_painter.getPixels());
 
             // Draw offscreen painter to main painter
             offscreen_nano_painter.drawToPainter(p,

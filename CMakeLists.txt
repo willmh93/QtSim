@@ -9,9 +9,39 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+string(FIND "${CMAKE_GENERATOR}" "Visual Studio" VS_FOUND)
+
+message(STATUS "CMAKE_GENERATOR:  ${CMAKE_GENERATOR}")
+message(STATUS "CMAKE_CXX_COMPILER:  ${CMAKE_CXX_COMPILER}")
+message(STATUS "CMAKE_CXX_COMPILER_ID:  ${CMAKE_CXX_COMPILER_ID}")
+message(STATUS "VS_FOUND:  ${VS_FOUND}")
 # packages
 find_package(QT NAMES Qt6 Qt5 REQUIRED)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Gui Widgets Quick Xml OpenGL OpenGLWidgets)
+
+#if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND VS_FOUND GREATER -1)
+#    message(FATAL_ERROR "Error: You are using MinGW but trying to generate a Visual Studio project. Please switch to the correct kit.")
+#endif()
+
+if (EXISTS "${CMAKE_BINARY_DIR}/CMakeCache.txt")
+    file(READ "${CMAKE_BINARY_DIR}/CMakeCache.txt" CACHE_CONTENTS)
+
+    # Detect MSVC compiler in a MinGW build
+    if (CMAKE_GENERATOR MATCHES "MinGW" AND CACHE_CONTENTS MATCHES "CMAKE_CXX_COMPILER:INTERNAL=.*cl.exe")
+        message(WARNING "Detected MSVC toolchain in a MinGW build. Cleaning build directory...")
+        execute_process(COMMAND ${CMAKE_COMMAND} --fresh .)
+    endif()
+
+    # Detect MinGW compiler in a Visual Studio build
+    if (CMAKE_GENERATOR MATCHES "Visual Studio" AND CACHE_CONTENTS MATCHES "CMAKE_CXX_COMPILER:INTERNAL=.*g\\+\\+")
+        message(WARNING "Detected MinGW toolchain in a Visual Studio build. Cleaning build directory...")
+        execute_process(COMMAND ${CMAKE_COMMAND} --fresh .)
+    endif()
+endif()
+
+#if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC" AND CMAKE_GENERATOR MATCHES "MinGW Makefiles")
+#    message(FATAL_ERROR "Error: You are using MSVC but trying to generate a MinGW Makefiles project. Please switch to the correct kit.")
+#endif()
 
 # sets default startup project in Visual Studio
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT QtSim)

@@ -13,76 +13,77 @@ SIM_DECLARE(Test, "Framework Tests", "Canvas Transforms")
 
 void Test::projectAttributes(Options* options)
 {
-    options->realtime_slider("Panel Count", &panel_count, 1, 36, 1);
+    options->realtime_slider("Viewport Count", &viewport_count, 1, 36, 1);
 }
 
-void Test::prepare()
+void Test::projectPrepare()
 {
 
-    auto& panels = newLayout();
+    auto& viewports = newLayout();
     
-    //setLayout(panel_count).constructAll<Test_Instance>(
-    //    /// Constructor args for all instances
+    //setLayout(viewport_count).constructAll<Test_Scene>(
+    //    /// Constructor args for all scenes
     //);
 
-    //construct<Test_Instance, 5>()->mountTo(panels);
+    //construct<Test_Scene, 5>()->mountTo(viewports);
 
-    // Unique instances
-    //construct<Test_Instance>()->mountTo(panels[0]);
-    //construct<Test_Instance>()->mountTo(panels[1]);
+    // Unique scenes
+    //construct<Test_Scene>()->mountTo(viewports[0]);
+    //construct<Test_Scene>()->mountTo(viewports[1]);
 
-    // Mirrored instance
-    //Test_Instance* scene_instance = new Test_Instance();
-    //scene_instance->mountTo(panels[0]);
-    //scene_instance->mountTo(panels[1]);
+    // Mirrored scene
+    //Test_Scene* scene_scene = new Test_Scene();
+    //scene_scene->mountTo(viewports[0]);
+    //scene_scene->mountTo(viewports[1]);
 
     //auto &env1 = new NS_CurvedSpace::CurvedSpace();
 
 
-    /// Or alternatively, set up each instance manually
-    //construct<Test_Instance>()->mountTo(panels[0]);
-    //construct<Test_Instance>()->mountTo(panels[1]);
+    /// Or alternatively, set up each scene manually
+    //construct<Test_Scene>()->mountTo(viewports[0]);
+    //construct<Test_Scene>()->mountTo(viewports[1]);
 
 
-    //CurvedSpace::makeInstance(2)->mountTo(panels[0]);
-    //CurvedSpace::makeInstance()->mountTo(panels[1]);
+    //CurvedSpace::createScene(2)->mountTo(viewports[0]);
+    //CurvedSpace::createScene()->mountTo(viewports[1]);
 
 
     //auto env1 = make_shared<CurvedSpace::LaunchConfig>(3, 10);
 
-    //CurvedSpace::makeInstance(env1)
-    //    ->mountTo(panels[0]);
+    //CurvedSpace::createScene(env1)
+    //    ->mountTo(viewports[0]);
 
-    EarthMoon::makeInstance()->mountTo(panels[0]);
-    Test::makeInstance()->mountTo(panels[1]);
-    
+    EarthMoon::createScene()->mountTo(viewports[0]);
+    Test::createScene()->mountTo(viewports[1]);
+   
 
-    //CurvedSpace::makeDefaultInstance();
 
-    //CurvedSpace::makeUniqueInstance();
+    //CurvedSpace::makeDefaultScene();
 
-    //makeDefaultInstance<CurvedSpace>();
+    //CurvedSpace::makeUniqueScene();
 
-    //construct<NS_CurvedSpace::CurvedSpace>();// ->mountTo(panels[1]);
+    //makeDefaultScene<CurvedSpace>();
 
-    //panels[0]->construct<CurvedSpaceInstance>(config_A);
-    //panels[1]->construct<CurvedSpaceInstance>(config_B);
+    //construct<NS_CurvedSpace::CurvedSpace>();// ->mountTo(viewports[1]);
+
+    //viewports[0]->construct<CurvedSpaceScene>(config_A);
+    //viewports[1]->construct<CurvedSpaceScene>(config_B);
 
 }
 
 ///----------///
-/// Instance ///
+/// Scene ///
 ///----------///
 
-void Test_Instance::instanceAttributes(Options* options)
+void Test_Scene::sceneAttributes(Options* options)
 {
     // starting_checkbox,   realtime_checkbox
     // starting_combo,      realtime_combo
     // starting_spin_int    realtime_spin_int
     // starting_spin_double starting_spin_double
 
-    //options->realtime_slider("Instance Var 1", &var1, 0.0, 1.0, 0.1); // updated in realtime
-    //options->starting_slider("Instance Var 2", &var2, 0.0, 1.0, 0.1); // only updated on restart
+    //options->realtime_slider("Scene Var 1", &var1, 0.0, 1.0, 0.1); // updated in realtime
+    //options->starting_slider("Scene Var 2", &var2, 0.0, 1.0, 0.1); // only updated on restart
     options->realtime_checkbox("Transform coordinates", &transform_coordinates); // updated in realtime
     options->realtime_checkbox("Scale Lines & Text", &scale_lines_text); // updated in realtime
     options->realtime_checkbox("Rotate Text", &rotate_text); // updated in realtime
@@ -91,9 +92,9 @@ void Test_Instance::instanceAttributes(Options* options)
     options->realtime_slider("Camera Y", &camera_y, -500.0, 500.0, 1.0); // updated in realtime
 }
 
-void Test_Instance::start()
+void Test_Scene::sceneStart()
 {
-    // Initialize instance
+    // Initialize scene
     for (int i = 0; i < 20; i++)
     {
         particles.push_back({
@@ -105,24 +106,24 @@ void Test_Instance::start()
     }
 }
 
-void Test_Instance::mount(Panel* panel)
+void Test_Scene::sceneMounted(Viewport* viewport)
 {
-    // Initialize panel
-    if (panel->panelIndex() == 0)
+    // Initialize viewport
+    if (viewport->viewportIndex() == 0)
         //camera->setOriginViewportAnchor(Anchor::CENTER);
         camera->setOriginViewportAnchor(Anchor::TOP_LEFT);
     else
         camera->setOriginViewportAnchor(Anchor::CENTER);
 
-    //camera->fitToViewport(0, 0, 300, 300);
+    //camera->focusWorldRect(0, 0, 300, 300);
 }
 
-void Test_Instance::destroy()
+void Test_Scene::sceneDestroy()
 {
-    // Destroy instance
+    // Destroy scene
 }
 
-void Test_Instance::processScene()
+void Test_Scene::sceneProcess()
 {
     // Process scene update
     seed += 0.005;
@@ -136,11 +137,11 @@ void Test_Instance::processScene()
     }
 }
 
-void Test_Instance::processPanel(Panel* ctx)
+void Test_Scene::viewportProcess(Viewport* ctx)
 {
-    //if (ctx->panelIndex() == 1)
+    //if (ctx->viewportIndex() == 1)
     //{
-    //    // Process panel update
+    //    // Process viewport update
     //    camera->rotation = sin(seed) * M_PI_2;
     //    camera->setZoom(1.0 + sin(seed + M_PI_2) * 0.5);
     //    camera->x = cos(seed + M_PI * 0.75) * 300;
@@ -162,7 +163,7 @@ void Test_Instance::processPanel(Panel* ctx)
     //ball_pos.y = mouse->world_y;
 }
 
-void Test_Instance::draw(Panel* ctx)
+void Test_Scene::viewportDraw(Viewport* ctx)
 {
     //camera->x += 1;
 
@@ -178,9 +179,9 @@ void Test_Instance::draw(Panel* ctx)
 
     
 
-    // Draw instance
+    // Draw scene
     //ctx->scaleGraphics(scale_graphics);
-    ctx->drawGraphGrid();
+    ctx->drawWorldAxis();
     /*ctx->setLineWidth(10);
     ctx->beginPath();
     ctx->moveTo(0, 0);
@@ -261,21 +262,21 @@ void Test_Instance::draw(Panel* ctx)
 
 /// User Interaction
 
-void Test_Instance::mouseDown() 
+void Test_Scene::mouseDown() 
 {
     //ball_pos.x = mouse.world_x;
     //ball_pos.y = mouse.world_y;
 }
-void Test_Instance::mouseUp()
+void Test_Scene::mouseUp()
 {
     //ball_pos.x = mouse.world_x;
     //ball_pos.y = mouse.world_y;
 }
-void Test_Instance::mouseMove()
+void Test_Scene::mouseMove()
 {
     ball_pos.x = mouse->world_x;
     ball_pos.y = mouse->world_y;
 }
-void Test_Instance::mouseWheel() {}
+void Test_Scene::mouseWheel() {}
 
 SIM_END(Test)

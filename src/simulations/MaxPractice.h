@@ -1,6 +1,6 @@
 #ifndef MAXPRACTICE_H
 #define MAXPRACTICE_H
-#include "Simulation.h"
+#include "Project.h"
 
 SIM_BEG(MaxPractice)
 
@@ -25,7 +25,7 @@ struct Ball
 };
 
 
-struct MaxPracticeInstance : public SimulationInstance
+struct MaxPracticeScene : public Scene
 {
     struct LaunchInfo
     {
@@ -38,22 +38,22 @@ struct MaxPracticeInstance : public SimulationInstance
     double max_speed = 5;
     double world_size = 500;
 
-    void instanceAttributes(Options* options) override;
+    void sceneAttributes(Options* options) override;
 
-    void start() override;
-    void destroy() override;
-    void processScene() override;
-    void draw(Panel* ctx) override;
+    void sceneStart() override;
+    void sceneDestroy() override;
+    void sceneProcess() override;
+    void viewportDraw(Viewport* ctx) override;
 };
 
 
 
-struct MaxPractice : public Simulation<MaxPracticeInstance>
+struct MaxPractice : public Project<MaxPracticeScene>
 {
-    int panel_count = 1;
+    int viewport_count = 1;
 
-    void prepare();
-    void start();
+    void projectPrepare();
+    void projectStart();
 };
 
 SIM_END(MaxPractice)

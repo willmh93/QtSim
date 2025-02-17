@@ -1,6 +1,6 @@
 #ifndef FLUID_H
 #define FLUID_H
-#include "Simulation.h"
+#include "Project.h"
 
 SIM_BEG(Fluid)
 
@@ -13,7 +13,7 @@ struct Particle : public Vec2
     Particle(double x, double y) : Vec2(x,y) {}
 };
 
-struct FluidInstance : public SimulationInstance
+struct FluidScene : public Scene
 {
     double world_w = 250.0;
     double world_h = 250.0;
@@ -32,12 +32,12 @@ struct FluidInstance : public SimulationInstance
     double viscosity_strength = 1;
     double viscosity_spring_dist_ratio = 10.0;
     
-    void instanceAttributes(Options* options) override;
+    void sceneAttributes(Options* options) override;
 
-    void start() override;
-    void destroy() override;
-    void processScene() override;
-    void draw(Panel* ctx) override;
+    void sceneStart() override;
+    void sceneDestroy() override;
+    void sceneProcess() override;
+    void viewportDraw(Viewport* ctx) override;
 
     void applyLinkViscosity(Particle* a, Particle* b, double r, double strength, double dt);
     void applyViscosityAll(double r, double strength, double dt);
@@ -45,12 +45,12 @@ struct FluidInstance : public SimulationInstance
     void spring(Particle* a, Particle* b, double restLength, double k, double damping, double deltaTime);
 };
 
-struct Fluid : public Simulation<FluidInstance>
+struct Fluid : public Project<FluidScene>
 {
-    int panel_count = 4;
+    int viewport_count = 4;
 
-    void prepare() override;
-    //void start();
+    void projectPrepare() override;
+    //void projectStart();
     void projectAttributes(Options *options) override;
     
 };

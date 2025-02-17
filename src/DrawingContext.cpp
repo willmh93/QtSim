@@ -20,21 +20,28 @@
 #include "DrawingContext.h"
 #include "helpers.h"
 
-double roundAxisTickStep(double step)
+double roundAxisTickStep(double ideal_step)
 {
-    if (step <= 0)
+    if (ideal_step <= 0)
         return 0; // or handle error
 
-    // Determine the order of magnitude of 'step'
-    double exponent = floor(log10(step));
+    // Determine the order of magnitude of 'ideal_step'
+    double exponent = floor(log10(ideal_step));
     double factor = pow(10.0, exponent);
 
-    // Normalize step to the range [1, 10)
-    double base = step / factor;
+    // Normalize ideal_step to the range [1, 10)
+    double base = ideal_step / factor;
     double niceMultiplier;
 
+    // 0.5, 1
+
     // Choose the largest candidate from {1, 2, 2.5, 5, 10} that is <= base.
-    if (base >= 10.0)
+    if (base >= 5)
+        niceMultiplier = 5;
+    else
+        niceMultiplier = 1;
+
+    /*if (base >= 10.0)
         niceMultiplier = 10.0;
     else if (base >= 5.0)
         niceMultiplier = 5.0;
@@ -43,11 +50,28 @@ double roundAxisTickStep(double step)
     else if (base >= 2.0)
         niceMultiplier = 2.0;
     else
-        niceMultiplier = 1.0;
+        niceMultiplier = 1.0;*/
 
     return niceMultiplier * factor;
 }
 
+/*double upperTickStep(double ideal_step, double rounded_step)
+{
+    double base = step / factor;
+    double currentMultiplier = 
+
+    // Choose the largest candidate from {1, 2, 2.5, 5, 10} that is <= base.
+    if (base >= 5)
+        niceMultiplier = 5;
+    else if (base >= 2.5)
+        niceMultiplier = 2.5;
+    else
+        niceMultiplier = 1;
+
+
+    return niceMultiplier * factor;
+}
+*/
 double roundAxisValue(double v, double step)
 {
     return floor(v / step) * step;
@@ -63,7 +87,7 @@ double getAngle(Vec2 a, Vec2 b)
     return (b - a).angle();
 }
 
-void DrawingContext::drawGraphGrid(
+void DrawingContext::drawWorldAxis(
     double axis_opacity,
     double grid_opacity, 
     double text_opacity)
@@ -119,8 +143,34 @@ void DrawingContext::drawGraphGrid(
 
     // Draw axis ticks
     camera.setTransformFilters(false, false, false);
-    double step_wx = roundAxisTickStep(100.0 / camera.zoom_x);
-    double step_wy = roundAxisTickStep(100.0 / camera.zoom_y);
+    double ideal_step_wx = (width / 7.0) / camera.zoom_x;
+    double ideal_step_wy = (height / 7.0) / camera.zoom_y;
+    double step_wx = roundAxisTickStep(ideal_step_wx);
+    double step_wy = roundAxisTickStep(ideal_step_wy);
+    double step, ideal_step;
+    if (step_wx < step_wy)
+    {
+        ideal_step = ideal_step_wx;
+        step = step_wy = step_wx;
+    }
+    else
+    {
+        ideal_step = ideal_step_wy;
+        step = step_wx = step_wy;
+    }
+
+    //double upperTickStep = 
+
+    double prev_step = fmod(step, ideal_step *2.0);
+    double next_step = roundAxisTickStep(prev_step * 5.0);
+    double step_stretch = (ideal_step - prev_step) / (next_step - prev_step);
+    double big_step_wx = step_wx * 5.0;
+    double big_step_wy = step_wy * 5.0;
+
+    fillText(QString::number(ideal_step), 0, 0);
+    fillText(QString::number(prev_step), 0, 20);
+    fillText(QString::number(next_step), 0, 40);
+    fillText(QString::number(step_stretch), 0, 60);
 
     Vec2 x_perp_off = camera.toStageOffset(0, 6 * world_zoom);
     Vec2 x_perp_norm = camera.toStageOffset(0, 1).normalized();
@@ -145,21 +195,83 @@ void DrawingContext::drawGraphGrid(
     double world_minY = std::min({ world_tl.y, world_tr.y, world_br.y, world_bl.y });
     double world_maxY = std::max({ world_tl.y, world_tr.y, world_br.y, world_bl.y });
 
-    // Draw gridlines
+    // Draw gridlines (big step)
     {
-        setStrokeStyle(255, 255, 255, static_cast<int>(255.0 * grid_opacity));
-        beginPath();
+        //setStrokeStyle(255, 255, 255, static_cast<int>(255.0 * grid_opacity));
+        //beginPath();
+        setFillStyle(255, 255, 255, 5.0 - (sin(step_stretch * M_PI) * 5.0));
+
+        bool offset = false;
+        Vec2 p1, p2;
+
+        for (double wy = ceilAxisValue(world_minY, big_step_wy); wy < world_maxY; wy += big_step_wy)
+        {
+            offset = !offset;
+
+            int64_t iy = wy / big_step_wy;
+
+            Ray line_ray_y(camera.toStage(0, wy), angle);
+            if (!getRayRectIntersection(&p1, &p2, stage_rect, line_ray_y)) break;
+
+            for (double wx = ceilAxisValue(world_minX, big_step_wx); wx < world_maxX; wx += big_step_wx)
+            {
+                int64_t ix = wx / big_step_wx;
+                //int64_t i = ix + (iy % 2 ? 1 : 0);
+
+                Ray line_ray_x(camera.toStage(wx, 0), angle + M_PI_2);
+                if (!getRayRectIntersection(&p1, &p2, stage_rect, line_ray_x)) break;
+
+                if ((ix + iy) % 2 == 0)
+                    fillRect(wx, wy, big_step_wx, big_step_wy);
+            }
+
+        }
+    }
+
+    // Small step
+    {
+        //setStrokeStyle(255, 255, 255, static_cast<int>(255.0 * grid_opacity));
+        //beginPath();
+        double small_visibility = 1 - sin(step_stretch * M_PI - M_PI/2);
+        setFillStyle(255, 255, 255, 5.0 * small_visibility);
+
+
+        bool offset = false;
+        Vec2 p1, p2;
+
+        for (double wy = ceilAxisValue(world_minY, step_wy); wy < world_maxY; wy += step_wy)
+        {
+            offset = !offset;
+
+            int64_t iy = wy / step_wy;
+
+            Ray line_ray_y(camera.toStage(0, wy), angle);
+            if (!getRayRectIntersection(&p1, &p2, stage_rect, line_ray_y)) break;
+
+            for (double wx = ceilAxisValue(world_minX, step_wx); wx < world_maxX; wx += step_wx)
+            {
+                int64_t ix = wx / step_wx;
+                //int64_t i = ix + (iy % 2 ? 1 : 0);
+
+                Ray line_ray_x(camera.toStage(wx, 0), angle + M_PI_2);
+                if (!getRayRectIntersection(&p1, &p2, stage_rect, line_ray_x)) break;
+
+                if ((ix+iy) % 2 == 0)
+                    fillRect(wx, wy, step_wx, step_wy);
+            }
+            
+        }
 
         // X
-        Vec2 p1, p2;
+        /*Vec2 p1, p2;
         for (double wx = ceilAxisValue(world_minX, step_wx); wx < world_maxX; wx += step_wx)
         {
             if (abs(wx) < 1e-9) continue;
             Ray line_ray(camera.toStage(wx, 0), angle + M_PI_2);
             if (!getRayRectIntersection(&p1, &p2, stage_rect, line_ray)) break;
 
-            moveToSharp(p1);
-            lineToSharp(p2);
+            //moveToSharp(p1);
+            //lineToSharp(p2);
         }
 
         // Y
@@ -169,11 +281,11 @@ void DrawingContext::drawGraphGrid(
             Ray line_ray(camera.toStage(0, wy), angle);
             if (!getRayRectIntersection(&p1, &p2, stage_rect, line_ray)) break;
 
-            moveToSharp(p1);
-            lineToSharp(p2);
-        }
+            //moveToSharp(p1);
+            //lineToSharp(p2);
+        }*/
 
-        stroke();
+        //stroke();
     }
 
     setStrokeStyle(255, 255, 255, static_cast<int>(255.0 * axis_opacity));

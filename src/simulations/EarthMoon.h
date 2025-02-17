@@ -4,7 +4,7 @@
 SIM_BEG(EarthMoon)
 BASE_SIM(SpaceEngine)
 
-struct EarthMoon_Instance : public SpaceEngineInstance
+struct EarthMoon_Scene : public SpaceEngineScene
 {
     struct LaunchConfig 
     {
@@ -14,7 +14,7 @@ struct EarthMoon_Instance : public SpaceEngineInstance
         {}
     };
 
-    EarthMoon_Instance(LaunchConfig &config) :
+    EarthMoon_Scene(LaunchConfig &config) :
         show_moon(config.show_moon)
     {}
 
@@ -41,16 +41,16 @@ struct EarthMoon_Instance : public SpaceEngineInstance
 
     bool planet_subparticles = false;
 
-    void instanceAttributes(Options* options);
-    void start() override;
-    void mount(Panel* ctx);
-    void processPanel(Panel* ctx);
-    void draw(Panel* ctx) override;
+    void sceneAttributes(Options* options);
+    void sceneStart() override;
+    void sceneMounted(Viewport* ctx);
+    void viewportProcess(Viewport* ctx);
+    void viewportDraw(Viewport* ctx) override;
 };
 
-struct EarthMoon : public SpaceEngineTemplate<EarthMoon_Instance>
+struct EarthMoon : public SpaceEngineTemplate<EarthMoon_Scene>
 {
-    void prepare() override;
+    void projectPrepare() override;
 };
 
 SIM_END(EarthMoon)

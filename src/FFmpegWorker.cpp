@@ -49,7 +49,7 @@ bool FFmpegWorker::startRecording()
         return false;
 
     // Set codec parameters
-    codec_context->bit_rate = 64000000; // 8mb/s kbps
+    codec_context->bit_rate = 128000000;
     codec_context->width = trimmed_targ_w;
     codec_context->height = trimmed_targ_h;
     codec_context->time_base = { 1, fps };

@@ -48,29 +48,29 @@ public:
     double sharpX(double x)
     {
         //return x;
-        return floor(x) + 0.5;
-        //return std::floor(x * camera.zoom_x) / camera.zoom_x + 0.5 / camera.zoom_x;
+        //return floor(x) + 0.5;
+        return std::floor(x * camera.zoom_x) / camera.zoom_x + 0.5 / camera.zoom_x;
     }
 
     double sharpY(double y)
     {
         //return y;
-        return floor(y) + 0.5;
-        //return std::floor(y * camera.zoom_y) / camera.zoom_y + 0.5 / camera.zoom_y;
+        //return floor(y) + 0.5;
+        return std::floor(y * camera.zoom_y) / camera.zoom_y + 0.5 / camera.zoom_y;
     }
 
     Vec2 sharp(const Vec2& p)
     {
         //return p;
-        return {
-            floor(p.x) + 0.5,
-            floor(p.y) + 0.5
-        };
-         
         //return {
-        //    std::floor(p.x * camera.zoom_x) / camera.zoom_x + 0.5 / camera.zoom_x,
-        //    std::floor(p.y * camera.zoom_y) / camera.zoom_y + 0.5 / camera.zoom_y
+        //    floor(p.x) + 0.5,
+        //    floor(p.y) + 0.5
         //};
+         
+        return {
+            std::round(p.x * camera.zoom_x) / camera.zoom_x + 0.5 / camera.zoom_x,
+            std::round(p.y * camera.zoom_y) / camera.zoom_y + 0.5 / camera.zoom_y
+        };
     }
 
     void save()
@@ -273,6 +273,21 @@ public:
         painter->setFont(this->font);
     }
 
+    void fillRect(double x, double y, double w, double h)
+    {
+        painter->fillRect(x, y, w, h);
+    }
+
+    void fillRect(const FRect& r)
+    {
+        painter->strokeRect(
+            r.x1,
+            r.y1,
+            r.x2 - r.x1,
+            r.y2 - r.y1
+        );
+    }
+
     void fillText(const QString& txt, double px, double py)
     {
         Vec2 pt = PT(px, py);
@@ -426,7 +441,7 @@ public:
         painter->setTextBaseline(align);
     }
 
-    void drawGraphGrid(
+    void drawWorldAxis(
         double axis_opacity=0.3,
         double grid_opacity=0.04, 
         double text_opacity=0.4

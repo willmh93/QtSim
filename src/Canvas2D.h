@@ -8,7 +8,7 @@
 
 
 
-class SimulationBase;
+class ProjectBase;
 
 class Canvas2D : public QNanoWidget, protected QOpenGLFunctions
 {
@@ -17,8 +17,8 @@ class Canvas2D : public QNanoWidget, protected QOpenGLFunctions
 
 public:
 
-    // Todo: Completely remove Simulation from Canvas
-    SimulationBase* sim = nullptr;
+    // Todo: Completely remove Project from Canvas
+    ProjectBase* scene = nullptr;
     int offscreen_w;
     int offscreen_h;
 
@@ -31,9 +31,9 @@ public:
 
     void initializeGL() override;
 
-    void setSimulation(SimulationBase* _sim)
+    void setProject(ProjectBase* _sim)
     {
-        sim = _sim;
+        scene = _sim;
     }
 
     //virtual void process() {}
