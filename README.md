@@ -42,27 +42,31 @@ Included are some Physics, Biology and Chemistry simulations experiments
 - **Windows or Linux OS**
 - **Qt 6.8.x or later** (Qt Creator)
 - **CMake 3.16+**
-- **Python 3.12** *(optional but recommended for creating new simulations from templates)*
+- **Python 3.12**
 - **Compiler:** MSVC or GCC
 
 ## Installation
 
-1. **Clone the repository**
+1. **Make sure Qt Creator is installed**
+   - https://www.qt.io/download-qt-installer-oss
+   - If using **Visual Studio**, add to your Environment PATH: ```C:\Qt\6.8.2\msvc2022_64\bin``` *(replace with your version)*
+
+3. **Clone the repository**
 
    ```sh
    git clone https://github.com/willmh93/QtSim.git
    cd QtSim
    ```
-2. **Open project in Qt Creator**
+4. **Open project in Qt Creator**
     - Select target kit
     - Click **Configure**
     - Wait for CMake to fetch dependencies and create project files
 
-3. Create Visual Studio Solution *(Optional - Requires MSVC2022 64-bit kit)*
+5. Create Visual Studio Solution *(Optional - Requires MSVC2022 64-bit kit)*
    - Run Generator (QtCreator: **Build** ─ **Run Generator**)
    - Open **build/Desktop_Qt_6_8_x_MSVC2022-Debug/qtc_Visual_Studio_17_2022/QtSim.sln**
      
-4. **Compile and Run!**
+6. **Compile and Run!**
    
 ## Simulation Tutorial
 
@@ -76,7 +80,7 @@ Included are some Physics, Biology and Chemistry simulations experiments
     src/simulations/Explosion.h
     src/simulations/Explosion.cpp
     ```
-  - When you run the application, your simulation should appear in the TreeView in the top-left corner
+  - When you run the application, your simulation **"Explosion"** should appear in the TreeView in the top-left corner
 ### Creating your Project / Scene and rendering it
 - Your generated **Project** class can override these methods
     ```cpp
