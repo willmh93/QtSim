@@ -5,6 +5,7 @@
 #include <QString>
 #include <QColor>
 #include <QElapsedTimer>
+#include <QKeyEvent>
 
 // Standard libraries for projects
 #include <random>
@@ -105,6 +106,9 @@ public:
     virtual void mouseUp() {}
     virtual void mouseMove() {}
     virtual void mouseWheel() {}
+
+    virtual void keyPressed(QKeyEvent *e) {}
+    virtual void keyReleased(QKeyEvent* e) {}
 
     void _destroy()
     {
@@ -385,6 +389,9 @@ public:
     void _mouseUp(int x, int y, Qt::MouseButton btn);
     void _mouseMove(int x, int y);
     void _mouseWheel(int x, int y, int delta);
+
+    void _keyPress(QKeyEvent* e);
+    void _keyRelease(QKeyEvent* e);
 
     void _draw(QNanoPainter* p);
     void onPainted(const std::vector<GLubyte>* frame);

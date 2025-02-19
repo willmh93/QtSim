@@ -88,6 +88,11 @@ public:
         painter->translate(tx, ty);
     }
 
+    void rotate(double angle)
+    {
+        painter->rotate(angle);
+    }
+
     void beginPath()
     {
         painter->beginPath();
