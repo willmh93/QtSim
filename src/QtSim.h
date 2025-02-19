@@ -50,6 +50,8 @@ private:
     void pauseSelectedProject();
     void toggleRecordSelectedProject(bool b);
 
+    
+
     private slots:
 
     void onAbout() 

@@ -529,6 +529,22 @@ void ProjectBase::_mouseWheel(int x, int y, int delta)
     }
 }
 
+void ProjectBase::_keyPress(QKeyEvent* e)
+{
+    for (Scene* scene : viewports.all_scenes)
+    {
+        scene->keyPressed(e);
+    }
+}
+
+void ProjectBase::_keyRelease(QKeyEvent* e)
+{
+    for (Scene* scene : viewports.all_scenes)
+    {
+        scene->keyReleased(e);
+    }
+}
+
 void ProjectBase::_draw(QNanoPainter* p)
 {
     Vec2 surface_size = surfaceSize();

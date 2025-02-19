@@ -25,6 +25,8 @@ Canvas2D::Canvas2D(QWidget* parent)
 {
     //setFillColor("#000000");
     setMouseTracking(true);
+    setFocusPolicy(Qt::StrongFocus);
+
 }
 
 Canvas2D::~Canvas2D()
@@ -61,6 +63,21 @@ void Canvas2D::wheelEvent(QWheelEvent* event)
     scene->_mouseWheel(mousePos.x(), mousePos.y(), event->angleDelta().y());
     update();
 }
+
+void Canvas2D::keyPressEvent(QKeyEvent* event)
+{
+    if (!scene) return;
+    scene->_keyPress(event);
+    update();
+}
+
+void Canvas2D::keyReleaseEvent(QKeyEvent* event)
+{
+    if (!scene) return;
+    scene->_keyRelease(event);
+    update();
+}
+
 
 void Canvas2D::initializeGL()
 {
