@@ -71,6 +71,11 @@ void AnnoyingRacing_Scene::sceneProcess()
 void AnnoyingRacing_Scene::viewportProcess(Viewport* ctx)
 {
     // Process Viewports running this Scene
+    int i = ctx->viewportIndex();
+
+    cars[i].process(ctx);
+    camera->x = cars[i].x;
+    camera->y = cars[i].y;
 }
 
 void AnnoyingRacing_Scene::viewportDraw(Viewport* ctx)
@@ -81,6 +86,7 @@ void AnnoyingRacing_Scene::viewportDraw(Viewport* ctx)
     for (Car &car : cars)
     {
         car.draw(ctx);
+        qDebug() << "Car accelerating: " << car.accelerating;
     }
 }
 
@@ -90,5 +96,42 @@ void AnnoyingRacing_Scene::mouseDown() {}
 void AnnoyingRacing_Scene::mouseUp() {}
 void AnnoyingRacing_Scene::mouseMove() {}
 void AnnoyingRacing_Scene::mouseWheel() {}
+
+void AnnoyingRacing_Scene::keyPressed(QKeyEvent* e)
+{
+    switch (e->key())
+    {
+        // Player 1
+        case Qt::Key_Up:    cars[0].accelerating = true; break;
+        case Qt::Key_Left:  cars[0].turning_left = true; break;
+        case Qt::Key_Right: cars[0].turning_right = true; break;
+        case Qt::Key_Down: break;
+
+
+        // Player 2
+        case Qt::Key_W: cars[1].accelerating = true; break;
+        case Qt::Key_A: cars[1].turning_left = true; break;
+        case Qt::Key_D: cars[1].turning_right = true; break;
+        case Qt::Key_S: break;
+    }
+}
+
+void AnnoyingRacing_Scene::keyReleased(QKeyEvent* e)
+{
+    switch (e->key())
+    {
+        // Player 1
+        case Qt::Key_Up:    cars[0].accelerating = false; break;
+        case Qt::Key_Left:  cars[0].turning_left = false; break;
+        case Qt::Key_Right: cars[0].turning_right = false; break;
+        case Qt::Key_Down: break;
+
+        // Player 2
+        case Qt::Key_W: cars[1].accelerating = false; break;
+        case Qt::Key_A: cars[1].turning_left = false; break;
+        case Qt::Key_D: cars[1].turning_right = false; break;
+        case Qt::Key_S: break;
+    }
+}
 
 SIM_END(AnnoyingRacing_Project)
