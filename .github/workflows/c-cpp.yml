@@ -30,14 +30,20 @@ jobs:
 
     - name: Install Qt 6.8.2 (if not cached)
       run: |
-        if [ ! -d "6.8.2" ]; then
+        if [ ! -d "6.8.2/gcc_64" ]; then
           aqt install-qt linux desktop 6.8.2 gcc_64 -m all
         fi
+
+    - name: Debug - List Qt Directory
+      run: ls -R 6.8.2
 
     - name: Set up environment variables
       run: |
         echo "QT_DIR=$(pwd)/6.8.2/gcc_64" >> $GITHUB_ENV
         echo "$QT_DIR/bin" >> $GITHUB_PATH
+
+    - name: Debug - Check qmake existence
+      run: ls -l $QT_DIR/bin/qmake
 
     - name: Show Qt version (for debug purposes)
       run: qmake --version
