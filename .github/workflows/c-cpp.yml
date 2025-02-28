@@ -1,9 +1,8 @@
-name: Build with Qt 6.8.2 and CMake (with Cache)
+name: Qt Build with Cache
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   pull_request:
 
 jobs:
@@ -20,7 +19,7 @@ jobs:
     - name: Install aqtinstall
       run: pip3 install aqtinstall
 
-    - name: Cache Qt 6.8.2
+    - name: Cache Qt
       uses: actions/cache@v3
       with:
         path: 6.8.2
@@ -34,25 +33,29 @@ jobs:
           aqt install-qt linux desktop 6.8.2 gcc_64 -m all
         fi
 
-    - name: Debug - List Qt Directory
-      run: ls -R 6.8.2
-
     - name: Set up environment variables
       run: |
         echo "QT_DIR=$(pwd)/6.8.2/gcc_64" >> $GITHUB_ENV
-        echo "$QT_DIR/bin" >> $GITHUB_PATH
+        echo "$(pwd)/6.8.2/gcc_64/bin" >> $GITHUB_PATH
+
+    - name: Debug - List Qt Directory
+      run: ls -R 6.8.2
 
     - name: Debug - Check qmake existence
-      run: ls -l $QT_DIR/bin/qmake
+      run: ls -l 6.8.2/gcc_64/bin/qmake
 
-    - name: Show Qt version (for debug purposes)
-      run: qmake --version
+    - name: Show Qt version (direct call for debugging)
+      run: |
+        $QT_DIR/bin/qmake --version
+
+    - name: Show Qt version (PATH-based check)
+      run: qmake --version  # This should work if PATH is set correctly
 
     - name: Configure with CMake
       run: |
         mkdir build
         cd build
-        cmake .. -DCMAKE_PREFIX_PATH="$QT_DIR"
+        cmake .. -DCMAKE_PREFIX_PATH=$QT_DIR
 
     - name: Build project
       run: |
