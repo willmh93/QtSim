@@ -26,6 +26,10 @@ public:
     {
     }
 
+    //Bitmap(const char *filepath) : bmp_width(0), bmp_height(0), nano_img(filepath)
+    //{
+    //}
+
     void create(int w, int h, bool smoothing=false)
     {
         bmp_width = w;

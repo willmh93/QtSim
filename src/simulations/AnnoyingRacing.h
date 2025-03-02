@@ -3,13 +3,20 @@
 
 SIM_BEG(AnnoyingRacing_Project)
 
+struct Ray
+{
+    double angle;
+    double dist;
+    bool longest;
+};
+
 class Car : public Vec2
 {
 public:
 
     const double car_w = 20;
     const double car_h = 10;
-    const double acceleration = 0.01;
+    const double acceleration = 0.05;
 
     bool accelerating = false;
     bool turning_left = false;
@@ -20,16 +27,94 @@ public:
     double angle = 0;
     double speed = 0;
 
-    void process(Viewport* ctx)
+    bool on_grass = false;
+
+    std::vector<Ray> rays;
+
+    bool point_on_grass(QImage& map_img, double x, double y)
     {
+        QColor pixel = map_img.pixelColor(x, y);
+        if (pixel.green() > 50 && pixel.red() < 10 && pixel.blue() < 10)
+            return true;
+        return false;
+    }
+
+    double project_dist(double angle_offset, QImage& map_img)
+    {
+        double step = 10.0;
+        double test_dist = step;
+        double project_angle = angle + angle_offset;
+
+        // If car on grass, skip ahead until we find road
+        if (on_grass)
+        {
+            for (int i = 0; i < 50; i++)
+            {
+                double test_x = x + cos(project_angle) * test_dist;
+                double test_y = y + sin(project_angle) * test_dist;
+
+                // Have we found the road?
+                if (!point_on_grass(map_img, test_x, test_y))
+                    break;
+
+                test_dist += step;
+            }
+        }
+
+        // Check for grass (i.e. walls)
+        for (int i=0; i<300; i++)
+        {
+            double test_x = x + cos(project_angle) * test_dist;
+            double test_y = y + sin(project_angle) * test_dist;
+
+            if (point_on_grass(map_img, test_x, test_y))
+                break;
+
+            test_dist += step;
+        }
+
+        return test_dist;
+    }
+
+    std::vector<Vec2> predict_ray(double angle, QImage& map_img)
+    {
+        double current_angle = angle;
+        double current_x = x;
+        double current_y = y;
+
+        for (int i = 0; i < 300; i++)
+        {
+            // For this future point, test possible angles
+
+            for (double test_angle = -90; test_angle < 90; test_angle += 10)
+            {
+                double angle = test_angle * M_PI / 180.0;
+                double ray_length = project_dist(angle, map_img);
+
+            }
+        }
+    }
+
+    void process(Viewport* ctx, QImage &map_img)
+    {
+        on_grass = point_on_grass(map_img, x, y);
+
         if (turning_left)
-            angle -= 0.01;
+            angle -= speed * 0.03;
         if (turning_right)
-            angle += 0.01;
+            angle += speed * 0.03;
 
         if (accelerating)
         {
             speed += acceleration;
+        }
+
+        // Air resistance
+        speed *= 0.985;
+
+        if (on_grass)
+        {
+            speed *= 0.9;
         }
 
         vx = cos(angle) * speed;
@@ -70,6 +155,9 @@ struct AnnoyingRacing_Scene : public Scene
 
     vector<Car> cars;
 
+    QImage map_img;
+    QNanoImage *map;
+
     void sceneAttributes(Options* options) override;
 
     void sceneStart() override;
@@ -92,7 +180,7 @@ struct AnnoyingRacing_Scene : public Scene
 
 struct AnnoyingRacing_Project : public Project<AnnoyingRacing_Scene>
 {
-    int panel_count = 1;
+    int panel_count = 2;
 
     void projectAttributes(Options* options) override;
     void projectPrepare() override;
