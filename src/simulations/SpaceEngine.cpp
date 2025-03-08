@@ -2,12 +2,12 @@
 #include "Options.h"
 SIM_BEG(SpaceEngine)
 
-void SpaceEngine::projectPrepare()
+void SpaceEngine_Project::projectPrepare()
 {
-    makeScenes(1)->mountTo(newLayout());
+    create<SpaceEngine_Scene>(1)->mountTo(newLayout());
 }
 
-void SpaceEngineScene::sceneAttributes(Options* options)
+void SpaceEngine_Scene::sceneAttributes(Input* options)
 {
     //camera.enable();
 
@@ -28,29 +28,31 @@ void SpaceEngineScene::sceneAttributes(Options* options)
 
     //options->slider("Particles", &particle_count, 10, 20000);
 
+
     options->realtime_checkbox("Optimize Gravity", &optimize_gravity);
     options->realtime_checkbox("Optimize Collisions", &optimize_collisions);
 
     options->realtime_checkbox("Draw Gravity Grid", &draw_gravity_grid);
     options->realtime_checkbox("Draw Collision Grid", &draw_collision_grid);
 
-
-    options->realtime_slider("Steps Per Frame", &steps_per_frame, 1, 100, 1);
+    options->realtime_slider("Steps Per Frame", &steps_per_frame, 1, 100);
     
-    AttributeItem* timestep_slider = options->realtime_slider("Time step (seconds)",
+    //step_seconds = 0.1;
+
+    auto timestep_slider = options->realtime_slider("Time step (seconds)",
         &step_seconds,
-        step_seconds * 0.5,
+        0,//step_seconds * 0.5,
         step_seconds * 10,
         step_seconds * 0.1);
         //&step_seconds_min, 
         //&step_seconds_max, 
         //&step_seconds_step);
 
-    timestep_slider->label_value = [this](double seconds)
-    {
-        double seconds_processed_by_second = seconds * 60;
-        return normalizeSeconds(seconds_processed_by_second) + " / second";
-    };
+    ///timestep_slider->label_value = [this](double seconds)
+    ///{
+    ///    double seconds_processed_by_second = seconds * 60;
+    ///    return normalizeSeconds(seconds_processed_by_second) + " / second";
+    ///};
 
 
     options->realtime_slider("Collision Substeps", &collision_substeps, 1, 20, 1);
@@ -70,21 +72,22 @@ void SpaceEngineScene::sceneAttributes(Options* options)
 }
 
 
-void SpaceEngineScene::sceneStart()
+void SpaceEngine_Scene::sceneStart()
 {
     //world_size = start_world_size;
-    bmp_scale = world_size / density_bmp_size;
     time_elapsed = 0;
 
     //cam.setZoom(((double)height()) / world_size);
 
-    density_bmp.create(density_bmp_size, density_bmp_size, true);
+    //bmp_scale = world_size / density_bmp_size;
+    //density_bmp.create(density_bmp_size, density_bmp_size, true);
     
+    pool.setMaxThreadCount(thread_count);
     particles.clear();
     //particles = start_particles;
 }
 
-void SpaceEngineScene::sceneDestroy()
+void SpaceEngine_Scene::sceneDestroy()
 {
     particles.clear();
 }
@@ -141,80 +144,9 @@ void SpaceEngineScene::sceneDestroy()
     }
 }*/
 
-void SpaceEngineScene::sceneProcess()
-{
-    //if (cache->missing())
-    {
-        for (int i = 0; i < steps_per_frame; i++)
-        {
-            processGravity();
-            processCollisions();
 
-            for (Particle& n : particles)
-            {
-                n.x += n.vx * step_seconds;
-                n.y += n.vy * step_seconds;
-            }
 
-            time_elapsed += step_seconds;
-        }
-    }
-
-    //cache->apply(particles);
-
- 
-    vector<vector<double>> density_map;
-    double min_density = std::numeric_limits<double>::max();
-    double max_density = 0;
-
-    double world_pixel_radius = bmp_scale / 2;
-
-    int len = (int)particles.size();
-    for (int y = 0; y < density_bmp_size; y++)
-    {
-        vector<double> density_row;
-        for (int x = 0; x < density_bmp_size; x++)
-        {
-            double cx = ((-density_bmp_size / 2) + (x + 0.5)) * bmp_scale;
-            double cy = ((-density_bmp_size / 2) + (y + 0.5)) * bmp_scale;
-            double sum_density = 0;
-
-            for (int i = 0; i < len; i++)
-            {
-                Particle& n = particles[i];
-                //if (n.x < left || n.y < top || n.x > right || n.y > bottom)
-               
-                double dx = n.x - cx;
-                double dy = n.y - cy;
-                double d = sqrt(dx * dx + dy * dy);
-                if (d < world_pixel_radius) d = world_pixel_radius;
-                sum_density += 1 / (d + 0.001);
-            }
-
-            double avg_density = sum_density / len;
-            if (avg_density > max_density) max_density = avg_density;
-            if (avg_density < min_density) min_density = avg_density;
-
-            density_row.push_back(avg_density);
-        }
-        density_map.emplace_back(density_row);
-    }
-
-    double density_range = (max_density - min_density);
-    for (int y = 0; y < density_bmp_size; y++)
-    {
-        vector<double>& dist_row = density_map[y];
-        for (int x = 0; x < density_bmp_size; x++)
-        {
-            double avg_density = dist_row[x];
-            double normalized_density = (avg_density - min_density) / density_range;
-            int heat = (int)(normalized_density * 255);
-            density_bmp.setPixel(x, y, heat, 0, 0, 170);
-        }
-    }
-}
-
-void SpaceEngineScene::buildUniformGrid(double cellSize, ParticleGrid& grid)
+void SpaceEngine_Scene::buildUniformGrid(double cellSize, ParticleGrid& grid)
 {
     grid.clear();
     grid.reserve(particles.size());
@@ -238,30 +170,50 @@ void SpaceEngineScene::buildUniformGrid(double cellSize, ParticleGrid& grid)
     }
 }
 
-void SpaceEngineScene::processParticlePairGravity(Particle* n0, Particle* n1)
+void SpaceEngine_Scene::processParticlePairGravity(Particle* n0, Particle* n1, bool only_n0)
 {
     double dx = n1->x - n0->x;
     double dy = n1->y - n0->y;
     double r = sqrt(dx * dx + dy * dy);
 
+    if (r < n0->r * 2)
+        r = n0->r * 2;
+
     double force_magnitude = gravity * (n0->mass * n1->mass) / (r * r); // No r^2 because F = G_2D * m1 * m2 / r
     double fx = force_magnitude * (dx / r);
     double fy = force_magnitude * (dy / r);
 
-    // Compute accelerations
-    double ax = fx / n0->mass;
-    double ay = fy / n0->mass;
-
-    // By Newton's Third Law, apply the opposite force to particle 2
-    double ax2 = -fx / n1->mass;
-    double ay2 = -fy / n1->mass;
+    //// Compute accelerations
+    //double ax = fx / n0->mass;
+    //double ay = fy / n0->mass;
+    //
+    //// By Newton's Third Law, apply the opposite force to particle 2
+    //double ax2 = -fx / n1->mass;
+    //double ay2 = -fy / n1->mass;
 
     // Update velocities of particle 1
-    n0->vx += ax * step_seconds;
-    n0->vy += ay * step_seconds;
+    n0->fx += fx;// * step_seconds;
+    n0->fy += fy;// * step_seconds;
 
-    n1->vx += ax2 * step_seconds;
-    n1->vy += ay2 * step_seconds;
+    if (!only_n0)
+    {
+        n1->fx -= fx;// * step_seconds;
+        n1->fy -= fy;// * step_seconds;
+    }
+}
+
+void SpaceEngine_Scene::processParticleRepulsion(Particle* n0, Particle* n1, bool only_n0)
+{
+    /*double dx = n1->x - n0->x;
+    double dy = n1->y - n0->y;
+    double d = sqrt(dx * dx + dy * dy);
+    double collide_dist = n0->r + n1->r;
+
+    if (d <= collide_dist)
+    {
+        double near_ratio = (collide_dist - d) / collide_dist;
+        double impuse_x = ;
+    }*/
 }
 
 inline float fastSqrt(float number) {
@@ -285,7 +237,7 @@ inline float fastSqrt(float number) {
     return number * y; // Since y is approximately 1/sqrt(number), multiply to get sqrt(number)
 }
 
-void SpaceEngineScene::processCellPairGravity(CellData& c0, CellData& c1)
+void SpaceEngine_Scene::processCellPairGravity(CellData& c0, CellData& c1)
 {
     //double dx = c1.cx - c0.cx;
     //double dy = c1.cy - c0.cy;
@@ -364,8 +316,311 @@ void SpaceEngineScene::processCellPairGravity(CellData& c0, CellData& c1)
     //}
 }
 
+// Return true if a collision was resolved, false if not
+/*bool SpaceEngineScene::checkAndResolveCollision(Particle* n0, Particle* n1)
+{
+    double dx = n1->x - n0->x;
+    double dy = n1->y - n0->y;
+    double dist2 = dx * dx + dy * dy;
+    double rSum = n0->r + n1->r;
 
-void SpaceEngineScene::processGravity()
+    if (dist2 >= rSum * rSum) {
+        return false; // no collision
+    }
+
+    double dist = std::sqrt(dist2);
+    if (dist < 1e-12) {
+        // Prevent division by zero
+        // You could either skip or forcibly nudge them...
+        return false;
+    }
+
+    // 1) Compute the collision normal
+    double nx = dx / dist; // unit collision normal x
+    double ny = dy / dist; // unit collision normal y
+
+    // 2) Compute overlap
+    double overlap = rSum - dist;
+
+    // 3) Positionally correct so circles do not overlap
+    double m0 = n0->mass, m1 = n1->mass;
+    double invMassSum = 1.0 / (m0 + m1);
+
+    // how much to push each
+    double push0 = (m1 * invMassSum) * overlap;
+    double push1 = (m0 * invMassSum) * overlap;
+
+    // move n0 back along normal, n1 forward along normal
+    n0->x -= push0 * nx;
+    n0->y -= push0 * ny;
+    n1->x += push1 * nx;
+    n1->y += push1 * ny;
+
+    // 4) Now compute the relative velocity along that normal
+    double vxRel = n1->vx - n0->vx;
+    double vyRel = n1->vy - n0->vy;
+    double relDotN = (vxRel * nx + vyRel * ny);
+
+    // If they are already separating, no impulse needed
+    if (relDotN > 0) {
+        return true;
+    }
+
+    // 5) Compute impulse scalar with restitution
+    //   j = -(1 + e) * (v_rel . n) / (1/m0 + 1/m1)
+    double j = -(1.0 + particle_bounce) * relDotN / ((1.0 / m0) + (1.0 / m1));
+
+    // 6) Apply impulse to each velocity
+    double impulseX = j * nx;
+    double impulseY = j * ny;
+
+    n0->vx -= impulseX / m0;
+    n0->vy -= impulseY / m0;
+    n1->vx += impulseX / m1;
+    n1->vy += impulseY / m1;
+
+    return true;
+}*/
+
+
+
+bool SpaceEngine_Scene::resolveCollisionOld(Particle* n0, Particle* n1)
+{
+    double dx = n1->x - n0->x;
+    double dy = n1->y - n0->y;
+    double dist2 = dx * dx + dy * dy;
+    double rSum = n0->r + n1->r;
+
+    if (dist2 >= rSum * rSum) {
+        return false; // no collision
+    }
+
+    double dist = std::sqrt(dist2);
+    if (dist < 1e-12) {
+        // Prevent division by zero
+        // You could either skip or forcibly nudge them...
+        return false;
+    }
+
+    // 1) Compute the collision normal
+    double nx = dx / dist; // unit collision normal x
+    double ny = dy / dist; // unit collision normal y
+
+    // 2) Compute overlap
+    double overlap = rSum - dist;
+
+    // 3) Positionally correct so circles do not overlap
+    double m0 = n0->mass, m1 = n1->mass;
+    double invMassSum = 1.0 / (m0 + m1);
+
+    // how much to push each
+    double push0 = (m1 * invMassSum) * overlap;
+    double push1 = (m0 * invMassSum) * overlap;
+
+    // move n0 back along normal, n1 forward along normal
+    n0->sum_ox -= push0 * nx;
+    n0->sum_oy -= push0 * ny;
+    n1->sum_ox += push1 * nx;
+    n1->sum_oy += push1 * ny;
+
+    // 4) Now compute the relative velocity along that normal
+    double vxRel = n1->vx - n0->vx;
+    double vyRel = n1->vy - n0->vy;
+    double relDotN = (vxRel * nx + vyRel * ny);
+
+    // If they are already separating, no impulse needed
+    if (relDotN > 0) {
+        return true;
+    }
+
+    // 5) Compute impulse scalar with restitution
+    //   j = -(1 + e) * (v_rel . n) / (1/m0 + 1/m1)
+    double j = -(1.0 + particle_bounce) * relDotN / ((1.0 / m0) + (1.0 / m1));
+
+    // 6) Apply impulse to each velocity
+    double impulseX = j * nx;
+    double impulseY = j * ny;
+
+    n0->fx -= (impulseX / m0);
+    n0->fy -= (impulseY / m0);
+    n1->fx += (impulseX / m1);
+    n1->fy += (impulseY / m1);
+
+    return true;
+}
+
+
+bool SpaceEngine_Scene::resolveCollision(Particle* n0, Particle* n1)
+{
+    double dx = n1->x - n0->x;
+    double dy = n1->y - n0->y;
+    double dist2 = dx * dx + dy * dy;
+    double radiusSum = n0->r + n1->r;
+
+    if (dist2 >= radiusSum * radiusSum) {
+        return false; // no collision
+    }
+
+    double dist = std::sqrt(dist2);
+    if (dist < 1e-12) {
+        // Prevent division by zero
+        // You could either skip or forcibly nudge them...
+        return false;
+    }
+
+    // 1) Compute the collision normal
+    double nx = dx / dist; // unit collision normal x
+    double ny = dy / dist; // unit collision normal y
+
+    // 2) Compute overlap
+    double overlap = radiusSum - dist;
+
+    // 3) Positionally correct so circles do not overlap
+    double m0 = n0->mass, m1 = n1->mass;
+    double invMassSum = 1.0 / (m0 + m1);
+
+    double correctionX = 0.5 * overlap * nx;
+    double correctionY = 0.5 * overlap * ny;
+
+    n0->sum_ox -= correctionX;
+    n0->sum_oy -= correctionY;
+    n1->sum_ox += correctionX;
+    n1->sum_oy += correctionY;
+
+    // how much to push each
+    ///double push0 = (m1 * invMassSum) * overlap * 0.5;
+    ///double push1 = (m0 * invMassSum) * overlap * 0.5;
+    ///
+    ///// move n0 back along normal, n1 forward along normal
+    ///n0->sum_ox -= push0 * nx;
+    ///n0->sum_oy -= push0 * ny;
+    ///n1->sum_ox += push1 * nx;
+    ///n1->sum_oy += push1 * ny;
+
+    // 4) Now compute the relative velocity along that normal
+    double rvx = n1->vx - n0->vx;
+    double rvy = n1->vy - n0->vy;
+    double velAlongNormal = (rvx * nx + rvy * ny);
+
+    // If they are already separating, no impulse needed
+    if (velAlongNormal > 0) {
+        return true;
+    }
+
+    // 5) Compute impulse scalar with restitution
+    //   j = -(1 + e) * (v_rel . n) / (1/m0 + 1/m1)
+    //double impulseMagnitude = -(1.0 + particle_bounce) * relDotN / ((1.0 / m0) + (1.0 / m1));
+    //float impulseMagnitude = -(1.0f + particle_bounce) * velAlongNormal / 2.0f;
+   
+    //double mult = (1.0 / ((1.0 / n0->mass) + (1.0 / n1->mass)));// / 5.0;
+    double impulseMagnitude = -(1.0 + particle_bounce) * velAlongNormal / ((1.0 / n0->mass) + (1.0 / n1->mass));
+
+    // 6) Apply impulse to each velocity
+    double impulseX = impulseMagnitude  * nx;
+    double impulseY = impulseMagnitude  * ny;
+
+    n0->fx -= impulseX;//100000;
+    n0->fy -= impulseY;//100000;
+    n1->fx += impulseX;//100000;
+    n1->fy += impulseY;//100000;
+    ///n0->fx -= (impulseX / m0);
+    ///n0->fy -= (impulseY / m0);
+    ///n1->fx += (impulseX / m1);
+    ///n1->fy += (impulseY / m1);
+
+    return true;
+}
+
+void SpaceEngine_Scene::processCollisions()
+{
+    int len = particles.size();
+
+    // Calculate appropriate cell size based on particle speed
+    double max_speed = 0;
+    double max_radius = 0;
+    for (int i = 0; i < len; i++)
+    {
+        Particle& p = particles[i];
+
+        if (p.vx > max_speed)
+            max_speed = p.vx;
+        else if (-p.vx > max_speed)
+            max_speed = -p.vx;
+        if (p.vy > max_speed)
+            max_speed = p.vx;
+        else if (-p.vy > max_speed)
+            max_speed = -p.vy;
+
+        if (p.r > max_radius)
+            max_radius = p.r;
+    }
+
+    double scaled_max_speed = max_speed * step_seconds;
+    double min_collision_cell_size = (max_radius * 2) + scaled_max_speed;
+
+    buildUniformGrid(min_collision_cell_size, collision_grid);
+
+
+
+    for (int i = 0; i < collision_substeps; i++)
+    {
+        for (int i = 0; i < len; i++)
+        {
+            Particle& p = particles[i];
+            p.sum_ox = 0;
+            p.sum_oy = 0;
+            p.sum_delta_vx = 0;
+            p.sum_delta_vy = 0;
+        }
+
+        if (optimize_collisions)
+        {
+            // Optimized
+            forEachCellAndNeighborsParticles(collision_grid, [&](Particle* a, Particle* b)
+            {
+                resolveCollision(a, b);
+            });
+        }
+        else
+        {
+            // Unoptimized
+            for (int j = 0; j < len; j++)
+            {
+                for (int q = j + 1; q < len; q++)
+                {
+                    Particle* a = &particles[j];
+                    Particle* b = &particles[q];
+                    resolveCollision(a, b);
+                }
+            }
+
+            for (int i = 0; i < len; i++)
+            {
+                auto& p = particles[i];
+                p.x += p.sum_ox;
+                p.y += p.sum_oy;
+                p.sum_ox = 0;
+                p.sum_oy = 0;
+            }
+        }
+
+        /*for (int i = 0; i < len; i++)
+        {
+            Particle& p = particles[i];
+            p.x += p.sum_ox;
+            p.y += p.sum_oy;
+            p.vx += p.sum_delta_vx;
+            p.vy += p.sum_delta_vy;
+        }*/
+    }
+
+
+}
+
+/////////////////////////////////////////////////
+//// Physics Pipeline
+
+void SpaceEngine_Scene::processGravity()
 {
     int len = particles.size();
 
@@ -403,7 +658,7 @@ void SpaceEngineScene::processGravity()
 
         forEachCellAndNeighborsParticles(gravity_grid_near, [&](Particle* a, Particle* b)
         {
-            processParticlePairGravity(a, b);
+            processParticlePairGravity(a, b, false);
         }, gravity_cell_near_grid_radius);
 
         
@@ -437,7 +692,7 @@ void SpaceEngineScene::processGravity()
             {
                 Particle* a = &particles[i];
                 Particle* b = &particles[j];
-                processParticlePairGravity(a, b);
+                processParticlePairGravity(a, b, false);
             }
         }
     }
@@ -530,214 +785,193 @@ void SpaceEngineScene::processGravity()
     }*/
 }
 
-// Return true if a collision was resolved, false if not
-bool SpaceEngineScene::checkAndResolveCollision(Particle* n0, Particle* n1)
-{
-    double dx = n1->x - n0->x;
-    double dy = n1->y - n0->y;
-    double dist2 = dx * dx + dy * dy;
-    double rSum = n0->r + n1->r;
-
-    if (dist2 >= rSum * rSum) {
-        return false; // no collision
-    }
-
-    double dist = std::sqrt(dist2);
-    if (dist < 1e-12) {
-        // Prevent division by zero
-        // You could either skip or forcibly nudge them...
-        return false;
-    }
-
-    // 1) Compute the collision normal
-    double nx = dx / dist; // unit collision normal x
-    double ny = dy / dist; // unit collision normal y
-
-    // 2) Compute overlap
-    double overlap = rSum - dist;
-
-    // 3) Positionally correct so circles do not overlap
-    double m0 = n0->mass, m1 = n1->mass;
-    double invMassSum = 1.0 / (m0 + m1);
-
-    // how much to push each
-    double push0 = (m1 * invMassSum) * overlap;
-    double push1 = (m0 * invMassSum) * overlap;
-
-    // move n0 back along normal, n1 forward along normal
-    n0->x -= push0 * nx;
-    n0->y -= push0 * ny;
-    n1->x += push1 * nx;
-    n1->y += push1 * ny;
-
-    // 4) Now compute the relative velocity along that normal
-    double vxRel = n1->vx - n0->vx;
-    double vyRel = n1->vy - n0->vy;
-    double relDotN = (vxRel * nx + vyRel * ny);
-
-    // If they are already separating, no impulse needed
-    if (relDotN > 0) {
-        return true;
-    }
-
-    // 5) Compute impulse scalar with restitution
-    //   j = -(1 + e) * (v_rel . n) / (1/m0 + 1/m1)
-    double j = -(1.0 + particle_bounce) * relDotN / ((1.0 / m0) + (1.0 / m1));
-
-    // 6) Apply impulse to each velocity
-    double impulseX = j * nx;
-    double impulseY = j * ny;
-
-    n0->vx -= impulseX / m0;
-    n0->vy -= impulseY / m0;
-    n1->vx += impulseX / m1;
-    n1->vy += impulseY / m1;
-
-    return true;
-}
-
-bool SpaceEngineScene::checkAndResolveSpringCollision(Particle* n0, Particle* n1)
-{
-    double dx = n1->x - n0->x;
-    double dy = n1->y - n0->y;
-    double dist2 = dx * dx + dy * dy;
-    double rSum = n0->r + n1->r;
-
-    if (dist2 >= rSum * rSum) {
-        return false; // no collision
-    }
-
-    double dist = std::sqrt(dist2);
-    if (dist < 1e-12) {
-        // Prevent division by zero
-        // You could either skip or forcibly nudge them...
-        return false;
-    }
-
-    // 1) Compute the collision normal
-    double nx = dx / dist; // unit collision normal x
-    double ny = dy / dist; // unit collision normal y
-
-    // 2) Compute overlap
-    double overlap = rSum - dist;
-
-    // 3) Positionally correct so circles do not overlap
-    double m0 = n0->mass, m1 = n1->mass;
-    double invMassSum = 1.0 / (m0 + m1);
-
-    // how much to push each
-    double push0 = (m1 * invMassSum) * overlap;
-    double push1 = (m0 * invMassSum) * overlap;
-
-    // move n0 back along normal, n1 forward along normal
-    n0->sum_ox -= push0 * nx;
-    n0->sum_oy -= push0 * ny;
-    n1->sum_ox += push1 * nx;
-    n1->sum_oy += push1 * ny;
-
-    // 4) Now compute the relative velocity along that normal
-    double vxRel = n1->vx - n0->vx;
-    double vyRel = n1->vy - n0->vy;
-    double relDotN = (vxRel * nx + vyRel * ny);
-
-    // If they are already separating, no impulse needed
-    if (relDotN > 0) {
-        return true;
-    }
-
-    // 5) Compute impulse scalar with restitution
-    //   j = -(1 + e) * (v_rel . n) / (1/m0 + 1/m1)
-    double j = -(1.0 + particle_bounce) * relDotN / ((1.0 / m0) + (1.0 / m1));
-
-    // 6) Apply impulse to each velocity
-    double impulseX = j * nx;
-    double impulseY = j * ny;
-
-    n0->sum_delta_vx -= (impulseX / m0);
-    n0->sum_delta_vy -= (impulseY / m0);
-    n1->sum_delta_vx += (impulseX / m1);
-    n1->sum_delta_vy += (impulseY / m1);
-
-    return true;
-}
-
-void SpaceEngineScene::processCollisions()
+void SpaceEngine_Scene::resetForces()
 {
     int len = particles.size();
-
-    double max_speed = 0;
-    double max_radius = 0;
     for (int i = 0; i < len; i++)
     {
-        Particle& p = particles[i];
-
-        if (p.vx > max_speed)
-            max_speed = p.vx;
-        else if (-p.vx > max_speed)
-            max_speed = -p.vx;
-        if (p.vy > max_speed)
-            max_speed = p.vx;
-        else if (-p.vy > max_speed)
-            max_speed = -p.vy;
-
-        if (p.r > max_radius)
-            max_radius = p.r;
+        auto& p = particles[i];
+        p.fx = 0;
+        p.fy = 0;
+        p.sum_ox = 0;
+        p.sum_oy = 0;
     }
-
-    double scaled_max_speed = max_speed * step_seconds;
-    double min_collision_cell_size = (max_radius * 2) + scaled_max_speed;
-
-    buildUniformGrid(min_collision_cell_size, collision_grid);
-
-    
-
-    for (int i = 0; i < collision_substeps; i++)
-    {
-        for (int i = 0; i < len; i++)
-        {
-            Particle& p = particles[i];
-            p.sum_ox = 0;
-            p.sum_oy = 0;
-            p.sum_delta_vx = 0;
-            p.sum_delta_vy = 0;
-        }
-
-        if (optimize_collisions)
-        {
-            // Optimized
-            forEachCellAndNeighborsParticles(collision_grid, [&](Particle* a, Particle* b)
-            {
-                checkAndResolveSpringCollision(a, b);
-            });
-        }
-        else
-        {
-            // Unoptimized
-            for (int j = 0; j < len; j++)
-            {
-                for (int q = j + 1; q < len; q++)
-                {
-                    Particle* a = &particles[j];
-                    Particle* b = &particles[q];
-                    checkAndResolveSpringCollision(a, b);
-                }
-            }
-        }
-
-        for (int i = 0; i < len; i++)
-        {
-            Particle& p = particles[i];
-            p.x += p.sum_ox;
-            p.y += p.sum_oy;
-            p.vx += p.sum_delta_vx;
-            p.vy += p.sum_delta_vy;
-        }
-    }
-
-    
 }
 
-void SpaceEngineScene::viewportDraw(Viewport*ctx)
+void SpaceEngine_Scene::computeForces()
+{
+    std::vector<QFuture<void>> futures(thread_count);
+    auto ranges = splitRanges(particles.size(), thread_count);
+
+    /*
+    // Unoptimized
+    for (int i = 0; i < len; i++)
+    {
+        for (int j = i + 1; j < len; j++)
+        {
+            Particle* a = &particles[i];
+            Particle* b = &particles[j];
+            processParticlePairGravity(a, b);
+        }
+    }
+    */
+
+    /*for (int ti = 0; ti < thread_count; ti++)
+    {
+        auto& range = ranges[ti];
+        futures[ti] = QtConcurrent::run([this, ti, range]()
+        {
+            // For each particle range...
+            int particle_count = particles.size();
+            for (int i = range.first; i < range.second; i++)
+            {
+                // Attract each particle to EVERY other particle (besides itself)
+                auto& p1 = particles[i];
+                for (int j = 0; j < particle_count; j++)
+                {
+                    if (i == j) continue;
+                    auto& p2 = particles[j];
+
+                    //processParticlePairGravity(&p1, &p2, true);
+                    //processParticleRepulsion(&p1, &p2, true);
+                }
+            }
+        });
+    }
+
+    for (auto& future : futures)
+        future.waitForFinished();*/
+
+    int len = particles.size();
+    for (int i = 0; i < len; i++)
+    {
+        for (int j = i + 1; j < len; j++)
+        {
+            Particle* a = &particles[i];
+            Particle* b = &particles[j];
+            processParticlePairGravity(a, b, false);
+        }
+    }
+
+    for (int j = 0; j < len; j++)
+    {
+        for (int q = j + 1; q < len; q++)
+        {
+            Particle* a = &particles[j];
+            Particle* b = &particles[q];
+            resolveCollision(a, b);
+        }
+    }
+
+    for (int i = 0; i < len; i++)
+    {
+        auto& p = particles[i];
+        p.x += p.sum_ox;
+        p.y += p.sum_oy;
+        p.sum_ox = 0;
+        p.sum_oy = 0;
+    }
+}
+
+void SpaceEngine_Scene::applyForcesAndUpdatePositions()
+{
+    std::vector<QFuture<void>> futures(thread_count);
+    auto ranges = splitRanges(particles.size(), thread_count);
+
+    //double substep_step_seconds = step_seconds / steps_per_frame;
+
+    for (int ti = 0; ti < thread_count; ti++)
+    {
+        auto& range = ranges[ti];
+        futures[ti] = QtConcurrent::run([this, ti, range]()
+        {
+            for (int i = range.first; i < range.second; i++)
+            {
+                auto& p = particles[i];
+                double ax = p.fx / p.mass;
+                double ay = p.fy / p.mass;
+                p.vx += ax * step_seconds;
+                p.vy += ay * step_seconds;
+                p.x += p.vx * step_seconds + p.sum_ox;
+                p.y += p.vy * step_seconds + p.sum_oy;
+            }
+        });
+    }
+
+    for (auto& future : futures)
+        future.waitForFinished();
+}
+
+void SpaceEngine_Scene::sceneProcess()
+{
+    //if (cache->missing())
+    {
+        for (int i = 0; i < steps_per_frame; i++)
+        {
+            resetForces();
+            computeForces();
+            applyForcesAndUpdatePositions();
+        }
+        time_elapsed += step_seconds * steps_per_frame;
+    }
+
+    //cache->apply(particles);
+
+
+    /*vector<vector<double>> density_map;
+    double min_density = std::numeric_limits<double>::max();
+    double max_density = 0;
+
+    double world_pixel_radius = bmp_scale / 2;
+
+    int len = (int)particles.size();
+    for (int y = 0; y < density_bmp_size; y++)
+    {
+        vector<double> density_row;
+        for (int x = 0; x < density_bmp_size; x++)
+        {
+            double cx = ((-density_bmp_size / 2) + (x + 0.5)) * bmp_scale;
+            double cy = ((-density_bmp_size / 2) + (y + 0.5)) * bmp_scale;
+            double sum_density = 0;
+
+            for (int i = 0; i < len; i++)
+            {
+                Particle& n = particles[i];
+                //if (n.x < left || n.y < top || n.x > right || n.y > bottom)
+
+                double dx = n.x - cx;
+                double dy = n.y - cy;
+                double d = sqrt(dx * dx + dy * dy);
+                if (d < world_pixel_radius) d = world_pixel_radius;
+                sum_density += 1 / (d + 0.001);
+            }
+
+            double avg_density = sum_density / len;
+            if (avg_density > max_density) max_density = avg_density;
+            if (avg_density < min_density) min_density = avg_density;
+
+            density_row.push_back(avg_density);
+        }
+        density_map.emplace_back(density_row);
+    }
+
+    double density_range = (max_density - min_density);
+    for (int y = 0; y < density_bmp_size; y++)
+    {
+        vector<double>& dist_row = density_map[y];
+        for (int x = 0; x < density_bmp_size; x++)
+        {
+            double avg_density = dist_row[x];
+            double normalized_density = (avg_density - min_density) / density_range;
+            int heat = (int)(normalized_density * 255);
+            density_bmp.setPixel(x, y, heat, 0, 0, 170);
+        }
+    }*/
+}
+
+/////////////////////////////////////////////////
+
+void SpaceEngine_Scene::viewportDraw(Viewport*ctx)
 {
     double left = -world_size / 2;
     double top = -world_size / 2;
@@ -867,7 +1101,17 @@ void SpaceEngineScene::viewportDraw(Viewport*ctx)
         p->fillText(id, n.x, n.y - 10);
     }*/
 
-    camera->setTransformFilters(false, false, false);
+    auto ranges = splitRanges(particles.size(), thread_count);
+
+    for (int ti = 0; ti < thread_count; ti++)
+    {
+        int count = ranges[ti].second - ranges[ti].first;
+        ctx->print() << "Thread " << ti << ": " << count << " particles\n";
+    }
+    ctx->print() << "Time elapsed: " << normalizeSeconds(time_elapsed) << "\n\n";
+    ctx->print() << "dt: " << scene_dt(20) << "\n";
+
+    /*camera->setTransformFilters(false, false, false);
 
     int ty = 5;
     int row_h = 18;
@@ -879,10 +1123,10 @@ void SpaceEngineScene::viewportDraw(Viewport*ctx)
     ctx->fillText("Time elapsed: " + normalizeSeconds(time_elapsed), 5, ty);
     ty += row_h;
 
-    ctx->fillText(QString("Particles: %1").arg(particles.size()), 5, ty);
+    ctx->fillText(QString("Particles: %1").arg(particles.size()), 5, ty);*/
 
     //ty += row_h;
-    //ctx->fillText(QString("Frame dt: %1").arg(frame_dt), 5, ty);
+    //ctx->fillText(QString("Frame dt: %1").arg(dt_projectProcess), 5, ty);
 }
 
 

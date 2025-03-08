@@ -2,6 +2,7 @@
 #include <QString>
 #include <qmath.h>
 #include <unordered_set>
+#include <random>
 #include "types.h"
 
 
@@ -32,7 +33,7 @@ FRect boundaries(const std::vector<T>& points)
 }
 
 template<typename T>
-std::vector<std::unique_ptr<T>> allocDelaunayTriangleMesh(
+std::vector<T> allocDelaunayTriangleMesh(
     double x0,
     double y0,
     double x1,
@@ -54,7 +55,7 @@ std::vector<std::unique_ptr<T>> allocDelaunayTriangleMesh(
 
     int maxRow = (h - (r*2)) / dy;// static_cast<int>(std::ceil((r * 2.0) / dx)) + 2;
 
-    std::vector<std::unique_ptr<T>> points;
+    std::vector<T> points;
 
     for (int row = 0; row <= maxRow; ++row)
     {
@@ -76,13 +77,16 @@ std::vector<std::unique_ptr<T>> allocDelaunayTriangleMesh(
                 y0 + y
             );*/
 
-            auto p = std::make_unique<T>(x0 + x, y0 + y);
-            points.push_back(std::move(p));
+            T p;
+            p.x = x0 + x;
+            p.y = y0 + y;
+            points.push_back(p);
         }
     }
 
     return points;
 }
+
 
 
 template <typename VecT>
@@ -354,5 +358,59 @@ Vec2 rotateVec(double cx, double cy, double angle, double x, double y);
 
 bool lineEqIntersect(Vec2 *targ, const Ray& ray1, const Ray& ray2, bool bidirectional=false);
 bool getRayRectIntersection(Vec2* back_intersect, Vec2* foward_intersect, const FRect& r, const Ray& ray);
+
+template<typename T>
+std::vector<std::vector<T>> splitVector(const std::vector<T>& objects, size_t numParts)
+{
+    std::vector<std::vector<T>> parts(numParts);
+
+    size_t partSize = objects.size() / numParts;
+    size_t remainder = objects.size() % numParts;
+
+    size_t start = 0;
+    for (size_t i = 0; i < numParts; ++i)
+    {
+        size_t thisPartSize = partSize + (i < remainder ? 1 : 0);  // Spread remainder evenly
+        parts[i] = std::vector<T>(objects.begin() + start, objects.begin() + start + thisPartSize);
+        start += thisPartSize;
+    }
+
+    return parts;
+}
+
+std::vector<std::pair<size_t, size_t>> splitRanges(size_t totalSize, size_t numParts);
+
+namespace MovingAverage
+{
+    class MA
+    {
+        int ma_count;
+        double sum;
+        std::vector<double> samples;
+
+    public:
+        MA(int ma_count) : ma_count(ma_count)
+        {}
+
+        double push(double v)
+        {
+            sum += v;
+            samples.push_back(v);
+
+            if (samples.size() > ma_count)
+            {
+                sum -= samples[0];
+                samples.erase(samples.begin());
+            }
+
+            return average();
+        }
+
+        double average()
+        {
+            return (sum / static_cast<double>(samples.size()));
+        }
+    };
+}
 
 //bool getRayRectIntersection(Vec2* targ, const FRect& r, const Ray& ray);

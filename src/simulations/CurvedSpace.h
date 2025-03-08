@@ -1,5 +1,4 @@
-#ifndef CURVEDSPACE_H
-#define CURVEDSPACE_H
+#pragma once
 #include "Project.h"
 
 SIM_BEG(CurvedSpace)
@@ -13,15 +12,15 @@ struct Particle : public Vec2
     {}
 };
 
-struct CurvedSpaceScene : public Scene
+struct CurvedSpace_Scene : public Scene
 {
-    struct LaunchConfig
+    struct Config
     {
         double radius_mult;
         double radius;
         std::vector<double> big_arr;
 
-        LaunchConfig(double radius_mult = 1, double radius = 10) :
+        Config(double radius_mult = 1, double radius = 10) :
             radius_mult(radius_mult),
             radius(radius),
             big_arr(big_arr)
@@ -33,7 +32,7 @@ struct CurvedSpaceScene : public Scene
     //    return new CurvedSpaceScene(info.radius_mult, info.radius, info.big_arr);
     //}
 
-    vector<unique_ptr<Particle>> particles;
+    vector<Particle> particles;
     double gravity = 0.5;
     double &radius_mult;
     double radius;
@@ -41,7 +40,7 @@ struct CurvedSpaceScene : public Scene
 
     std::vector<double>& big_arr;
 
-    CurvedSpaceScene(LaunchConfig& info) :
+    CurvedSpace_Scene(Config& info) :
         radius_mult(info.radius_mult),
         radius(info.radius),
         big_arr(info.big_arr)
@@ -55,10 +54,10 @@ struct CurvedSpaceScene : public Scene
 
     void gravitateSpace(double x, double y, double mass)
     {
-        for (const auto& p : particles)
+        for (auto& p : particles)
         {
-            double dx = x - p->x;
-            double dy = y - p->y;
+            double dx = x - p.x;
+            double dy = y - p.y;
 
             double r = sqrt(dx * dx + dy * dy);
 
@@ -71,12 +70,12 @@ struct CurvedSpaceScene : public Scene
             double ay = fy / mass;
 
             // Update velocities of particle 1
-            p->x += ax;
-            p->y += ay;
+            p.x += ax;
+            p.y += ay;
         }
     }
 
-    void sceneAttributes(Options* options) override;
+    void sceneAttributes(Input* options) override;
 
     //void projectPrepare();
     void sceneStart() override;
@@ -87,18 +86,15 @@ struct CurvedSpaceScene : public Scene
     void mouseDown(MouseInfo mouse);
 };
 
-struct CurvedSpace : public Project<CurvedSpaceScene>
+struct CurvedSpace_Project : public Project
 {
     int viewport_count = 4;
     
-    shared_ptr<LaunchConfig> shared_config = make_shared<LaunchConfig>();
-
-    
+    shared_ptr<CurvedSpace_Scene::Config> shared_config = make_shared<CurvedSpace_Scene::Config>();
 
     void projectPrepare() override;
-    void projectAttributes(Options* options) override;
+    void projectAttributes(Input* options) override;
     
 };
 
 SIM_END(CurvedSpace)
-#endif

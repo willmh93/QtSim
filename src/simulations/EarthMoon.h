@@ -2,19 +2,20 @@
 #include "SpaceEngine.h"
 
 SIM_BEG(EarthMoon)
-BASE_SIM(SpaceEngine)
 
-struct EarthMoon_Scene : public SpaceEngineScene
+using namespace SpaceEngine;
+
+struct EarthMoon_Scene : public SpaceEngine_Scene
 {
-    struct LaunchConfig 
+    struct Config 
     {
         bool show_moon;
-        LaunchConfig(bool show_moon = false) :
+        Config(bool show_moon = false) :
             show_moon(show_moon)
         {}
     };
 
-    EarthMoon_Scene(LaunchConfig &config) :
+    EarthMoon_Scene(Config &config) :
         show_moon(config.show_moon)
     {}
 
@@ -41,19 +42,19 @@ struct EarthMoon_Scene : public SpaceEngineScene
 
     bool planet_subparticles = false;
 
-    void sceneAttributes(Options* options);
+    void sceneAttributes(Input* options);
     void sceneStart() override;
     void sceneMounted(Viewport* ctx);
     void viewportProcess(Viewport* ctx);
     void viewportDraw(Viewport* ctx) override;
 };
 
-struct EarthMoon : public SpaceEngineTemplate<EarthMoon_Scene>
+struct EarthMoon_Project : public SpaceEngine_Project
 {
     void projectPrepare() override;
 };
 
 SIM_END(EarthMoon)
 
-
+using EarthMoon::EarthMoon_Scene;
 

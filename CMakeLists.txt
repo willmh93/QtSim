@@ -78,6 +78,10 @@ message(STATUS "Auto-generating simulations")
         "resources.qrc"
     )
 
+    # Remove precompiled/pch.cpp from the glob results
+    list(FILTER PROJECT_SOURCES EXCLUDE REGEX "src/Project\\.h$")
+
+
     file(GLOB CORE_SOURCES CONFIGURE_DEPENDS
         "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/*.h"
@@ -128,6 +132,8 @@ target_link_libraries(QtSim PRIVATE
     Qt${QT_VERSION_MAJOR}::OpenGL
     Qt${QT_VERSION_MAJOR}::OpenGLWidgets
 )
+
+target_precompile_headers(QtSim PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/Project.h")
 
 # Detect build system
 if (CMAKE_GENERATOR MATCHES "Ninja")

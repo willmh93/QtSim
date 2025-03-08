@@ -1,3 +1,5 @@
+#pragma once
+
 #include "qnanopainter.h"
 #include "World.h"
 
@@ -101,6 +103,16 @@ public:
     void setFillStyle(const QNanoColor& color)
     {
         painter->setFillStyle(color);
+    }
+
+    //void setFillStyle(const QColor &color)
+    //{
+    //    painter->setFillStyle(QNanoColor::fromQColor(color));
+    //}
+
+    void setFillStyle(Qt::GlobalColor color)
+    {
+        painter->setFillStyle(QNanoColor::fromQColor(color));
     }
 
     void setStrokeStyle(int r, int g, int b, int a = 255)

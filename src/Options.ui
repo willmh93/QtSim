@@ -348,7 +348,7 @@ QFrame {
            <enum>QTabWidget::TabShape::Rounded</enum>
           </property>
           <property name="currentIndex">
-           <number>0</number>
+           <number>1</number>
           </property>
           <widget class="QWidget" name="attributes_tab">
            <property name="styleSheet">
@@ -787,7 +787,7 @@ background-color: #2A2A3A;</string>
                          <number>24</number>
                         </property>
                         <property name="maximum">
-                         <number>60</number>
+                         <number>1000</number>
                         </property>
                         <property name="value">
                          <number>60</number>

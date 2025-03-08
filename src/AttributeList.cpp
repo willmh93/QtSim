@@ -65,3 +65,18 @@ void AttributeList::clearItems()
     }
     item_widgets.clear();
 }
+
+void AttributeList::removeItem(const QString& name)
+{
+    for (auto it=item_widgets.begin(); it != item_widgets.end(); it++)
+    {
+        auto* w = *it;
+        if (w->name == name)
+        {
+            layout->removeWidget(w);
+            delete w;
+            item_widgets.erase(it);
+            break;
+        }
+    }
+}

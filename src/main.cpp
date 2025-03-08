@@ -122,17 +122,17 @@ int main(int argc, char *argv[])
     QApplication a(argc, argv);
     //a.setStyleSheet("* { border: 1px solid red; }");
 
-    QString sourceFile = "mycode.cpp";
+    /*QString sourceFile = "mycode.cpp";
     QString outFile = getOutputLibraryName("mycode");
 
     if (compileCode(sourceFile, outFile))
     {
         loadLibraryAndExecute(getOutputLibraryName("mycode"));
-    }
+    }*/
 
     QtSim w;
     w.setWindowTitle("QtSim v1.0");
-    w.setStyleSheet("background: #2E2E3E;");
+    w.setStyleSheet("background: #1B1B2B;");
     w.resize(1024, 768);
     //w.setWindowIcon(QIcon(":/resources/icon.png"));
     w.setWindowIcon(QIcon(":/resources/icon.ico"));

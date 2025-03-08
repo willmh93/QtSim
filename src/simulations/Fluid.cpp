@@ -4,16 +4,17 @@ SIM_DECLARE(Fluid, "Physics", "Fabric")
 // Shared variables (available to all scenes)
 
 
-void Fluid::projectAttributes(Options* options)
+void Fluid_Project::projectAttributes(Input* options)
 {
     // Project settings
     options->realtime_slider("Viewport Count", &viewport_count, 1, 36, 1);
 }
 
-void Fluid::projectPrepare()
+void Fluid_Project::projectPrepare()
 {
     auto& layout = newLayout();
-    Fluid::makeScenes(viewport_count)->mountTo(layout);
+    //Fluid::makeScenes(viewport_count)->mountTo(layout);
+    create<Fluid_Scene>(viewport_count)->mountTo(layout);
 
     //auto& layout = setLayout(viewport_count);
     //for (Viewport* viewport : layout)
@@ -22,9 +23,9 @@ void Fluid::projectPrepare()
     //}
 }
 
-void FluidScene::sceneAttributes(Options* options)
+void Fluid_Scene::sceneAttributes(Input* options)
 {
-    // Scene Settings
+    // SceneBase Settings
     options->realtime_slider("Timestep", &timestep, 0.01, 0.1, 0.01);
     options->realtime_slider("Particle Count", &particle_count, 10, 1000, 10);
     options->realtime_slider("Spring Distance", &spring_dist, 10.0, 100.0, 10.0);
@@ -36,7 +37,7 @@ void FluidScene::sceneAttributes(Options* options)
 
 
 
-void FluidScene::sceneStart()
+void Fluid_Scene::sceneStart()
 {
     // Initialize scene
     camera->setOriginViewportAnchor(Anchor::CENTER);
@@ -53,14 +54,14 @@ void FluidScene::sceneStart()
     }
 }
 
-void FluidScene::sceneDestroy()
+void Fluid_Scene::sceneDestroy()
 {
     for (Particle *p : particles)
         delete p;
     particles.clear();
 }
 
-void FluidScene::sceneProcess()
+void Fluid_Scene::sceneProcess()
 {
     delaunay.triangulate(particles, triangles);
     delaunay.extractLinks(triangles, links);
@@ -86,21 +87,21 @@ void FluidScene::sceneProcess()
     }
 }
 
-void FluidScene::viewportDraw(Viewport* ctx)
+void Fluid_Scene::viewportDraw(Viewport* ctx)
 {
     ctx->drawWorldAxis();
     ctx->setLineCap(LineCap::CAP_ROUND);
 
     // Fill triangles
     ctx->setFillStyle(127, 0, 0 );
-    ctx->beginPath();
     for (auto& tri : triangles)
     {
+        ctx->beginPath();
         ctx->moveTo(tri.a->x, tri.a->y);
         ctx->lineTo(tri.b->x, tri.b->y);
         ctx->lineTo(tri.c->x, tri.c->y);
+        ctx->fill();
     }
-    ctx->fill();
 
     // Fill particles
     ctx->setFillStyle(255, 255, 255);
@@ -146,10 +147,10 @@ void FluidScene::viewportDraw(Viewport* ctx)
     ctx->fillText(QString("Particles: %1").arg(particles.size()), 5, ty);
 
     ty += row_h;
-    //p->fillText(QString("Frame dt: %1").arg(frame_dt), 5, ty);
+    //p->fillText(QString("Frame dt: %1").arg(dt_projectProcess), 5, ty);
 }
 
-void FluidScene::applyLinkViscosity(Particle* a, Particle* b, double r, double strength, double dt)
+void Fluid_Scene::applyLinkViscosity(Particle* a, Particle* b, double r, double strength, double dt)
 {
     const double radiusSq = r * r;
 
@@ -181,7 +182,7 @@ void FluidScene::applyLinkViscosity(Particle* a, Particle* b, double r, double s
     b->vy -= dvy * impulse;
 }
 
-void FluidScene::applyViscosityAll(double r, double strength, double dt)
+void Fluid_Scene::applyViscosityAll(double r, double strength, double dt)
 {
     for (Particle* a : particles)
     {
@@ -193,7 +194,7 @@ void FluidScene::applyViscosityAll(double r, double strength, double dt)
     }
 }
 
-void FluidScene::spring(Particle* a, Particle* b, double restLength, double k, double damping, double deltaTime)
+void Fluid_Scene::spring(Particle* a, Particle* b, double restLength, double k, double damping, double deltaTime)
 {
     // Direction vector between particles
     double dx = b->x - a->x;
@@ -223,7 +224,5 @@ void FluidScene::spring(Particle* a, Particle* b, double restLength, double k, d
     b->vx -= totalImpulse * nx;
     b->vy -= totalImpulse * ny;
 }
-
-
 
 SIM_END(Fluid)

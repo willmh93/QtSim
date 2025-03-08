@@ -5,6 +5,12 @@
 #include <QString>
 #include <QColor>
 #include <QElapsedTimer>
+#include <QFuture>
+#include <QThreadPool>
+#include <QtConcurrent/QtConcurrent>
+
+#include <QOpenGLShaderProgram>
+#include <QMatrix4x4>
 
 // Standard libraries for projects
 #include <random>
@@ -23,7 +29,7 @@ using namespace std;
 #include "CacheContext.h"
 
 // Graphics
-#include "FFmpegWorker.h"
+//#include "FFmpegWorker.h"
 #include "DrawingContext.h"
 #include "graphics.h"
 
@@ -35,21 +41,32 @@ using namespace std;
 template<typename... Ts>
 std::vector<QString> VectorizeArgs(Ts&&... args) { return { QString::fromUtf8(std::forward<Ts>(args))... }; }
 
-#define SIM_BEG(cls) namespace NS_##cls {
-#define SIM_DECLARE(cls, ...) namespace NS_##cls { AutoRegisterProject<cls> register_##cls(VectorizeArgs(__VA_ARGS__));
-#define BASE_SIM(cls) using namespace NS_##cls; //typedef NS_##cls::Sim cls;
-//#define BASE_SIM(id) namespace NS_##id {
-#define SIM_END(cls) } using NS_##cls::cls;
+#define SIM_BEG(ns) namespace ns{
+#define SIM_DECLARE(ns, ...) namespace ns { AutoRegisterProject<ns##_Project> register_##ns(VectorizeArgs(__VA_ARGS__));
+#define SIM_END(ns) } using ns::ns##_Project;
 
+//#define BASE_SIM(cls) using namespace cls;
+// 
 //#define CHILD_SORT(...) AutoRegisterProjectOrder register_order(VectorizeArgs(__VA_ARGS__));
 
+
+// Declarations
+class ProjectWorker;
+class Options;
+class FFmpegWorker;
+
+// Forward declare crossreferences
 class QNanoPainter;
 class Canvas2D;
 
 class Layout;
 class Viewport;
-class ProjectBase;
+class Project;
 
+//template<typename T>
+//class SceneBase
+//{
+//};
 
 class Scene
 {
@@ -58,9 +75,15 @@ class Scene
 
     Options* options = nullptr;
 
+    QElapsedTimer timer_sceneProcess;
+    int dt_sceneProcess;
+    size_t dt_call_index;
+    std::vector<MovingAverage::MA> dt_ma_list;
+
 protected:
 
     friend class Viewport;
+    friend class Project;
 
     std::vector<Viewport*> mounted_to_viewports;
 
@@ -73,30 +96,33 @@ public:
 
     std::shared_ptr<void> temporary_environment;
 
-    struct LaunchConfig {};
+    struct Config {};
 
-    //static_assert(has_launch_config<Scene>::value, "Derived class must define InternalClass");
+    //static_assert(has_launch_config<SceneBase>::value, "Derived class must define InternalClass");
 
-    ProjectBase* main = nullptr;
+    Project* main = nullptr;
     Camera* camera = nullptr;
     CacheContext* cache = nullptr;
 
     MouseInfo *mouse;
 
     Scene() : gen(rd()) {}
-    Scene(LaunchConfig& info) : gen(rd()) {}
+    //SceneBase(Config& info) : gen(rd()) {}
     virtual ~Scene() = default;
 
+   
     void mountTo(Viewport* viewport);
     void mountTo(Layout& viewports);
     void mountToAll(Layout& viewports);
     
-    virtual void sceneAttributes(Options* options) {}
+    virtual void sceneAttributes(Input* options) {}
     virtual void sceneStart() {}
     virtual void sceneMounted(Viewport *ctx) {}
     virtual void sceneStop() {}
     virtual void sceneDestroy() {}
     virtual void sceneProcess() = 0;
+
+    virtual void loadShaders() {}
 
     virtual void viewportProcess(Viewport* ctx) {}
     virtual void viewportDraw(Viewport* ctx) = 0;
@@ -121,13 +147,23 @@ public:
     {
         return camera->toWorldOffset({ stage_offX, stage_offY });
     }
+
+   
+    int scene_dt(int average_samples=1)
+    {
+        if (dt_call_index >= dt_ma_list.size())
+            dt_ma_list.push_back(MovingAverage::MA(average_samples));
+
+        auto& ma = dt_ma_list[dt_call_index++];
+        return ma.push(dt_sceneProcess);
+    }
 };
 
 class Viewport : public DrawingContext
 {
 protected:
 
-    friend class ProjectBase;
+    friend class Project;
     friend class Scene;
     friend class Layout;
 
@@ -141,8 +177,39 @@ protected:
 
     double x;
     double y;
+
+    QString print_text;
+    QTextStream print_stream;
+
+    OffscreenGLSurface offscreen_surface;
     
 public:
+
+    QMatrix4x4 projectionMatrix;
+    QMatrix4x4 transformMatrix;
+    QMatrix4x4 modelViewMatrix()
+    {
+        return projectionMatrix * transformMatrix;
+    }
+
+    QOpenGLExtraFunctions* beginGL()
+    {
+        return offscreen_surface.begin(width, height);
+    }
+
+    void endGL()
+    {
+        // Draw FBO to QNanoPainter
+        QTransform cur_transform = painter->currentTransform();
+        painter->resetTransform();
+        painter->transform(default_viewport_transform);
+
+        offscreen_surface.drawToPainter(painter);
+        offscreen_surface.end();
+
+        painter->resetTransform();
+        painter->transform(cur_transform);
+    }
 
     Viewport(
         Layout *layout,
@@ -179,6 +246,11 @@ public:
         scene->registerMount(this);
         return _sim;
     }
+
+    QTextStream& print()
+    {
+        return print_stream;
+    }
 };
 
 class Layout
@@ -187,7 +259,7 @@ class Layout
 
 protected:
 
-    friend class ProjectBase;
+    friend class Project;
     friend class Scene;
 
     Options* options;
@@ -267,16 +339,25 @@ public:
     int count() const {
         return static_cast<int>(viewports.size());
     }
-
 };
 
-class ProjectBase : public QObject
+struct SimSceneList : public std::vector<Scene*>
+{
+    void mountTo(Layout& viewports)
+    {
+        for (size_t i = 0; i < size(); i++)
+            at(i)->mountTo(viewports[i]);
+    }
+};
+
+class Project : public QObject
 {
     Q_OBJECT
 
     int sim_uid = -1;
 
     Options* options;
+    Input* input_proxy;
 
     QThread* ffmpeg_thread = nullptr;
     FFmpegWorker* ffmpeg_worker = nullptr;
@@ -293,10 +374,18 @@ class ProjectBase : public QObject
     std::vector<GLubyte> frame_buffer; // Not changed until next process
     
     Canvas2D* canvas = nullptr;
-    QElapsedTimer dt_timer;
-    int frame_dt;
+    QElapsedTimer timer_projectProcess;
+    int dt_projectProcess;
 
     Layout viewports;
+
+    bool shaders_loaded = false;
+
+    void _loadShaders()
+    {
+        for (Scene* scene : viewports.all_scenes)
+            scene->loadShaders();
+    }
 
 public:
 
@@ -333,21 +422,79 @@ public:
         return findProjectInfo(sim_uid);
     }
 
-    void setProjectInfoState(ProjectInfo::State state)
+    void setProjectInfoState(ProjectInfo::State state);
+
+    // Shared Scene creators
+    template<typename SceneType>
+    static SceneType* create()
     {
-        getProjectInfo()->state = state;
-        options->refreshTreeUI();
+        auto config = make_shared<typename SceneType::Config>();
+        SceneType* scene;
+
+        if constexpr (std::is_constructible_v<SceneType, typename SceneType::Config&>)
+        {
+            scene = new SceneType(*config);
+            scene->temporary_environment = config;
+        }
+        else
+            scene = new SceneType();
+
+        return scene;
+    }
+
+    template<typename SceneType> static SceneType* create(typename SceneType::Config config)
+    {
+        auto config_ptr = make_shared<typename SceneType::Config>(config);
+
+        SceneType* scene = new SceneType(*config_ptr);
+        scene->temporary_environment = config_ptr;
+        return scene;
+    }
+
+    template<typename SceneType>
+    static SceneType* create(shared_ptr<typename SceneType::Config> config)
+    {
+        if (!config)
+            throw "Launch Config wasn't created";
+
+        SceneType* scene = new SceneType(*config);
+        scene->temporary_environment = config;
+        return scene;
+    }
+
+    template<typename SceneType>
+    static shared_ptr<SimSceneList> create(int count)
+    {
+        auto ret = make_shared<SimSceneList>();
+        for (int i = 0; i < count; i++)
+            ret->push_back(create<SceneType>());
+        return ret;
+    }
+
+    template<typename SceneType>
+    static shared_ptr<SimSceneList> create(int count, typename SceneType::Config config)
+    {
+        auto ret = make_shared<SimSceneList>();
+        for (int i = 0; i < count; i++)
+            ret->push_back(create<SceneType>(config));
+        return ret;
     }
 
 protected:
 
-    CacheContext cache;
+    CacheContext cache; // todo: Make dynamic and remove include
 
     friend class QtSim;
+    friend class ProjectWorker;
     friend class Canvas2D;
 
-    bool started;
-    bool paused;
+    ProjectWorker* worker = nullptr;
+
+    bool started = false;
+    bool paused = false;
+
+    double canvas_width = 0;
+    double canvas_height = 0;
 
 public:
 
@@ -359,13 +506,16 @@ public:
 
     void configure(int sim_uid, Canvas2D *canvas, Options *options);
 
+    void onResize(); // Called on main GUI thread
+
     int canvasWidth();  // Screen dimensions of canvas
     int canvasHeight(); // Screen dimensions of canvas
-    int getFrameTimeDelta() { return frame_dt; }
+    int getFrameTimeDelta() { return dt_projectProcess; }
 
     void updateViewportRects();
     Vec2 surfaceSize(); // Dimensions of FBO (depends on whether recording or not)
 
+    // Make protected
     void _projectPrepare();
     void _projectStart();
     void _projectStop();
@@ -373,11 +523,12 @@ public:
     void _projectDestroy();
     void _projectProcess();
 
-    virtual void projectAttributes(Options* options) {}
+    virtual void projectAttributes(Input* options) {}
     virtual void projectPrepare() = 0;
     virtual void projectStart() {}
     virtual void projectStop() {}
     virtual void projectDestroy() {}
+
 
     virtual void postProcess();
 
@@ -405,76 +556,13 @@ signals:
     void endRecording();
 };
 
-struct SimSceneList : public std::vector<Scene*>
-{
-    void mountTo(Layout& viewports)
-    {
-        for (size_t i = 0; i < size(); i++)
-            at(i)->mountTo(viewports[i]);
-    }
-};
-
-// Subclass ProjectBase so Project contains scene type information
-template <typename T>
-class Project : public ProjectBase
-{
-public:
-    typedef T SceneType;
-    typedef typename T::LaunchConfig LaunchConfig;
-
-    // Methods for spawning new scenes
-
-    static SceneType* createScene()
-    {
-        shared_ptr<LaunchConfig> config = make_shared<LaunchConfig>();
-        SceneType* scene;
-
-        if constexpr (std::is_constructible_v<SceneType, LaunchConfig&>)
-        {
-            scene = new SceneType(*config);
-            scene->temporary_environment = config;
-        }
-        else
-            scene = new SceneType();
-
-        return scene;
-    }
-
-    static SceneType* createScene(LaunchConfig config)
-    {
-        shared_ptr<LaunchConfig> config_ptr = make_shared<LaunchConfig>(config);
-
-        SceneType* scene = new SceneType(*config_ptr);
-        scene->temporary_environment = config_ptr;
-        return scene;
-    }
-
-    static SceneType* createScene(shared_ptr<LaunchConfig> config)
-    {
-        if (!config)
-            throw "Launch Config wasn't created";
-
-        SceneType* scene = new SceneType(*config);
-        scene->temporary_environment = config;
-        return scene;
-    }
-
-    static shared_ptr<SimSceneList> makeScenes(int count)
-    {
-        auto ret = make_shared<SimSceneList>();
-        for (int i = 0; i < count; i++)
-            ret->push_back(createScene());
-        return ret;
-    }
-};
-
 template <typename T>
 struct AutoRegisterProject
 {
     AutoRegisterProject(const std::vector<QString> &tree_path)
     {
-        ProjectBase::addProjectInfo(tree_path, []() -> ProjectBase* {
-            return (ProjectBase*)(new T());
+        Project::addProjectInfo(tree_path, []() -> Project* {
+            return (Project*)(new T());
         });
     }
 };

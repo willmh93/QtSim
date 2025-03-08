@@ -21,11 +21,13 @@
 #include "Project.h"
 
 #include "qnanopainter.h"
-#include <QOpenGLFunctions>
+
 #include <QOpenGLFramebufferObjectFormat>
 #include <QOpenGLVertexArrayObject>
 #include <QOpenGLBuffer>
 #include <QOpenGLShaderProgram>
+
+
 
 OffscreenNanoPainter::OffscreenNanoPainter()
 {}
@@ -44,15 +46,20 @@ OffscreenNanoPainter::~OffscreenNanoPainter()
 QNanoPainter* OffscreenNanoPainter::begin(int w, int h, bool capture_pixels)
 {
     QOpenGLFunctions glF(QOpenGLContext::currentContext());
-    capture_frame = capture_pixels;
+
+    glF.glGetIntegerv(GL_FRAMEBUFFER_BINDING, &previousFBO);
 
     if (w != m_width || h != m_height)
     {
         m_width = w;
         m_height = h;
 
+        if (m_fbo)
+            delete m_fbo;
+
         QOpenGLFramebufferObjectFormat format;
-        format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
+        //format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
+        format.setInternalTextureFormat(GL_RGBA8);
         m_fbo = new QOpenGLFramebufferObject(m_width, m_height, format);
         painter = new QNanoPainter();
     }
@@ -67,7 +74,7 @@ QNanoPainter* OffscreenNanoPainter::begin(int w, int h, bool capture_pixels)
 
     // Clear the framebuffer
     glF.glViewport(0, 0, m_width, m_height);
-    glF.glClearColor(0.0f, 0.0f, 0.0f, 255.0f);
+    glF.glClearColor(0.0f, 0.0f, 0.0f, 0.0f/*255.0f*/);
     glF.glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     // Create QNanoPainter and begin drawing
@@ -75,6 +82,7 @@ QNanoPainter* OffscreenNanoPainter::begin(int w, int h, bool capture_pixels)
     return painter;
 
 }
+
 void OffscreenNanoPainter::end()
 {
     painter->endFrame();
@@ -87,6 +95,8 @@ void OffscreenNanoPainter::end()
     //painter = nullptr;
 
     m_fbo->release();
+
+    glF.glBindFramebuffer(GL_FRAMEBUFFER, previousFBO);
 }
 
 void OffscreenNanoPainter::drawToPainter(QNanoPainter* p, double x, double y)
@@ -128,6 +138,84 @@ QImage OffscreenNanoPainter::toImage() const
 {
     return m_fbo->toImage();
 }
+
+
+
+OffscreenGLSurface::OffscreenGLSurface()
+{}
+
+OffscreenGLSurface::~OffscreenGLSurface()
+{
+    /*if (m_fbo)
+    {
+        m_fbo->release();
+        delete m_fbo;
+    }*/
+}
+
+QOpenGLExtraFunctions *OffscreenGLSurface::begin(int w, int h)
+{
+    //QOpenGLFunctions glF(QOpenGLContext::currentContext());
+
+    QOpenGLExtraFunctions *glF = QOpenGLContext::currentContext()->extraFunctions();
+
+    m_width = w;
+    m_height = h;
+
+    // Cache currently active FBO for restoring in end()
+    glF->glGetIntegerv(GL_FRAMEBUFFER_BINDING, &previousFBO);
+    
+    // Cache old viewport size for restoring in end()
+    GLint viewport[4];
+    glF->glGetIntegerv(GL_VIEWPORT, viewport);
+    old_vw = viewport[2];  // Width of the viewport
+    old_vh = viewport[3];  // Height of the viewport
+
+    // Make sure a FBO slot exists for this layer
+    if (current_fbo_index >= fbos.size())
+    {
+        fbos.resize(current_fbo_index + 1);
+        fbos[current_fbo_index] = std::make_unique<FBO_Info>();
+    }
+
+    // Make sure FBO exists with the correct dimensions
+    fbos[current_fbo_index]->prepare(w, h);
+
+    // Bind for offscreen rendering
+    activeFBO()->bind();
+
+    // Clear the framebuffer
+    glF->glViewport(0, 0, m_width, m_height);
+    glF->glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+    glF->glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    return glF;
+}
+void OffscreenGLSurface::end()
+{
+    QOpenGLExtraFunctions* glF = QOpenGLContext::currentContext()->extraFunctions();
+
+    glF->glViewport(0, 0, old_vw, old_vh);
+
+    // Release the active FBO, prepare for next
+    activeFBO()->release();
+    current_fbo_index++;
+
+    // Restore previously active FBO / Viewport Size
+    glF->glBindFramebuffer(GL_FRAMEBUFFER, previousFBO);
+}
+
+void OffscreenGLSurface::drawToPainter(QNanoPainter* p, double x, double y)
+{
+    auto offscreenImage = QNanoImage::fromFrameBuffer(activeFBO());
+
+    // Note: This does NOT immediately draw the image to painter.
+    // Active FBO must be retained for render pipeline.
+    p->drawImage(offscreenImage, x, y, m_width, m_height);
+}
+
+
+
 
 void Draw::arrow(DrawingContext* ctx, Vec2& a, Vec2& b, QColor color, double arrow_size)
 {

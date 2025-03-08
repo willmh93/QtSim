@@ -2,5 +2,9 @@
     <qresource prefix="/">
         <file>resources/icon.png</file>
         <file>resources/icon.ico</file>
+        <file>shaders/particle.frag</file>
+        <file>shaders/particle.vert</file>
+        <file>shaders/superfluid.frag</file>
+        <file>shaders/superfluid.vert</file>
     </qresource>
 </RCC>

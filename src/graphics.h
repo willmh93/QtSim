@@ -1,6 +1,7 @@
 #pragma once
 #include <QObject>
 #include <QImage>
+#include <QOpenGLExtraFunctions>
 #include <QOpenGLFramebufferObject>
 #include "qnanopainter.h"
 #include "types.h"
@@ -75,6 +76,8 @@ class OffscreenNanoPainter
 
     QNanoPainter* painter = nullptr;
     QOpenGLFramebufferObject* m_fbo = nullptr; 
+
+    GLint previousFBO = 0;
     
    void readPixels();
 
@@ -96,6 +99,78 @@ public:
     {
         return painter;
     }
+};
+
+struct FBO_Info
+{
+    QOpenGLFramebufferObject* fbo = nullptr;
+    int m_width = 0;
+    int m_height = 0;
+
+    ~FBO_Info()
+    {
+        if (fbo)
+        {
+            // Unbind if currently bound
+            fbo->release();
+
+            delete fbo;
+            fbo = nullptr;
+        }
+    }
+
+    void prepare(int w, int h)
+    {
+        if (fbo == nullptr || w != m_width || h != m_height)
+        {
+            m_width = w;
+            m_height = h;
+
+            // Delete the old unbound FBO (if it already exists)
+            if (fbo)
+                delete fbo;
+
+            QOpenGLFramebufferObjectFormat format;
+            //format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
+            format.setInternalTextureFormat(GL_RGBA8);
+            fbo = new QOpenGLFramebufferObject(w, h, format);
+        }
+    }
+};
+
+class OffscreenGLSurface
+{
+    int m_width = 0;
+    int m_height = 0;
+
+    int old_vw = 0;
+    int old_vh = 0;
+
+    std::vector<std::unique_ptr<FBO_Info>> fbos;
+    size_t current_fbo_index = 0;
+
+    QOpenGLFramebufferObject* activeFBO()
+    {
+        return fbos[current_fbo_index]->fbo;
+    }
+
+    GLint previousFBO = 0;
+
+public:
+
+    OffscreenGLSurface();
+    ~OffscreenGLSurface();
+
+    void newFrame()
+    {
+        current_fbo_index = 0;
+    }
+
+    QOpenGLExtraFunctions* begin(int w, int h);
+    void end();
+
+    void drawToPainter(QNanoPainter* p, double x = 0, double y = 0);
+
 };
 
 namespace Draw

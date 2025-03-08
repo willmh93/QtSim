@@ -3,13 +3,13 @@
 SIM_DECLARE(CurvedSpace, "Physics", "Experimental", "Space Curvature")
 
 
-void CurvedSpace::projectAttributes(Options* options)
+void CurvedSpace_Project::projectAttributes(Input* options)
 {
     options->realtime_slider("Viewport Count", &viewport_count, 1, 36, 1);
     options->realtime_slider("Start Radius Mult", &shared_config->radius_mult, 0.1, 2.0, 0.1); // Never add same pointer twice
 }
 
-void CurvedSpace::projectPrepare()
+void CurvedSpace_Project::projectPrepare()
 {
     auto &viewports = newLayout();
 
@@ -19,16 +19,16 @@ void CurvedSpace::projectPrepare()
     //createScene(shared_config)->mountTo(viewports[0]);
     //createScene(shared_config)->mountTo(viewports[1]);
 
-    viewports << createScene(shared_config);
-    viewports << createScene(shared_config);
-    viewports << createScene(shared_config);
-    viewports << createScene(shared_config);
-    viewports << createScene(shared_config);
+    viewports << create<CurvedSpace_Scene>(shared_config);
+    viewports << create<CurvedSpace_Scene>(shared_config);
+    viewports << create<CurvedSpace_Scene>(shared_config);
+    viewports << create<CurvedSpace_Scene>(shared_config);
+    viewports << create<CurvedSpace_Scene>(shared_config);
 
     shared_config->radius_mult = 0.3;
 
-    //construct<Scene>(shared_config)->mountTo(viewports[0]);
-    //construct<Scene>(shared_config)->mountTo(viewports[1]);
+    //construct<SceneBase>(shared_config)->mountTo(viewports[0]);
+    //construct<SceneBase>(shared_config)->mountTo(viewports[1]);
 
     //setLayout(viewport_count).constructAll<CurvedSpaceScene>(radius_mult, 10);
     //setLayout(viewport_count).
@@ -44,29 +44,29 @@ void CurvedSpace::projectPrepare()
 
 
 
-void CurvedSpaceScene::sceneAttributes(Options* options)
+void CurvedSpace_Scene::sceneAttributes(Input* options)
 {
     options->realtime_slider("Gravity", &gravity, 0.0, 1.0, 0.1);
     options->starting_checkbox("Custom Color", &custom_color);
 }
 
 
-/// Project Scene Logic
+/// Project SceneBase Logic
 
-void CurvedSpaceScene::sceneStart()
+void CurvedSpace_Scene::sceneStart()
 {
     //main->options->realtime_slider("Gravity", &gravity, 0.0, 1.0, 0.1);
     //radius = radius_mult * radius;
     particles = allocDelaunayTriangleMesh<Particle>(0, 0, 400, 400, 20);
-    //qDebug() << "Scene Constructed: " << viewport->viewport_index;
+    //qDebug() << "SceneBase Constructed: " << viewport->viewport_index;
 }
 
-void CurvedSpaceScene::sceneDestroy()
+void CurvedSpace_Scene::sceneDestroy()
 {
-    //qDebug() << "Scene Destroyed: " << viewport->viewport_index;
+    //qDebug() << "SceneBase Destroyed: " << viewport->viewport_index;
 }
 
-void CurvedSpaceScene::sceneProcess()
+void CurvedSpace_Scene::sceneProcess()
 {
     //scenes[ctx.viewport_index].process(ctx);
     //cam.setCamera(camera);
@@ -74,7 +74,7 @@ void CurvedSpaceScene::sceneProcess()
     camera->rotation += (gravity / 180.0 * M_PI);
 }
 
-void CurvedSpaceScene::viewportDraw(Viewport* ctx)
+void CurvedSpace_Scene::viewportDraw(Viewport* ctx)
 {
     srand(0);
 
@@ -92,13 +92,13 @@ void CurvedSpaceScene::viewportDraw(Viewport* ctx)
         //ctx.scaleGraphics(custom_scaling ? scale_graphics : true);
 
         ctx->beginPath();
-        ctx->circle(n->x, n->y, radius_mult * radius);
+        ctx->circle(n.x, n.y, radius_mult * radius);
         ctx->fill();
     }
 }
 
 
-void CurvedSpaceScene::mouseDown(MouseInfo mouse)
+void CurvedSpace_Scene::mouseDown(MouseInfo mouse)
 {
     gravitateSpace(mouse.world_x, mouse.world_y, 1000000);
 }

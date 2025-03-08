@@ -87,6 +87,11 @@ double getAngle(Vec2 a, Vec2 b)
     return (b - a).angle();
 }
 
+//double wrap180(double angle)
+//{
+//
+//}
+
 void DrawingContext::drawWorldAxis(
     double axis_opacity,
     double grid_opacity, 
@@ -167,10 +172,25 @@ void DrawingContext::drawWorldAxis(
     double big_step_wx = step_wx * 5.0;
     double big_step_wy = step_wy * 5.0;
 
-    fillText(QString::number(ideal_step), 0, 0);
-    fillText(QString::number(prev_step), 0, 20);
-    fillText(QString::number(next_step), 0, 40);
-    fillText(QString::number(step_stretch), 0, 60);
+    
+
+
+    /*fillText("ideal_step: " + QString::number(ideal_step), 0, 0);
+    fillText("prev_step: " + QString::number(prev_step), 0, 20);
+    fillText("next_step: " + QString::number(next_step), 0, 40);
+    fillText("step_stretch: " + QString::number(step_stretch), 0, 60);*/
+
+    double big_angle = step_stretch * M_PI * 2;
+    double small_angle = (big_angle) + M_PI/2;
+
+    double big_visibility = 1;// sin(big_angle) / 2 + 0.5;
+    double small_visibility = 0;// sin(small_angle) / 2 + 0.5;
+
+    /*fillText("big_angle: " + QString::number((int)(big_angle*180.0/M_PI)), 0, 100);
+    fillText("big_visibility: " + QString::number(big_visibility), 0, 120);
+
+    fillText("small_angle: " + QString::number((int)(small_angle * 180.0 / M_PI)), 0, 160);
+    fillText("small_visibility: " + QString::number(small_visibility), 0, 180);*/
 
     Vec2 x_perp_off = camera.toStageOffset(0, 6 * world_zoom);
     Vec2 x_perp_norm = camera.toStageOffset(0, 1).normalized();
@@ -199,7 +219,10 @@ void DrawingContext::drawWorldAxis(
     {
         //setStrokeStyle(255, 255, 255, static_cast<int>(255.0 * grid_opacity));
         //beginPath();
-        setFillStyle(255, 255, 255, 5.0 - (sin(step_stretch * M_PI) * 5.0));
+        
+
+
+        setFillStyle(255, 255, 255, big_visibility * 5.0);
 
         bool offset = false;
         Vec2 p1, p2;
@@ -232,9 +255,9 @@ void DrawingContext::drawWorldAxis(
     {
         //setStrokeStyle(255, 255, 255, static_cast<int>(255.0 * grid_opacity));
         //beginPath();
-        double small_visibility = 1 - sin(step_stretch * M_PI - M_PI/2);
-        setFillStyle(255, 255, 255, 5.0 * small_visibility);
+        
 
+        setFillStyle(255, 255, 255, 5.0 * small_visibility);
 
         bool offset = false;
         Vec2 p1, p2;
