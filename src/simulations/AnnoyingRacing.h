@@ -27,6 +27,12 @@ struct CarState
     double turningSpeed = 0;
     bool accelerating = false;
 
+    double turn_bias = 0;
+
+    double sum_turned = 0;
+
+    //bool on_grass = false;
+
     void setTurn(double _turn_speed)
     {
         turningSpeed = _turn_speed;
@@ -42,13 +48,22 @@ public:
     CarState present_state;
     CarState ghost_state;
 
-    bool on_grass = false;
-
     std::vector<Ray> rays;
 
+    bool is_grass(const QColor& pixel)
+    {
+        if (pixel.green() > 50)
+            return true;
+        return false;
+    }
+    bool is_outside_map(const QColor& pixel)
+    {
+        if (pixel.alpha() < 10)
+            return true;
+        return false;
+    }
 
-
-    bool point_on_grass(QImage& map_img, double x, double y)
+    /*bool point_on_grass(QImage& map_img, double x, double y)
     {
         QColor pixel = map_img.pixelColor(x, y);
         if (pixel.green() > 50 && pixel.red() < 10 && pixel.blue() < 10)
@@ -62,7 +77,7 @@ public:
         if (pixel.alpha() < 10)
             return true;
         return false;
-    }
+    }*/
 
     double project_dist(CarState &state, double angle_offset, QImage& map_img)
     {
@@ -71,18 +86,28 @@ public:
         double project_angle = state.angle + angle_offset;
 
         // If car on grass, skip ahead until we find road
+        QColor pixel = map_img.pixelColor(state.x, state.y);
+        bool on_grass = is_grass(pixel);
+
+        int w = map_img.width();
+        int h = map_img.height();
+
         if (on_grass)
         {
             for (int i = 0; i < 50; i++)
             {
                 double test_x = state.x + cos(project_angle) * test_dist;
                 double test_y = state.y + sin(project_angle) * test_dist;
+                if (test_x < 0 || test_y < 0 || test_x >= w || test_y >= h)
+                    return test_dist;
 
-                // Have we found the road?
-                if (!point_on_grass(map_img, test_x, test_y))
+                QColor pixel = map_img.pixelColor(test_x, test_y);
+
+                if (is_outside_map(pixel))
                     break;
 
-                if (point_outside_map(map_img, test_x, test_y))
+                // Have we found the road?
+                if (!is_grass(pixel))
                     break;
 
                 test_dist += step;
@@ -90,15 +115,18 @@ public:
         }
 
         // Check for grass (i.e. walls)
-        for (int i=0; i<300; i++)
+        for (int i=0; i<200; i++)
         {
             double test_x = state.x + cos(project_angle) * test_dist;
             double test_y = state.y + sin(project_angle) * test_dist;
+            if (test_x < 0 || test_y < 0 || test_x >= w || test_y >= h)
+                return test_dist;
 
-            if (point_on_grass(map_img, test_x, test_y))
+            QColor pixel = map_img.pixelColor(test_x, test_y);
+            if (is_outside_map(pixel))
                 break;
 
-            if (point_outside_map(map_img, test_x, test_y))
+            if (is_grass(pixel))
                 break;
 
             test_dist += step;
@@ -107,10 +135,12 @@ public:
         return test_dist;
     }
 
-    void process(CarState &state, Viewport* ctx, QImage &map_img)
+    void process(CarState &state, Viewport* ctx, QImage &map_img, double dt)
     {
-        on_grass = point_on_grass(map_img, state.x, state.y);
-        state.angle += state.turningSpeed * state.speed;
+        QColor pixel = map_img.pixelColor(state.x, state.y);
+        bool on_grass = is_grass(pixel);
+
+        state.angle += state.turningSpeed * state.speed * dt;
 
         if (state.accelerating)
         {
@@ -128,11 +158,11 @@ public:
         state.vx = cos(state.angle) * state.speed;
         state.vy = sin(state.angle) * state.speed;
 
-        state.x += state.vx;
-        state.y += state.vy;
+        state.x += state.vx * dt;
+        state.y += state.vy * dt;
     }
 
-    void process_future(CarState& state, Viewport* ctx, QImage& map_img)
+    /*void process_future(CarState& state, Viewport* ctx, QImage& map_img)
     {
         bool ghost_on_grass = point_on_grass(map_img, state.x, state.y);
 
@@ -157,7 +187,7 @@ public:
         state.y += state.vy;
 
         aiProcess(state, map_img);
-    }
+    }*/
 
 
     void aiProcess(CarState &state, QImage& map_img)
@@ -191,11 +221,13 @@ public:
         {
             // Turn left
             state.setTurn(-turn_speed);
+            state.sum_turned -= turn_speed;
         }
         else
         {
             // Turn right
             state.setTurn(turn_speed);
+            state.sum_turned += turn_speed;
         }
     }
 
@@ -210,9 +242,9 @@ public:
     }
 
 
-    void draw(CarState &state, Viewport* ctx)
+    void draw(CarState &state, Viewport* ctx, double alpha)
     {
-        ctx->setFillStyle(255, 0, 255);
+        ctx->setFillStyle(255, 0, 255, alpha);
 
         ctx->save();
         ctx->translate(state.x, state.y);

@@ -77,7 +77,7 @@ void AnnoyingRacing_Scene::viewportProcess(Viewport* ctx)
     int i = ctx->viewportIndex();
 
     Car& car = cars[i];
-    car.process(car.present_state, ctx, map_img);
+    car.process(car.present_state, ctx, map_img, 1);
 
     camera->x = car.present_state.x;
     camera->y = car.present_state.y;
@@ -110,32 +110,37 @@ void AnnoyingRacing_Scene::viewportDraw(Viewport* ctx)
 
     for (Car &car : cars)
     {
-        car.draw(car.present_state, ctx);
+        car.draw(car.present_state, ctx, 255);
 
-        ~ // Add bias
-
-        car.reset_ghost_to_present();
-        car.ghost_state.setTurn(-turn_speed);
-        for (int i = 0; i < 500; i++)
-        {
-            car.process_future(car.ghost_state, ctx, map_img);
-
-            if (i % 10 == 0)
-                car.draw(car.ghost_state, ctx);
-        }
+        //~ // Add bias
 
         car.reset_ghost_to_present();
-        car.ghost_state.setTurn(turn_speed);
-        for (int i = 0; i < 500; i++)
-        {
-            car.process_future(car.ghost_state, ctx, map_img);
+        //car.ghost_state.turn_bias = -turn_speed / 10.0;
 
-            if (i % 10 == 0)
-                car.draw(car.ghost_state, ctx);
+        car.ghost_state.sum_turned = 0;
+        for (int i = 0; i < 100; i++)
+        {
+            car.process(car.ghost_state, ctx, map_img, 2);
+            car.aiProcess(car.ghost_state, map_img);
+
+            if (i % 20 == 0)
+                car.draw(car.ghost_state, ctx, 80);
         }
 
+        /*car.reset_ghost_to_present();
+        car.ghost_state.turn_bias = turn_speed / 10.0;
 
-        /*for (auto& ray : car.rays)
+        for (int i = 0; i < 100; i++)
+        {
+            car.process(car.ghost_state, ctx, map_img, 2);
+            car.aiProcess(car.ghost_state, map_img);
+
+            if (i % 20 == 0)
+                car.draw(car.ghost_state, ctx, 80);
+        }*/
+
+
+        for (auto& ray : car.rays)
         {
             double angle = ray.angle * M_PI / 180.0;
             double d = ray.dist;
@@ -147,13 +152,13 @@ void AnnoyingRacing_Scene::viewportDraw(Viewport* ctx)
             else
                 ctx->setStrokeStyle(255, 0, 0);
 
-            ctx->moveTo(car.x, car.y);
+            ctx->moveTo(car.present_state.x, car.present_state.y);
             ctx->lineTo(
-                car.x + cos(car.angle + angle) * d,
-                car.y + sin(car.angle + angle) * d
+                car.present_state.x + cos(car.present_state.angle + angle) * d,
+                car.present_state.y + sin(car.present_state.angle + angle) * d
             );
             ctx->stroke();
-        }*/
+        }
     }
 
     
