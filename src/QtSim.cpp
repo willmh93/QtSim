@@ -29,7 +29,11 @@ void ProjectWorker::tick()
         //qDebug() << "ProjectThread::run() - Mutex LOCKED:" << QThread::currentThread()->objectName();
 
         project->_projectProcess();
-        canvas->update();
+        //canvas->update();
+
+        //QMetaObject::invokeMethod(main_window, [this]() {
+        //    main_window->update();
+        //});
 
 
         // todo: Move to post-draw on GUI thread?
@@ -253,6 +257,13 @@ QtSim::QtSim(QWidget *parent)
         project_worker->project->onResize();
 
     project_thread->start();
+
+    QTimer* renderTimer = new QTimer(this);
+    connect(renderTimer, &QTimer::timeout, this, [this]()
+    {
+        canvas->update();
+    });
+    renderTimer->start(1000 / 60); // 60 FPS
 }
 
 QtSim::~QtSim()

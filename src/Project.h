@@ -4,6 +4,7 @@
 #include <QObject>
 #include <QString>
 #include <QColor>
+#include <QKeyEvent>
 #include <QElapsedTimer>
 #include <QFuture>
 #include <QThreadPool>
@@ -131,6 +132,9 @@ public:
     virtual void mouseUp() {}
     virtual void mouseMove() {}
     virtual void mouseWheel() {}
+
+    virtual void keyPressed(QKeyEvent* e) {};
+    virtual void keyReleased(QKeyEvent* e) {};
 
     void _destroy()
     {
@@ -536,6 +540,17 @@ public:
     void _mouseUp(int x, int y, Qt::MouseButton btn);
     void _mouseMove(int x, int y);
     void _mouseWheel(int x, int y, int delta);
+
+    void _keyPress(QKeyEvent* e)
+    {
+        for (Scene* scene : viewports.all_scenes)
+            scene->keyPressed(e);
+    }
+    void _keyRelease(QKeyEvent* e)
+    {
+        for (Scene* scene : viewports.all_scenes)
+            scene->keyReleased(e);
+    }
 
     void _draw(QNanoPainter* p);
     void onPainted(const std::vector<GLubyte>* frame);

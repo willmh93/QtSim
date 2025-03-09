@@ -82,15 +82,16 @@ void Superfluid_Scene::viewportProcess(Viewport* ctx)
 
 void Superfluid_Scene::viewportDraw(Viewport* ctx)
 {
-    /// Draw Scene to Viewport
-    ctx->drawWorldAxis();
 
     {
+        //shader->setUniformValue("transform", ctx->modelViewMatrix());
         QOpenGLExtraFunctions* gl = ctx->beginGL();
 
         shader->bind();
 
-        shader->setUniformValue("transform", ctx->modelViewMatrix());
+        shader->setUniformValue("projection", ctx->projectionMatrix);
+        shader->setUniformValue("transform", ctx->transformMatrix);
+
         shader->setUniformValue("iTime", t);
         shader->setUniformValue("iResolution", QSizeF(ctx->width, ctx->height));
 
@@ -102,14 +103,27 @@ void Superfluid_Scene::viewportDraw(Viewport* ctx)
             gl->glBindVertexArray(vao);
             gl->glBindBuffer(GL_ARRAY_BUFFER, vbo);
 
+            float w = (float)ctx->width;
+            float h = (float)ctx->height;
+
             static const GLfloat vertices[] = {
-                -1.0f, -1.0f,
-                 1.0f, -1.0f,
-                -1.0f,  1.0f,
-                -1.0f,  1.0f,
-                 1.0f, -1.0f,
-                 1.0f,  1.0f
+                0, 0,
+                w, 0,
+                0, h,
+                0, h,
+                w, 0,
+                w, h
             };
+
+            /*static const GLfloat vertices[] = {
+                -1.0f, -1.0f, 0.0f, 0.0f,  // Bottom-left
+                 1.0f, -1.0f, 1.0f, 0.0f,  // Bottom-right
+                -1.0f,  1.0f, 0.0f, 1.0f,  // Top-left
+                -1.0f,  1.0f, 0.0f, 1.0f,  // Top-left
+                 1.0f, -1.0f, 1.0f, 0.0f,  // Bottom-right
+                 1.0f,  1.0f, 1.0f, 1.0f   // Top-right
+            };*/
+
 
             gl->glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
             gl->glEnableVertexAttribArray(0);
@@ -129,6 +143,10 @@ void Superfluid_Scene::viewportDraw(Viewport* ctx)
 
         ctx->endGL();
     }
+
+    /// Draw Scene to Viewport
+    ctx->drawWorldAxis();
+
 }
 
 /// User Interaction

@@ -1,0 +1,68 @@
+name: Qt Build with Cache
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install system dependencies
+      run: sudo apt-get update && sudo apt-get install -y g++ cmake ninja-build python3-pip
+
+    - name: Install aqtinstall
+      run: pip3 install aqtinstall
+
+    - name: Cache Qt
+      uses: actions/cache@v3
+      with:
+        path: 6.8.2
+        key: qt-6.8.2-ubuntu-gcc_64
+        restore-keys: |
+          qt-6.8.2-ubuntu-
+
+    - name: Install Qt 6.8.2 (if not cached)
+      run: |
+        if [ ! -d "6.8.2/gcc_64" ]; then
+          aqt install-qt linux desktop 6.8.2 gcc_64 -m all
+        fi
+
+    - name: Set up environment variables
+      run: |
+        echo "QT_DIR=$(pwd)/6.8.2/gcc_64" >> $GITHUB_ENV
+        echo "$(pwd)/6.8.2/gcc_64/bin" >> $GITHUB_PATH
+
+    - name: Debug - List Qt Directory
+      run: ls -R 6.8.2
+
+    - name: Debug - Check qmake existence
+      run: ls -l 6.8.2/gcc_64/bin/qmake
+
+    - name: Show Qt version (direct call for debugging)
+      run: |
+        $QT_DIR/bin/qmake --version
+
+    - name: Show Qt version (PATH-based check)
+      run: qmake --version  # This should work if PATH is set correctly
+
+    - name: Configure with CMake
+      run: |
+        mkdir build
+        cd build
+        cmake .. -DCMAKE_PREFIX_PATH=$QT_DIR
+
+    - name: Build project
+      run: |
+        cd build
+        cmake --build .
+
+    - name: Run tests (if any)
+      run: |
+        cd build
+        ctest --output-on-failure

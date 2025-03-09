@@ -1,9 +1,10 @@
 #version 330 core
 in vec2 TexCoord;
+in vec3 WorldPos;
 out vec4 FragColor;
 
-uniform float iTime;        // Pass the elapsed time (in seconds)
-uniform vec2 iResolution;   // The viewport resolution
+uniform float iTime;
+uniform vec2 iResolution;
 
 //
 // A 2D simplex noise function (inspired by Inigo Quilez)
@@ -58,7 +59,12 @@ float snoise(vec2 v) {
 void main(){
     // Normalize fragment coordinates (-1 to 1)
     vec2 uv = (gl_FragCoord.xy / iResolution.xy) * 2.0 - 1.0;
-    uv.x *= iResolution.x / iResolution.y;
+    vec3 normalizedWorldPos = 0.5 + 0.5 * sin(WorldPos * 10.5 + iTime);
+
+    /*uv.x *= iResolution.x / iResolution.y;
+
+    uv.x += 800 / iResolution.x;
+
 
     float t = iTime * 0.5;
 
@@ -79,7 +85,8 @@ void main(){
     vec3 col = mix(colorA, colorB, intensity);
 
     // Add subtle noise highlights
-    col += 0.1 * vec3(n);
+    col += 0.1 * vec3(n);*/
 
-    FragColor = vec4(col, 1.0);
+   vec3 color = vec3(sin(WorldPos.x*0.1) * 0.5 + 0.5, WorldPos.y, sin(iTime));
+   FragColor = vec4(color, 1.0);
 }

@@ -18,7 +18,7 @@ void main() {
     }
 
     // Exponential falloff for soft glow effect
-    float alpha = 1-dist;//exp(-glowStrength * dist * dist);
+    float alpha = 1 - dist;
     if (dist < 0) {
         discard;
     }

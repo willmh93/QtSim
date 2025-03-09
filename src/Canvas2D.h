@@ -45,6 +45,9 @@ public:
     void mouseMoveEvent(QMouseEvent* event) override;
     void wheelEvent(QWheelEvent* event) override;
 
+    void keyPressEvent(QKeyEvent* event) override;
+    void keyReleaseEvent(QKeyEvent* event) override;
+
     //void (*onPainted)() = nullptr;
     void paint(QNanoPainter* p) override;
     //void paint2(QNanoPainter* p);
