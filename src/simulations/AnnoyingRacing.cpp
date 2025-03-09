@@ -59,9 +59,9 @@ void AnnoyingRacing_Scene::sceneMounted(Viewport* viewport)
 
 
     Car car;
-    car.x = 920;
-    car.y = 500 + (viewport->viewportIndex() * 20);
-    car.angle = -20 * M_PI / 180.0;
+    car.present_state.x = 920;
+    car.present_state.y = 500 + (viewport->viewportIndex() * 20);
+    car.present_state.angle = -20 * M_PI / 180.0;
 
     cars.push_back(car);
 }
@@ -77,10 +77,10 @@ void AnnoyingRacing_Scene::viewportProcess(Viewport* ctx)
     int i = ctx->viewportIndex();
 
     Car& car = cars[i];
-    car.process(ctx, map_img);
+    car.process(car.present_state, ctx, map_img);
 
-    camera->x = car.x;
-    camera->y = car.y;
+    camera->x = car.present_state.x;
+    camera->y = car.present_state.y;
 
     //if (ctx->viewportIndex() == 0)
     //{
@@ -89,42 +89,15 @@ void AnnoyingRacing_Scene::viewportProcess(Viewport* ctx)
     //else
     //{
         // AI player
-        //car.accelerating = true;
+        
 
-        car.rays.clear();
+        //car.reset_ghost_to_present();
+        //for (int i = 0; i < 500; i++)
+        //{
+        //    car.process_future(ctx, map_img);
+        //}
 
-        double longest = 0;
-        double longest_angle;
-        int longest_ray_index;
-
-        for (double test_angle = -90; test_angle < 90; test_angle += 10)
-        {
-            double angle = test_angle * M_PI / 180.0;
-            double ray_length = car.project_dist(angle, map_img);
-
-            if (ray_length > longest)
-            {
-                // Found new longest ray
-                longest = ray_length;
-                longest_angle = test_angle;
-                longest_ray_index = car.rays.size();
-            }
-
-            car.rays.push_back({ test_angle, ray_length, false });
-        }
-
-        car.rays[longest_ray_index].longest = true;
-
-        /*if (longest_angle < 0)
-        {
-            // Turn left
-            car.angle -= 0.1;
-        }
-        else
-        {
-            // Turn right
-            car.angle += 0.1;
-        }*/
+    car.aiProcess(car.present_state, map_img);
     //}
 }
 
@@ -137,9 +110,32 @@ void AnnoyingRacing_Scene::viewportDraw(Viewport* ctx)
 
     for (Car &car : cars)
     {
-        car.draw(ctx);
+        car.draw(car.present_state, ctx);
 
-        for (auto& ray : car.rays)
+        ~ // Add bias
+
+        car.reset_ghost_to_present();
+        car.ghost_state.setTurn(-turn_speed);
+        for (int i = 0; i < 500; i++)
+        {
+            car.process_future(car.ghost_state, ctx, map_img);
+
+            if (i % 10 == 0)
+                car.draw(car.ghost_state, ctx);
+        }
+
+        car.reset_ghost_to_present();
+        car.ghost_state.setTurn(turn_speed);
+        for (int i = 0; i < 500; i++)
+        {
+            car.process_future(car.ghost_state, ctx, map_img);
+
+            if (i % 10 == 0)
+                car.draw(car.ghost_state, ctx);
+        }
+
+
+        /*for (auto& ray : car.rays)
         {
             double angle = ray.angle * M_PI / 180.0;
             double d = ray.dist;
@@ -151,21 +147,6 @@ void AnnoyingRacing_Scene::viewportDraw(Viewport* ctx)
             else
                 ctx->setStrokeStyle(255, 0, 0);
 
-            ctx->moveTo(car.x, car.y);
-            ctx->lineTo(
-                car.x + cos(car.angle + angle) * d,
-                car.y + sin(car.angle + angle) * d
-            );
-            ctx->stroke();
-        }
-
-        /*for (double test_angle = -90; test_angle < 90; test_angle += 10)
-        {
-            double angle = test_angle * M_PI / 180.0;
-            double d = car.project_dist(angle, map_img);
-
-            ctx->beginPath();
-            ctx->setStrokeStyle(255, 255, 0);
             ctx->moveTo(car.x, car.y);
             ctx->lineTo(
                 car.x + cos(car.angle + angle) * d,
@@ -190,17 +171,22 @@ void AnnoyingRacing_Scene::keyPressed(QKeyEvent* e)
     switch (e->key())
     {
         // Player 1
-        case Qt::Key_Up:    cars[0].accelerating = true; break;
-        case Qt::Key_Left:  cars[0].turning_left = true; break;
-        case Qt::Key_Right: cars[0].turning_right = true; break;
+        case Qt::Key_Up:    cars[0].present_state.accelerating = true; break;
+        case Qt::Key_Left:  cars[0].present_state.setTurn(-turn_speed); break;
+        case Qt::Key_Right: cars[0].present_state.setTurn(turn_speed); break;
         case Qt::Key_Down: break;
+    }
 
-
-        // Player 2
-        case Qt::Key_W: cars[1].accelerating = true; break;
-        case Qt::Key_A: cars[1].turning_left = true; break;
-        case Qt::Key_D: cars[1].turning_right = true; break;
-        case Qt::Key_S: break;
+    if (cars.size() >= 2)
+    {
+        switch (e->key())
+        {
+            // Player 2
+            case Qt::Key_W: cars[1].present_state.accelerating = true; break;
+            case Qt::Key_A: cars[1].present_state.setTurn(-turn_speed); break;
+            case Qt::Key_D: cars[1].present_state.setTurn(turn_speed);   break;
+            case Qt::Key_S: break;
+        }
     }
 }
 
@@ -209,16 +195,21 @@ void AnnoyingRacing_Scene::keyReleased(QKeyEvent* e)
     switch (e->key())
     {
         // Player 1
-        case Qt::Key_Up:    cars[0].accelerating = false; break;
-        case Qt::Key_Left:  cars[0].turning_left = false; break;
-        case Qt::Key_Right: cars[0].turning_right = false; break;
+        case Qt::Key_Up:    cars[0].present_state.accelerating = false; break;
+        case Qt::Key_Left:  cars[0].present_state.setTurn(0); break;
+        case Qt::Key_Right: cars[0].present_state.setTurn(0); break;
         case Qt::Key_Down: break;
-
-        // Player 2
-        case Qt::Key_W: cars[1].accelerating = false; break;
-        case Qt::Key_A: cars[1].turning_left = false; break;
-        case Qt::Key_D: cars[1].turning_right = false; break;
-        case Qt::Key_S: break;
+    }
+    if (cars.size() >= 2)
+    {
+        switch (e->key())
+        {
+            // Player 2
+            case Qt::Key_W: cars[1].present_state.accelerating = false; break;
+            case Qt::Key_A: cars[1].present_state.setTurn(0); break;
+            case Qt::Key_D: cars[1].present_state.setTurn(0); break;
+            case Qt::Key_S: break;
+        }
     }
 }
 
