@@ -18,6 +18,8 @@ public:
     explicit AttributeList(QWidget *parent=nullptr);
 
     void clearItems();
+    void removeItem(const QString &name);
+
     AttributeItem* addItem(const QString& name, AttributeType type, bool manual_refresh);
     AttributeItem *getItem(QString name);
 

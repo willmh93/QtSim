@@ -7,8 +7,8 @@
 #include "graphics.h"
 
 
-
-class ProjectBase;
+class QtSim;
+class Project;
 
 class Canvas2D : public QNanoWidget, protected QOpenGLFunctions
 {
@@ -17,8 +17,10 @@ class Canvas2D : public QNanoWidget, protected QOpenGLFunctions
 
 public:
 
-    // Todo: Completely remove Project from Canvas
-    ProjectBase* scene = nullptr;
+    // Todo: Completely abstract away Project from Canvas
+    Project* project = nullptr;
+    QtSim* main_window = nullptr;
+
     int offscreen_w;
     int offscreen_h;
 
@@ -31,9 +33,9 @@ public:
 
     void initializeGL() override;
 
-    void setProject(ProjectBase* _sim)
+    void setProject(Project* _sim)
     {
-        scene = _sim;
+        project = _sim;
     }
 
     //virtual void process() {}

@@ -20,6 +20,125 @@
 #include "QtSim.h"
 #include <QDebug>
 
+
+void ProjectWorker::tick()
+{
+    if (project && project->started)
+    {
+        QMutexLocker locker(&main_window->sim_lock);
+        //qDebug() << "ProjectThread::run() - Mutex LOCKED:" << QThread::currentThread()->objectName();
+
+        project->_projectProcess();
+        //canvas->update();
+
+        //QMetaObject::invokeMethod(main_window, [this]() {
+        //    main_window->update();
+        //});
+
+
+        // todo: Move to post-draw on GUI thread?
+        if (!project->paused)
+            project->postProcess();
+
+        //qDebug() << "ProjectThread::run() - Mutex UNLOCKED:" << QThread::currentThread()->objectName();
+    }
+}
+
+void ProjectWorker::setProject(int sim_uid)
+{
+    QMutexLocker locker(&main_window->sim_lock);
+    qDebug() << "ProjectThread::setProject() - Thread:" << QThread::currentThread()->objectName();
+
+    canvas->setProject(nullptr);
+
+    if (project)
+    {
+        project->_projectDestroy();
+        delete project;
+        project = nullptr;
+    }
+
+    // Pointers were cleared in _projectDestroy, but when we switch project, 
+    // clean up all components rather than keeping them (which we do in case
+    // we restart the same simulation but want to preserve input values)
+    input_proxy->removeUnusedInputs();
+
+    project = Project::findProjectInfo(sim_uid)->creator();
+    project->worker = this;
+    project->input_proxy = input_proxy;
+    project->configure(sim_uid, canvas, options);
+
+    canvas->setProject(project);
+
+    project->onResize();
+    project->_projectPrepare();
+
+    emit onProjectSet();
+}
+
+
+void ProjectWorker::destroyProject()
+{
+    //QMutexLocker locker(&simulation_lock);
+    qDebug() << "ProjectThread::destroyProject() - Thread:" << QThread::currentThread()->objectName();
+
+    if (project)
+    {
+        project->_projectDestroy();
+        delete project;
+        project = nullptr;
+    }
+}
+
+void ProjectWorker::startProject()
+{
+    if (!project)
+        return;
+
+    qDebug() << "ProjectThread::startProject() - Thread:" << QThread::currentThread()->objectName();
+
+    project->_projectDestroy();
+    project->_projectStart();
+
+    ///toolbar->setButtonStates(true, false, true, true);
+    emit onProjectStarted();
+}
+
+void ProjectWorker::stopProject()
+{
+    if (!project)
+        return;
+
+    qDebug() << "ProjectThread::stopProject() - Thread:" << QThread::currentThread()->objectName();
+
+    project->_projectDestroy();
+    project->_projectStop();
+
+    emit onProjectStopped();
+}
+
+void ProjectWorker::pauseProject()
+{
+    if (!project)
+        return;
+
+    qDebug() << "ProjectThread::pauseProject() - Thread:" << QThread::currentThread()->objectName();
+
+    project->_projectPause();
+}
+
+void ProjectWorker::startRecording()
+{
+
+}
+
+void ProjectWorker::stopRecording()
+{
+
+}
+
+
+
 QtSim::QtSim(QWidget *parent)
     : QMainWindow(parent)
 {
@@ -66,15 +185,13 @@ QtSim::QtSim(QWidget *parent)
         setStatusBar(statusBar);
     }
 
-    active_sim_uid = -1;
-    project = nullptr;
-
     // Create the main splitter
     QSplitter* mainSplitter = new QSplitter(Qt::Horizontal, this);
 
     // Add two OpenGL viewports
     options = new Options(this);
     canvas = new Canvas2D(this);
+    canvas->main_window = this;
 
     QVBoxLayout* simToolbarLayout = new QVBoxLayout(this);
     toolbar = new Toolbar(this);
@@ -100,7 +217,7 @@ QtSim::QtSim(QWidget *parent)
     // Set the splitter as the central widget
     setCentralWidget(mainSplitter);
 
-    auto& sim_factory_list = ProjectBase::projectInfoList();
+    auto& sim_factory_list = Project::projectInfoList();
     for (auto factory_info : sim_factory_list)
     {
         options->addSimListEntry(factory_info);
@@ -126,117 +243,157 @@ QtSim::QtSim(QWidget *parent)
     connect(toolbar, &Toolbar::onPausePressed, this, &QtSim::pauseSelectedProject);
     connect(toolbar, &Toolbar::onToggleRecordProject, this, &QtSim::toggleRecordSelectedProject);
 
-    // Setup main frame timer
-    timer = new QTimer(this);
-    connect(timer, &QTimer::timeout, this, [this]()
+    project_worker = new ProjectWorker();
+    project_worker->options = options;
+    project_worker->input_proxy = new Input(this, options);
+    project_worker->canvas = canvas;
+
+    project_thread = new ProjectThread(this);
+    project_worker->main_window = this;
+    project_worker->moveToThread(project_thread);
+
+    QMutexLocker locker(&sim_lock);
+    if (project_worker && project_worker->project)
+        project_worker->project->onResize();
+
+    project_thread->start();
+
+    QTimer* renderTimer = new QTimer(this);
+    connect(renderTimer, &QTimer::timeout, this, [this]()
     {
-        if (project && project->started)
-        {
-            project->_projectProcess();
-            canvas->update();
-
-            if (!project->paused)
-                project->postProcess();
-        }
+        canvas->update();
     });
-
-    setFPS(60);
-    timer->start();
+    renderTimer->start(1000 / 60); // 60 FPS
 }
 
 QtSim::~QtSim()
-{}
-
-void QtSim::resizeEvent(QResizeEvent * event)
 {
-    /*if (canvas)
-    {
-        canvas->update();
-    }*/
+    qDebug() << "~QtSim() Destructor Called";
 }
 
-void QtSim::setProject(int sim_uid)
+void QtSim::closeEvent(QCloseEvent* event)
 {
-    if (project)
+    if (project_thread)
     {
-        options->clearAttributeList();
-        project->_projectDestroy();
-        delete project;
+        project_thread->quit();
+        project_thread->wait();
+        delete project_thread;
+        project_thread = nullptr;
     }
 
-    active_sim_uid = sim_uid;
+    QMainWindow::closeEvent(event);
+}
 
-    project = ProjectBase::findProjectInfo(active_sim_uid)->creator();
-    project->configure(active_sim_uid, canvas, options);
-
-    canvas->setProject(project);
-
-    project->_projectPrepare();
-    options->updateListUI();
-    toolbar->setButtonStates(false, true, false, true);
+void QtSim::resizeEvent(QResizeEvent *e)
+{
+    QMutexLocker locker(&sim_lock);
+    if (project_worker && project_worker->project)
+        project_worker->project->onResize();
 }
 
 void QtSim::setFPS(int fps)
 {
-    int delay = 1000 / fps;
-    timer->setInterval(delay);
+    QMetaObject::invokeMethod(project_worker, [this, fps]()
+    {
+        project_worker->setFPS(fps);
+    }, Qt::QueuedConnection);
+}
+
+void QtSim::setProject(int sim_uid)
+{
+    connect(
+        project_worker, &ProjectWorker::onProjectSet,
+        this, &QtSim::onProjectSet,
+        static_cast<Qt::ConnectionType>(Qt::QueuedConnection | Qt::UniqueConnection)
+    );
+
+    QMetaObject::invokeMethod(project_worker, [this, sim_uid]()
+    {
+        project_worker->setProject(sim_uid);
+    }, Qt::QueuedConnection);
+}
+
+void QtSim::onProjectSet()
+{
+    options->updateListUI();
+    toolbar->setButtonStates(false, true, false, true);
 }
 
 void QtSim::startSelectedProject()
 {
-    if (!project)
-        return;
+    connect(
+        project_worker, &ProjectWorker::onProjectStarted,
+        this, &QtSim::onProjectStarted,
+        static_cast<Qt::ConnectionType>(Qt::QueuedConnection | Qt::UniqueConnection)
+    );
 
-    project->_projectDestroy();
-    project->_projectStart();
+    QMetaObject::invokeMethod(project_worker, [this]()
+    {
+        project_worker->startProject();
+    }, Qt::QueuedConnection);
+}
+
+void QtSim::onProjectStarted()
+{
     toolbar->setButtonStates(true, false, true, true);
 }
 
 void QtSim::stopSelectedProject()
 {
-    if (!project)
-        return;
+    connect(
+        project_worker, &ProjectWorker::onProjectStopped,
+        this, &QtSim::onProjectStopped,
+        static_cast<Qt::ConnectionType>(Qt::QueuedConnection | Qt::UniqueConnection)
+    );
 
-    project->_projectDestroy();
-    project->_projectStop();
+    QMetaObject::invokeMethod(project_worker, [this]()
+    {
+        project_worker->stopProject();
+    }, Qt::QueuedConnection);
 
+}
+
+void QtSim::onProjectStopped()
+{
     toolbar->setRecordingUI(false);
     toolbar->setButtonStates(false, true, false, true);
+    canvas->update();
 }
 
 void QtSim::pauseSelectedProject()
 {
-    if (!project)
-        return;
-
-    project->_projectPause();
+    QMetaObject::invokeMethod(project_worker, [this]()
+    {
+        project_worker->pauseProject();
+    }, Qt::QueuedConnection);
 }
 
 void QtSim::toggleRecordSelectedProject(bool b)
 {
-    if (project)
+    if (project_worker->project)
     {
         if (b)
         {
-            if (project->started)
+            if (project_worker->project->started)
             {
                 // If already started, immediately start recording
-                if (project->startRecording())
+                if (project_worker->project->startRecording())
                     toolbar->setRecordingUI(true);
             }
             else
             {
                 // Indicate to project that recording will begin on project start
-                project->setRecordOnStart(true);
+                project_worker->project->setRecordOnStart(true);
                 toolbar->setRecordingUI(true);
             }
         }
         else
         {
-            project->finalizeRecording();
-            project->setRecordOnStart(false);
+            project_worker->project->finalizeRecording();
+            project_worker->project->setRecordOnStart(false);
 
             toolbar->setRecordingUI(false);
         }
     }
 }
+

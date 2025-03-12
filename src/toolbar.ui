@@ -224,7 +224,7 @@
   <property name="styleSheet">
    <string notr="true">QWidget 
 {
-    background-color: #1B1B2B;
+
 	border: none;
 }
 
@@ -235,13 +235,7 @@ QToolButton
     border-radius: 0px;
 }
 
-QToolButton:enabled
-{
-    background-color: #1B1B2B;
-    color: blue;
-    border: 1px solid black;
-    border-radius: 0px;
-}</string>
+</string>
   </property>
   <layout class="QHBoxLayout" name="horizontalLayout">
    <property name="leftMargin">

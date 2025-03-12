@@ -1,35 +1,24 @@
 #include "EarthMoon.h"
+#include "PlanetGenerator.h"
 
 SIM_DECLARE(EarthMoon, "Physics", "Space Engine", "Earth Moon")
 
-void EarthMoon::projectPrepare()
+void EarthMoon_Project::projectPrepare()
 {
     auto& layout = newLayout();
 
-    auto scene = createScene(LaunchConfig(true));
+    auto scene = create<EarthMoon_Scene>(EarthMoon_Scene::Config(true));
 
     for (int i=0; i<1; i++)
         layout << scene;
-
-
-    //layout << createScene(LaunchConfig(true));
-    //layout << createScene(LaunchConfig(false));
-
-    //createScene(LaunchConfig(true))->mountTo(layout);
-    //createScene(LaunchConfig(false))->mountTo(layout);
-
-    //EarthMoon::createScene()->mountToAll(layout);
-    //EarthMoon::makeScenes(2)->mountTo(layout);
-
-    //setLayout(1).constructAll<EarthMoon_Scene>();
 }
 
-void EarthMoon_Scene::sceneAttributes(Options* options)
+void EarthMoon_Scene::sceneAttributes(Input* options)
 {
 
-    steps_per_frame = 60;
-    step_seconds = 8;// 1000000000000.0;
-    collision_substeps = 4;
+    steps_per_frame = 100;
+    step_seconds = 1;// 1000000000000.0;
+    collision_substeps = 1;// 4;
 
     //timestep = 1 / step_seconds;
 
@@ -69,6 +58,7 @@ void EarthMoon_Scene::sceneAttributes(Options* options)
     world_size_max = solar_system_size * 10;*/
 
 
+    options->realtime_checkbox("Show Moon", &show_moon);
     options->starting_slider("Earth Particles", &earth_particle_count, 10, 2000);
     options->realtime_slider("Bounce Coefficient", &particle_bounce, 0.0, 1.0, 0.01);
     options->starting_slider("Particle Speed (m/s^2)", &particle_speed, 0.0, 1e11, 1e5);
@@ -77,24 +67,24 @@ void EarthMoon_Scene::sceneAttributes(Options* options)
     //options->starting_slider("Particle Radius (gm)", &particle_radius, particle_radius_min, particle_radius_max, particle_radius_step);
     //options->slider("Particle Mass (zg)", &start_particle_mass, &particle_mass_min, &particle_mass_max, &particle_mass_step);
 
-    SpaceEngineScene::sceneAttributes(options);
+    SpaceEngine_Scene::sceneAttributes(options);
 }
 
 
 void EarthMoon_Scene::sceneStart()
 {
-    SpaceEngineScene::sceneStart();
+    SpaceEngine_Scene::sceneStart();
 
     //double distance_to_neptune = 4495.1 * gigemeter;
 
-    double particle_radius = particleRadiusForPlanet(earth_radius, earth_particle_count);
+    double particle_radius = PlanetGenerator::particleRadiusForPlanet(earth_radius, earth_particle_count);
     
     //auto earth = newParticle(0, 0, earth_radius, earth_density);
     //auto earth2 = newParticle(moon_earth_orbit_radius, 0, earth_radius, earth_density);
     //auto moon = newParticle(moon_earth_orbit_radius, 0, moon_radius, moon_density);
 
-    auto earth_particles = newPlanetFromParticleSize(0, 0, earth_radius, earth_density, particle_radius);
-    auto moon_particles = newPlanetFromParticleSize(moon_earth_orbit_radius, 0, moon_radius, moon_density, particle_radius);
+    auto earth_particles = PlanetGenerator::planetFromParticleSize<Particle>(0, 0, earth_radius, earth_density, particle_radius);
+    auto moon_particles = PlanetGenerator::planetFromParticleSize<Particle>(moon_earth_orbit_radius, 0, moon_radius, moon_density, particle_radius);
 
     //double earth_mass_error = earth_sum_mass / earth.mass;
     //double moon_mass_error = moon_sum_mass / moon.mass;
@@ -159,7 +149,7 @@ void EarthMoon_Scene::viewportProcess(Viewport* ctx)
 
 void EarthMoon_Scene::viewportDraw(Viewport* ctx)
 {
-    SpaceEngineScene::viewportDraw(ctx);
+    SpaceEngine_Scene::viewportDraw(ctx);
 }
 
 SIM_END(EarthMoon)

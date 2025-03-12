@@ -1,26 +1,27 @@
 #pragma once
 #include "Project.h"
 
-SIM_BEG({CLASS_NAME})
+SIM_BEG(Superfluid)
 
-struct {CLASS_NAME}_Scene : public Scene
-{{
+struct Superfluid_Scene : public Scene
+{
 /*  // --- Custom Launch Config Example ---
        
     struct Config
-    {{
+    {
         double speed = 10.0;
-    }};
+    };
 
-    {CLASS_NAME}_Scene(Config& info) :
+    Superfluid_Scene(Config& info) :
         speed(info.speed)
-    {{}}
+    {}
 
     double speed;
 */
 
     /// --- Sim Variables ---
     // double speed;
+    float t = 0;
 
     // --- Scene management ---
     void sceneAttributes(Input* input) override;
@@ -35,7 +36,9 @@ struct {CLASS_NAME}_Scene : public Scene
     void sceneProcess() override;
 
     // --- Shaders ---
-    //void loadShaders() override;
+    std::unique_ptr<QOpenGLShaderProgram> shader = nullptr;
+
+    void loadShaders() override;
 
     // --- Viewport handling ---
     void viewportProcess(Viewport* ctx) override;
@@ -46,10 +49,10 @@ struct {CLASS_NAME}_Scene : public Scene
     void mouseUp() override;
     void mouseMove() override;
     void mouseWheel() override;
-}};
+};
 
-struct {CLASS_NAME}_Project : public Project
-{{
+struct Superfluid_Project : public Project
+{
     int panel_count = 1;
 
     void projectAttributes(Input* input) override;
@@ -58,6 +61,6 @@ struct {CLASS_NAME}_Project : public Project
     //void projectStop() override;
     //void projectDestroy() override;
 
-}};
+};
 
-SIM_END({CLASS_NAME})
+SIM_END(Superfluid)

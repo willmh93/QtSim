@@ -54,16 +54,17 @@ AttributeItem::AttributeItem(
     //value_int_ptr = &value_int;
     //value_float_ptr.push_back(&value_float);
     //value_bool_ptr = &value_bool;
-    value_string_ptr = &value_string;
-    value_combo_selected_ptr = &value_combo_selected;
 
-    slider_float_step_ptr = &slider_float_step;
-    slider_float_min_ptr = &slider_float_min;
-    slider_float_max_ptr = &slider_float_max;
-
-    slider_int_step_ptr = &slider_int_step;
-    slider_int_min_ptr = &slider_int_min;
-    slider_int_max_ptr = &slider_int_max;
+    ///value_string_ptr = &value_string;
+    ///value_combo_selected_ptr = &value_combo_selected;
+    ///
+    ///slider_float_step_ptr = &slider_float_step;
+    ///slider_float_min_ptr = &slider_float_min;
+    ///slider_float_max_ptr = &slider_float_max;
+    ///
+    ///slider_int_step_ptr = &slider_int_step;
+    ///slider_int_min_ptr = &slider_int_min;
+    ///slider_int_max_ptr = &slider_int_max;
 
 
 
@@ -107,8 +108,7 @@ AttributeItem::AttributeItem(
             input = slider;
 
             // Set input value
-            slider->setValue(value_int);
-            //val_lbl->setText(QString::number(value_int));
+            ///slider->setValue(value_int);
 
             // Handle change
             connect(slider, &QSlider::valueChanged, this, [this](int v)
@@ -118,12 +118,12 @@ AttributeItem::AttributeItem(
                 
                 if (!manual_refresh)
                 {
-                    for (int*& ptr : int_ptrs)
-                        *ptr = v;
+                    ///for (int*& ptr : int_ptrs)
+                    ///    *ptr = v;
 
                     // Invoke callback
-                    if (float_change)
-                        float_change(v);
+                    if (int_change)
+                        int_change(v);
                 }
 
                 updateUIValue();
@@ -146,20 +146,20 @@ AttributeItem::AttributeItem(
 
             input = slider;
 
-            // Set input text
-            slider->setValue(value_float / *slider_float_step_ptr);
+            // Set input value
+            ///slider->setValue(value_float / slider_float_step);
 
             // Handle change
             connect(slider, &QSlider::valueChanged, this, [this](int v)
             {
-                double f = ((double)v) * *slider_float_step_ptr;
+                double f = ((double)v) * slider_float_step;
 
                 // Update values
                 value_float = f;
                 if (!manual_refresh)
                 {
-                    for (double*& ptr : float_ptrs)
-                        *ptr = f;
+                    ///for (double*& ptr : float_ptrs)
+                    ///    *ptr = f;
 
                     // Invoke callback
                     if (float_change)
@@ -183,12 +183,12 @@ AttributeItem::AttributeItem(
             // Handle change
             connect(spinBox, &QSpinBox::valueChanged, this, [this](int v)
             {
-                // Update value
-                //value_float = v;
+                /// Update value
+                ///value_float = v;
 
                 // Invoke callback
-                if (float_change)
-                    float_change(v);
+                if (int_change)
+                    int_change(v);
 
                 updateUIValue();
             });
@@ -207,8 +207,8 @@ AttributeItem::AttributeItem(
             // Handle change
             connect(spinBox, &QDoubleSpinBox::valueChanged, this, [this](double v)
             {
-                // Update value
-                //value_float = v;
+                /// Update value
+                ///value_float = v;
 
                 // Invoke callback
                 if (float_change)
@@ -238,8 +238,8 @@ AttributeItem::AttributeItem(
 
                 if (!manual_refresh)
                 {
-                    for (bool*& ptr : bool_ptrs)
-                        *ptr = b;
+                    ///for (bool*& ptr : bool_ptrs)
+                    ///    *ptr = b;
 
                     // Invoke callback
                     if (bool_change)
@@ -320,6 +320,7 @@ AttributeItem::AttributeItem(
     }
 }*/
 
+/*
 std::vector<void*> AttributeItem::getValuePointers()
 {
     switch (type)
@@ -378,7 +379,7 @@ void AttributeItem::removeAllPointers()
     std::vector<void*> ptrs = getValuePointers();
     for (void* ptr : ptrs)
         removePointer(ptr);
-}
+}*/
 
 void AttributeItem::updateUIValue()
 {
@@ -388,17 +389,17 @@ void AttributeItem::updateUIValue()
     {
         QSlider* slider = (QSlider*)input;
 
-        slider->setSingleStep(*slider_int_step_ptr);
+        slider->setSingleStep(slider_int_step);
 
         // Block value callback while setting range to avoid overriding value
         slider->blockSignals(true);
-        slider->setRange(*slider_int_min_ptr, *slider_int_max_ptr);
+        slider->setRange(slider_int_min, slider_int_max);
         slider->blockSignals(false);
 
-        QString users_txt = QString(" (%1 users)").arg(int_ptrs.size());
+        //QString users_txt = QString(" (%1 users)").arg(int_ptrs.size());
 
         slider->setValue(value_int);
-        name_lbl->setText(name + users_txt);
+        name_lbl->setText(name/* + users_txt*/);
         val_lbl->setText(QString::number(value_int));
     }
     break;
@@ -413,25 +414,25 @@ void AttributeItem::updateUIValue()
     {
         QSlider* slider = (QSlider*)input;
 
-        int iStep = (int)(1.0 / *slider_float_step_ptr);
+        int iStep = (int)(1.0 / slider_float_step);
 
         slider->setSingleStep(iStep);
 
         // Block value callback while setting range to avoid overriding value
         slider->blockSignals(true);
         slider->setRange(
-            *slider_float_min_ptr / *slider_float_step_ptr,
-            *slider_float_max_ptr / *slider_float_step_ptr
+            slider_float_min / slider_float_step,
+            slider_float_max / slider_float_step
         );
         slider->blockSignals(false);
 
 
-        slider_float_decimals = getDecimalPlaces(*slider_float_step_ptr);
+        slider_float_decimals = getDecimalPlaces(slider_float_step);
 
-        QString users_txt = QString(" (%1 users)").arg(float_ptrs.size());
+        //QString users_txt = QString(" (%1 users)").arg(float_ptrs.size());
 
-        slider->setValue(value_float / *slider_float_step_ptr);
-        name_lbl->setText(name + users_txt);
+        slider->setValue(value_float / slider_float_step);
+        name_lbl->setText(name /*+ users_txt*/);
         val_lbl->setText(label_value(value_float));
     }
     break;
@@ -446,113 +447,14 @@ void AttributeItem::updateUIValue()
     {
         QCheckBox* checkBox = (QCheckBox*)input;
 
-        QString users_txt = QString(" (%1 users)").arg(bool_ptrs.size());
-        name_lbl->setText(name + users_txt);
+        //QString users_txt = QString(" (%1 users)").arg(bool_ptrs.size());
+        name_lbl->setText(name/* + users_txt*/);
         checkBox->setChecked(value_bool);
     }
     break;
     }
 }
 
-
-
-/*AttributeItem* AttributeItem::updateValue()
-{
-    //value_int = value;
-
-    switch (type)
-    {
-    case AttributeType::SLIDER_INT:
-    {
-        QSlider* slider = (QSlider*)input;
-        slider->setValue(value);
-        val_lbl->setText(QString::number(value));
-    }
-    break;
-    case AttributeType::INPUT_INT:
-    {
-        QSpinBox* spinBox = (QSpinBox*)input;
-        spinBox->setValue(value);
-    }
-    break;
-    }
-    return this;
-}
-
-AttributeItem* AttributeItem::setValue(double value)
-{
-    // Update value
-    value_float = value;
-
-    switch (type)
-    {
-    case AttributeType::SLIDER_FLOAT:
-    {
-        QSlider* slider = (QSlider*)input;
-        slider->setValue(value / slider_step);
-        val_lbl->setText(QString::number(value, 'f', float_decimals));
-    }
-    break;
-    case AttributeType::INPUT_FLOAT:
-    {
-        QSpinBox* spinBox = (QSpinBox*)input;
-        spinBox->setValue(value);
-    }
-    break;
-    }
-    return this;
-}
-
-AttributeItem* AttributeItem::setRange(int min, int max, int step)
-{
-    switch (type)
-    {
-    case AttributeType::SLIDER_INT:
-    {
-        QSlider* slider = (QSlider*)input;
-        slider->setSingleStep(step);
-        slider->setRange(min, max);
-    }
-    break;
-    case AttributeType::INPUT_INT:
-    {
-        QSpinBox* spinBox = (QSpinBox*)input;
-        spinBox->setSingleStep(step);
-        spinBox->setRange(min, max);
-    }
-    break;
-    }
-    return this;
-}
-
-AttributeItem* AttributeItem::setRange(double min, double max, double step)
-{
-    switch (type)
-    {
-    case AttributeType::SLIDER_FLOAT:
-    {
-        slider_step = step;
-        float_decimals = getDecimalPlaces(step);
-
-        QSlider* slider = (QSlider*)input;
-        int iStep = (int)(1.0 / step);
-        slider->setSingleStep(iStep);
-        slider->setRange(min / step, max / step);
-    }
-    break;
-    case AttributeType::INPUT_FLOAT:
-    {
-        //slider_step = step;
-        //float_decimals = getDecimalPlaces(step);
-
-        QDoubleSpinBox* spinBox = (QDoubleSpinBox*)input;
-        spinBox->setSingleStep(step);
-        spinBox->setRange(min, max);
-    }
-    break;
-    }
-    return this;
-}*/
 
 AttributeItem* AttributeItem::addComboItem(QString text, std::function<void(void)> callback)
 {

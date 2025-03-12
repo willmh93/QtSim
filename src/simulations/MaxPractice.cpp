@@ -2,25 +2,25 @@
 
 SIM_DECLARE(MaxPractice, "Lessons", "Max Practice 1")
 
-void MaxPractice::projectPrepare()
+void MaxPractice_Project::projectPrepare()
 {
     auto& layout = newLayout();
-    makeScenes(viewport_count)->mountTo(layout);
+    create<MaxPractice_Scene>(viewport_count)->mountTo(layout);
 }
 
-void MaxPractice::projectStart()
+void MaxPractice_Project::projectStart()
 {
    
 }
 
-void MaxPracticeScene::sceneAttributes(Options* options)
+void MaxPractice_Scene::sceneAttributes(Input* options)
 {
-    // Scene Settings
+    // SceneBase Settings
     options->realtime_slider("Num Particles", &particle_count, 1, 1000000, 1);
     options->realtime_slider("Max Start Speed", &max_speed, 0.0, 20.0, 0.1);
 }
 
-void MaxPracticeScene::sceneStart()
+void MaxPractice_Scene::sceneStart()
 {
     for (int i = 0; i < particle_count; ++i)
     {
@@ -38,10 +38,10 @@ void MaxPracticeScene::sceneStart()
     }
 }
 
-void MaxPracticeScene::sceneDestroy()
+void MaxPractice_Scene::sceneDestroy()
 {}
 
-void MaxPracticeScene::sceneProcess()
+void MaxPractice_Scene::sceneProcess()
 {
     //uint8_t arr[] = {1,2,3,4,5};
     //std::vector<uint8_t> arr;// = { 1,2,3,4,5 };
@@ -103,7 +103,7 @@ void MaxPracticeScene::sceneProcess()
     }
 }
 
-void MaxPracticeScene::viewportDraw(Viewport* ctx)
+void MaxPractice_Scene::viewportDraw(Viewport* ctx)
 {
     for (Ball &ball : balls)
     {

@@ -11,96 +11,47 @@ SIM_DECLARE(Test, "Framework Tests", "Canvas Transforms")
 /// Project ///
 ///---------///
 
-void Test::projectAttributes(Options* options)
+void Test_Project::projectAttributes(Input* options)
 {
-    options->realtime_slider("Viewport Count", &viewport_count, 1, 36, 1);
+    //options->realtime_slider("Viewport Count", &viewport_count, 1, 36, 1);
 }
 
-void Test::projectPrepare()
+void Test_Project::projectPrepare()
 {
+    auto& layout = newLayout();
 
-    auto& viewports = newLayout();
-    
-    //setLayout(viewport_count).constructAll<Test_Scene>(
-    //    /// Constructor args for all scenes
-    //);
+    Test_Scene::Config config1;
+    //auto config2 = make_shared<Test_Scene::Config>(Test_Scene::Config());
 
-    //construct<Test_Scene, 5>()->mountTo(viewports);
-
-    // Unique scenes
-    //construct<Test_Scene>()->mountTo(viewports[0]);
-    //construct<Test_Scene>()->mountTo(viewports[1]);
-
-    // Mirrored scene
-    //Test_Scene* scene_scene = new Test_Scene();
-    //scene_scene->mountTo(viewports[0]);
-    //scene_scene->mountTo(viewports[1]);
-
-    //auto &env1 = new NS_CurvedSpace::CurvedSpace();
-
-
-    /// Or alternatively, set up each scene manually
-    //construct<Test_Scene>()->mountTo(viewports[0]);
-    //construct<Test_Scene>()->mountTo(viewports[1]);
-
-
-    //CurvedSpace::createScene(2)->mountTo(viewports[0]);
-    //CurvedSpace::createScene()->mountTo(viewports[1]);
-
-
-    //auto env1 = make_shared<CurvedSpace::LaunchConfig>(3, 10);
-
-    //CurvedSpace::createScene(env1)
-    //    ->mountTo(viewports[0]);
-
-    //EarthMoon::createScene()->mountTo(viewports[0]);
-    //Test::createScene()->mountTo(viewports[1]);
-
-    Layout& layout = newLayout();
-
-    for (int i=0; i< viewport_count; i++)
-        layout << Test::createScene();
-   
-
-
-    //CurvedSpace::makeDefaultScene();
-
-    //CurvedSpace::makeUniqueScene();
-
-    //makeDefaultScene<CurvedSpace>();
-
-    //construct<NS_CurvedSpace::CurvedSpace>();// ->mountTo(viewports[1]);
-
-    //viewports[0]->construct<CurvedSpaceScene>(config_A);
-    //viewports[1]->construct<CurvedSpaceScene>(config_B);
-
+    create<Test_Scene>(config1)->mountTo(layout);
 }
 
-///----------///
-/// Scene ///
-///----------///
+///-----------///
+/// SceneBase ///
+///-----------///
 
-void Test_Scene::sceneAttributes(Options* options)
+void Test_Scene::sceneAttributes(Input* options)
 {
     // starting_checkbox,   realtime_checkbox
     // starting_combo,      realtime_combo
     // starting_spin_int    realtime_spin_int
     // starting_spin_double starting_spin_double
 
-    //options->realtime_slider("Scene Var 1", &var1, 0.0, 1.0, 0.1); // updated in realtime
-    //options->starting_slider("Scene Var 2", &var2, 0.0, 1.0, 0.1); // only updated on restart
+    //options->realtime_slider("SceneBase Var 1", &var1, 0.0, 1.0, 0.1); // updated in realtime
+    //options->starting_slider("SceneBase Var 2", &var2, 0.0, 1.0, 0.1); // only updated on restart
     options->realtime_checkbox("Transform coordinates", &transform_coordinates); // updated in realtime
     options->realtime_checkbox("Scale Lines & Text", &scale_lines_text); // updated in realtime
     options->realtime_checkbox("Rotate Text", &rotate_text); // updated in realtime
     options->realtime_slider("Camera Rotatation", &camera_rotation, 0.0, M_PI*2.0, 0.0001); // updated in realtime
     options->realtime_slider("Camera X", &camera_x, -500.0, 500.0, 1.0); // updated in realtime
     options->realtime_slider("Camera Y", &camera_y, -500.0, 500.0, 1.0); // updated in realtime
+  
 }
 
 void Test_Scene::sceneStart()
 {
     // Initialize scene
-    for (int i = 0; i < 20; i++)
+    for (int i = 0; i < 50; i++)
     {
         particles.push_back({
             random(-200, 200),
@@ -131,7 +82,7 @@ void Test_Scene::sceneDestroy()
 void Test_Scene::sceneProcess()
 {
     // Process scene update
-    seed += 0.005;
+    seed += 0.015;
 
     for (Particle& p : particles)
     {
@@ -186,9 +137,7 @@ void Test_Scene::viewportDraw(Viewport* ctx)
 
     // Draw scene
     //ctx->scaleGraphics(scale_graphics);
-
-    //ctx->drawWorldAxis();
-
+    ctx->drawWorldAxis();
     /*ctx->setLineWidth(10);
     ctx->beginPath();
     ctx->moveTo(0, 0);
@@ -207,7 +156,7 @@ void Test_Scene::viewportDraw(Viewport* ctx)
 
     //ctx->beginWorldTransform();
 
-   
+
 
     camera->setTransformFilters(
         transform_coordinates,
@@ -216,14 +165,12 @@ void Test_Scene::viewportDraw(Viewport* ctx)
     );
 
     ctx->setFillStyle(255, 0, 255);
-    
+    ctx->beginPath();
     for (Particle& p : particles)
     {
-        ctx->beginPath();
-        ctx->circle(p.x, p.y, 2);
-        ctx->fill();
+        ctx->circle(p.x, p.y, 0.1);
     }
-    
+    ctx->fill();
 
     ctx->setFillStyle(255, 255, 255);
     ctx->strokeRect(-100, -100, 200, 200);

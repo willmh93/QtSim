@@ -1,5 +1,6 @@
 #pragma once
 #include "Project.h"
+#include "PlanetGenerator.h"
 #include <QOpenGLFunctions>
 
 SIM_BEG(SpaceEngine)
@@ -29,9 +30,13 @@ struct Particle : public Serializable
     Cluster* cluster;
     std::vector<Bond*> bonds;
 
+    double fx, fy;
+    //double ax, ay;
+    double vx, vy; // m/s^2
     double x, y; // m
     double sum_ox, sum_oy;
-    double vx, vy; // m/s^2
+
+
     double sum_delta_vx, sum_delta_vy; // m/s^2
     double mass;// = 1; // Kg
     double r;// = 5;
@@ -156,7 +161,7 @@ struct ParticleGrid : public std::unordered_map<CellCoord, CellData, CellCoordHa
     }
 };
 
-struct SpaceEngineScene : public Scene
+struct SpaceEngine_Scene : public Scene
 {
     // Constants
     const double G = 6.67430e-11;
@@ -168,7 +173,7 @@ struct SpaceEngineScene : public Scene
     //double start_world_size = 100;
     //double start_particle_speed = 1;
     //double start_particle_radius = 1;
-    double particle_bounce = 0.9;
+    double particle_bounce = 0.5;// 0.9;
     double particle_magnify = 1;
     double gravity = 0.1;
 
@@ -194,16 +199,18 @@ struct SpaceEngineScene : public Scene
     //double collision_cell_size_step = collision_cell_size * 0.1;
 
 
-
+    QThreadPool pool;
+    int thread_count = 8;
 
     double world_size = 100;// start_world_size;
     
 
-    double hex_lattice_density = 0.952;
+    //double hex_lattice_density = 0.952;
     //double hex_lattice_density_scalar = 1 / hex_lattice_density;
 
     //vector<Particle> start_particles;
     vector<Particle> particles;
+    //int particle_count = 3000;
 
 
     bool draw_gravity_grid = false;
@@ -214,34 +221,39 @@ struct SpaceEngineScene : public Scene
     ParticleGrid collision_grid;
 
     // Density map
-    Bitmap density_bmp;
-    double bmp_scale;
+    //Bitmap density_bmp;
+    //double bmp_scale;
 
     double step_seconds = 1.0/60.0;
     double time_elapsed = 0;
 
     int steps_per_frame = 5;
-    int collision_substeps = 5;
+    int collision_substeps = 1;
 
-    bool optimize_gravity = true;
-    bool optimize_collisions = true;
+    bool optimize_gravity = false;
+    bool optimize_collisions = false;
 
-    void sceneAttributes(Options* options) override;
+    void sceneAttributes(Input* options) override;
     void sceneStart() override;
     void sceneDestroy() override;
     void sceneProcess() override;
     void viewportDraw(Viewport* ctx) override;
 
-    
+    void resetForces();
+    void computeForces();
+    void applyForcesAndUpdatePositions();
+    //void updatePositions();
 
     // Gravity
     inline void processCellPairGravity(CellData &c0, CellData& c1);
-    inline void processParticlePairGravity(Particle *n0, Particle *n1);
+    inline void processParticlePairGravity(Particle *n0, Particle *n1, bool only_n0);
+    inline void processParticleRepulsion(Particle* n0, Particle* n1, bool only_n0);
     void processGravity();
 
     // Collisions
-    inline bool checkAndResolveCollision(Particle* n0, Particle* n1);
-    inline bool checkAndResolveSpringCollision(Particle* n0, Particle* n1);
+    //inline bool checkAndResolveCollision(Particle* n0, Particle* n1);
+    inline bool resolveCollisionOld(Particle* n0, Particle* n1);
+    inline bool resolveCollision(Particle* n0, Particle* n1);
     
     void processCollisions();
 
@@ -419,84 +431,9 @@ struct SpaceEngineScene : public Scene
         return n;
     }
 
-    std::vector<Particle> newPlanetFromParticleSize(
-        double cx,
-        double cy,
-        double planet_radius,
-        double density,
-        double particle_radius)
-    {
-        double planet_volume = (4.0 / 3.0) * M_PI * pow(planet_radius, 3);
-        double planet_target_mass = density * planet_volume;
 
-        double dx = 2.0 * particle_radius;            // horizontal spacing
-        double dy = sqrt(3.0) * particle_radius;      // vertical spacing
 
-        double maxAllowedRadius = planet_radius;// -particle_radius;
-
-        int maxRow = static_cast<int>(std::ceil((planet_radius * 2.0) / dx)) + 2;
-     
-        std::vector<Particle> planet_particles;
-
-        for (int row = -maxRow; row <= maxRow; ++row)
-        {
-            double y = row * dy;
-
-            // Shift in x for every other row (to achieve the "hex" staggering)
-            double xOffset = (row % 2 == 0) ? 0.0 : particle_radius;
-
-            int maxCol = static_cast<int>(std::ceil((planet_radius * 2.0) / dx)) + 2;
-
-            for (int col = -maxCol; col <= maxCol; ++col)
-            {
-                double x = xOffset + col * dx;
-
-                // Check if (x, y) is inside the circle of radius maxAllowedRadius
-                double dist = std::sqrt(x * x + y * y);
-                if (dist <= maxAllowedRadius)
-                {
-                    // Accept this position
-                    Particle p;
-                    p.x = cx + x;
-                    p.y = cy + y;
-                    p.vx = 0;
-                    p.vy = 0;
-                    p.r = particle_radius;
-                    planet_particles.push_back(p);
-                }
-            }
-        }
-
-        double particle_count = planet_particles.size();
-        double particle_mass = planet_target_mass / particle_count;
-        for (Particle& p : planet_particles)
-        {
-            p.mass = particle_mass;
-        }
-
-        return planet_particles;
-    }
-
-    std::vector<Particle> newPlanetFromParticleCount(
-        double cx,
-        double cy,
-        double planet_radius,
-        double density,
-        int subparticle_count)
-    {
-        //density *= hex_lattice_density_scalar;
-
-        double planet_volume = (4.0 / 3.0) * M_PI * pow(planet_radius, 3);
-        double planet_target_mass = density * planet_volume;
-
-        double particle_radius = particleRadiusForPlanet(planet_radius, subparticle_count);
-        return newPlanetFromParticleSize(cx, cy, planet_radius, density, particle_radius);
-    }
-
-    double particleRadiusForPlanet(double planet_radius, int subparticle_count)
-    {
-        return (hex_lattice_density * (planet_radius / sqrt((double)subparticle_count)));
-    }
+    
 
     void addParticles(const Particle& p)
     {
@@ -519,16 +456,7 @@ struct SpaceEngineScene : public Scene
 
 };
 
-template<typename T>
-struct SpaceEngineTemplate : public Project<T>
-{
-    //void projectPrepare() override
-    //{
-    //    setLayout(1).constructAll<T>();
-    //}
-};
-
-struct SpaceEngine : public SpaceEngineTemplate<SpaceEngineScene>
+struct SpaceEngine_Project : public Project
 {
     void projectPrepare() override;
 };

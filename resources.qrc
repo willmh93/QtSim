@@ -4,5 +4,10 @@
         <file>resources/icon.ico</file>
         <file>resources/race_map.png</file>
         <file>resources/race_hit_map.png</file>
+        <file>shaders/particle.frag</file>
+        <file>shaders/particle.vert</file>
+        <file>shaders/superfluid.frag</file>
+        <file>shaders/superfluid.vert</file>
+        <file>resources/car.png</file>
     </qresource>
 </RCC>

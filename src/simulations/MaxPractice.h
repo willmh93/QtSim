@@ -25,7 +25,7 @@ struct Ball
 };
 
 
-struct MaxPracticeScene : public Scene
+struct MaxPractice_Scene : public Scene
 {
     struct LaunchInfo
     {
@@ -38,7 +38,7 @@ struct MaxPracticeScene : public Scene
     double max_speed = 5;
     double world_size = 500;
 
-    void sceneAttributes(Options* options) override;
+    void sceneAttributes(Input* options) override;
 
     void sceneStart() override;
     void sceneDestroy() override;
@@ -48,7 +48,7 @@ struct MaxPracticeScene : public Scene
 
 
 
-struct MaxPractice : public Project<MaxPracticeScene>
+struct MaxPractice_Project : public Project
 {
     int viewport_count = 1;
 

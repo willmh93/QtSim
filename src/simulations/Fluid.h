@@ -13,7 +13,7 @@ struct Particle : public Vec2
     Particle(double x, double y) : Vec2(x,y) {}
 };
 
-struct FluidScene : public Scene
+struct Fluid_Scene : public Scene
 {
     double world_w = 250.0;
     double world_h = 250.0;
@@ -32,7 +32,7 @@ struct FluidScene : public Scene
     double viscosity_strength = 1;
     double viscosity_spring_dist_ratio = 10.0;
     
-    void sceneAttributes(Options* options) override;
+    void sceneAttributes(Input* options) override;
 
     void sceneStart() override;
     void sceneDestroy() override;
@@ -45,13 +45,13 @@ struct FluidScene : public Scene
     void spring(Particle* a, Particle* b, double restLength, double k, double damping, double deltaTime);
 };
 
-struct Fluid : public Project<FluidScene>
+struct Fluid_Project : public Project
 {
     int viewport_count = 4;
 
     void projectPrepare() override;
     //void projectStart();
-    void projectAttributes(Options *options) override;
+    void projectAttributes(Input* options) override;
     
 };
 

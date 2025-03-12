@@ -19,6 +19,7 @@
 
 #include "Canvas2D.h"
 #include "Project.h"
+#include "QtSim.h"
 
 Canvas2D::Canvas2D(QWidget* parent)
     : QNanoWidget(parent)
@@ -34,47 +35,47 @@ Canvas2D::~Canvas2D()
 
 void Canvas2D::mousePressEvent(QMouseEvent* event)
 {
-    if (!scene) return;
+    if (!project) return;
     QPointF mousePos = event->position();
-    scene->_mouseDown(mousePos.x(), mousePos.y(), event->button());
+    project->_mouseDown(mousePos.x(), mousePos.y(), event->button());
     update();
 }
 
 void Canvas2D::mouseReleaseEvent(QMouseEvent* event)
 {
-    if (!scene) return;
+    if (!project) return;
     QPointF mousePos = event->position();
-    scene->_mouseUp(mousePos.x(), mousePos.y(), event->button());
+    project->_mouseUp(mousePos.x(), mousePos.y(), event->button());
     update();
 }
 
 void Canvas2D::mouseMoveEvent(QMouseEvent* event)
 {
-    if (!scene) return;
+    if (!project) return;
     QPointF mousePos = event->position();
-    scene->_mouseMove(mousePos.x(), mousePos.y());
+    project->_mouseMove(mousePos.x(), mousePos.y());
     update();
 }
 
 void Canvas2D::wheelEvent(QWheelEvent* event)
 {
-    if (!scene) return;
+    if (!project) return;
     QPointF mousePos = event->position();
-    scene->_mouseWheel(mousePos.x(), mousePos.y(), event->angleDelta().y());
+    project->_mouseWheel(mousePos.x(), mousePos.y(), event->angleDelta().y());
     update();
 }
 
 void Canvas2D::keyPressEvent(QKeyEvent* event)
 {
-    if (!scene) return;
-    scene->_keyPress(event);
+    if (!project) return;
+    project->_keyPress(event);
     update();
 }
 
 void Canvas2D::keyReleaseEvent(QKeyEvent* event)
 {
-    if (!scene) return;
-    scene->_keyRelease(event);
+    if (!project) return;
+    project->_keyRelease(event);
     update();
 }
 
@@ -87,6 +88,7 @@ void Canvas2D::initializeGL()
 
 void Canvas2D::paint(QNanoPainter* p)
 {
+    //qDebug() << "Canvas2D::paint() - Thread: " << QThread::currentThread()->objectName();
     QScreen* screen = this->screen();
     qreal scaleFactor = screen->devicePixelRatio();
 
@@ -96,18 +98,26 @@ void Canvas2D::paint(QNanoPainter* p)
     p->beginFrame(vw*scaleFactor, vh*scaleFactor);
     p->scale(scaleFactor);
 
-    if (!scene || !scene->started)
+
+    if (!project || !project->started)
     {
         p->setFillStyle({ 10,10,15 });
         p->fillRect(0, 0, vw, vh);
     }
-    
-    if (scene && scene->started)
+    else if (project && project->recording)
     {
+        p->setFillStyle({ 0,0,0 });
+        p->fillRect(0, 0, vw, vh);
+    }
+    
+    if (project && project->started)
+    {
+        QMutexLocker locker(&main_window->sim_lock);
+
         if (!render_to_offscreen)
         {
-            scene->_draw(p);
-            scene->onPainted(nullptr);
+            project->_draw(p);
+            project->onPainted(nullptr);
         }
         else
         {
@@ -136,11 +146,11 @@ void Canvas2D::paint(QNanoPainter* p)
 
             // Draw project to offscreen painter
             auto offscreen_painter = offscreen_nano_painter.begin(offscreen_w, offscreen_h, true);
-            scene->_draw(offscreen_painter);
+            project->_draw(offscreen_painter);
             offscreen_nano_painter.end();
 
             // Provide project with frame pixels
-            scene->onPainted(&offscreen_nano_painter.getPixels());
+            project->onPainted(&offscreen_nano_painter.getPixels());
 
             // Draw offscreen painter to main painter
             offscreen_nano_painter.drawToPainter(p,

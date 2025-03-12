@@ -2,8 +2,8 @@
 #include <QPoint>
 #include <QRectF>
 
-class ProjectBase;
-using CreatorFunc = std::function<ProjectBase*()>;
+class Project;
+using CreatorFunc = std::function<Project*()>;
 
 struct ProjectInfo
 {
@@ -145,6 +145,16 @@ struct Ray : public Vec2
     {}
     Ray(const Vec2& a, const Vec2 &b) : Vec2(a.x, a.y), angle(a.angleTo(b))
     {}
+};
+
+struct MassForceParticle : public Vec2
+{
+    double r;
+    double fx;
+    double fy;
+    double vx;
+    double vy;
+    double mass;
 };
 
 // Triangle structure
@@ -328,10 +338,6 @@ struct TriangleHash
         return seed;
     }
 };*/
-
-
-
-
 
 // A custom equality that relies on Triangle's operator==.
 template <typename VecT>

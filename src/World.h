@@ -50,6 +50,9 @@ public:
     double pan_beg_y = 0;
     bool panning = false;
 
+    bool saved_transform_coordinates = transform_coordinates;
+    bool saved_scale_lines_text = scale_lines_text;
+    bool saved_rotate_text = rotate_text;
 
     void setTransformFilters(
         bool _transform_coordinates,
@@ -87,6 +90,20 @@ public:
         transform_coordinates = true;
         scale_lines_text = false;
         rotate_text = false;
+    }
+
+    void saveCameraTransform()
+    {
+        saved_transform_coordinates = transform_coordinates;
+        saved_scale_lines_text = scale_lines_text;
+        saved_rotate_text = rotate_text;
+    }
+
+    void restoreCameraTransform()
+    {
+        transform_coordinates = saved_transform_coordinates;
+        scale_lines_text = saved_scale_lines_text;
+        rotate_text = saved_rotate_text;
     }
 
     double stage_ox = 0;

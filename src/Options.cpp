@@ -114,7 +114,7 @@ void Options::addSimListEntry(const std::shared_ptr<ProjectInfo>& info)
         }
     }
 
-    ui.simTree->expandAll();
+    //ui.simTree->expandAll();
 }
 
 void Options::selectionChanged(const QItemSelection& selected, const QItemSelection&)
@@ -142,131 +142,51 @@ void Options::doubleClickSim(const QModelIndex& index)
     }
 }
 
-template<typename T>
-void assign_ptr(std::variant<T, T*>& value, T*& val_ptr, T& val_placeholder)
-{
-    std::visit([&val_ptr, &val_placeholder](auto&& v)
-    {
-        using DecayedType = std::decay_t<decltype(v)>;
-        if constexpr (std::is_pointer_v<DecayedType>)
-            val_ptr = v; // If ptr passed, use the passed ptr
-        else if constexpr (std::is_same_v<DecayedType, T>)
-            val_placeholder = v; // If value passed, set placeholder value to target
-    }, value);
-}
-
-template<typename T>
-void assign_ptr(std::variant<T, T*>& target, std::vector<T*>& val_ptr, T& val_placeholder, bool keep_existing_value)
-{
-    // Visit possible "target" types
-    std::visit([&val_ptr, &val_placeholder, keep_existing_value](auto&& v)
-    {
-        // Check if the target is a pointer, or a hardcoded value
-        using DecayedType = std::decay_t<decltype(v)>;
-        if constexpr (std::is_pointer_v<DecayedType>)
-        {
-            // If ptr passed, add pointer to list to update on change
-            if (!keep_existing_value)
-                val_placeholder = *v; // Set placeholder to current pointer value
-            else
-                *v = val_placeholder;
-            val_ptr.push_back(v);
-        }
-        else if constexpr (std::is_same_v<DecayedType, T>)
-        {
-            if (!keep_existing_value)
-                val_placeholder = v; // If value passed, set placeholder value to target
-        }
-    }, target);
-}
 
 
-
-AttributeItem* Options::realtime_slider(
+AttributeItem* Options::int_realtime_slider(
     QString name, 
-    IntVar target, 
-    IntVar min, IntVar max, IntVar step,
+    int value, int min, int max, int step,
     IntCallback changed)
 {
     auto* item = attributeList->getItem(name);
     bool keep_existing_value = (item != nullptr);
     if (!item)
+    {
+        // New item, initialize with defaults
         item = attributeList->addItem(name, AttributeType::SLIDER_INT, false);
-    //item->touched = true;
 
-    assign_ptr(target, item->int_ptrs, item->value_int, keep_existing_value);
-    assign_ptr(min, item->slider_int_min_ptr, item->slider_int_min);
-    assign_ptr(max, item->slider_int_max_ptr, item->slider_int_max);
-    assign_ptr(step, item->slider_int_step_ptr, item->slider_int_step);
-
-    item->updateUIValue();
-    return item;
-}
-
-AttributeItem* Options::starting_slider(
-    QString name,
-    IntVar target,
-    IntVar min, IntVar max, IntVar step,
-    IntCallback changed)
-{
-    auto* item = attributeList->getItem(name);
-    bool keep_existing_value = (item != nullptr);
-    if (!item)
-        item = attributeList->addItem(name, AttributeType::SLIDER_INT, true);
-    //item->touched = true;
-
-    assign_ptr(target, item->int_ptrs, item->value_int, keep_existing_value);
-    assign_ptr(min, item->slider_int_min_ptr, item->slider_int_min);
-    assign_ptr(max, item->slider_int_max_ptr, item->slider_int_max);
-    assign_ptr(step, item->slider_int_step_ptr, item->slider_int_step);
+        item->value_int = value;
+        item->slider_int_min = min;
+        item->slider_int_max = max;
+        item->slider_int_step = step;
+        item->int_change = changed;
+    }
+    else
+    {
+        // Existing item. Broadcast existing values
+        valueChangedInt(name, item->value_int);
+    }
 
     item->updateUIValue();
     return item;
 }
 
-///
-
-AttributeItem* Options::realtime_slider(
+AttributeItem* Options::double_realtime_slider(
     QString name, 
-    DoubleVar target, 
-    DoubleVar min, DoubleVar max, DoubleVar step, 
+    double target, double min, double max, double step,
     DoubleCallback changed)
 {
     auto* item = attributeList->getItem(name);
     bool keep_existing_value = (item != nullptr);
     if (!item)
         item = attributeList->addItem(name, AttributeType::SLIDER_FLOAT, false);
-    //item->touched = true;
 
-    assign_ptr(target, item->float_ptrs, item->value_float, keep_existing_value);
-
-    assign_ptr(min, item->slider_float_min_ptr, item->slider_float_min);
-    assign_ptr(max, item->slider_float_max_ptr, item->slider_float_max);
-    assign_ptr(step, item->slider_float_step_ptr, item->slider_float_step);
-    
-    item->updateUIValue();
-    return item;
-}
-
-AttributeItem* Options::starting_slider(
-    QString name,
-    DoubleVar target,
-    DoubleVar min, DoubleVar max,
-    DoubleVar step,
-    DoubleCallback changed)
-{
-    auto* item = attributeList->getItem(name);
-    bool keep_existing_value = (item != nullptr);
-    if (!item)
-        item = attributeList->addItem(name, AttributeType::SLIDER_FLOAT, true);
-    //item->touched = true;
-
-    //assign_ptr(target, item->value_float_ptr, item->value_float);
-    assign_ptr(target, item->float_ptrs, item->value_float, keep_existing_value);
-
-    assign_ptr(min, item->slider_float_min_ptr, item->slider_float_min);
-    assign_ptr(max, item->slider_float_max_ptr, item->slider_float_max);
-    assign_ptr(step, item->slider_float_step_ptr, item->slider_float_step);
+    item->value_float = target;
+    item->slider_float_min = min;
+    item->slider_float_max = max;
+    item->slider_float_step = step;
+    item->float_change = changed;
 
     item->updateUIValue();
     return item;
@@ -274,29 +194,15 @@ AttributeItem* Options::starting_slider(
 
 ///
 
-AttributeItem* Options::realtime_checkbox(QString name, BoolVar target, BoolCallback on_change)
+AttributeItem* Options::realtime_checkbox(QString name, bool target, BoolCallback on_change)
 {
     auto* item = attributeList->getItem(name);
     bool keep_existing_value = (item != nullptr);
     if (!item)
         item = attributeList->addItem(name, AttributeType::CHECKBOX, false);
+
+    item->value_bool = target;
     item->bool_change = on_change;
-
-    assign_ptr(target, item->bool_ptrs, item->value_bool, keep_existing_value);
-
-    item->updateUIValue();
-    return item;
-}
-
-AttributeItem* Options::starting_checkbox(QString name, BoolVar target, BoolCallback on_change)
-{
-    auto* item = attributeList->getItem(name);
-    bool keep_existing_value = (item != nullptr);
-    if (!item)
-        item = attributeList->addItem(name, AttributeType::CHECKBOX, true);
-    item->bool_change = on_change;
-
-    assign_ptr(target, item->bool_ptrs, item->value_bool, keep_existing_value);
 
     item->updateUIValue();
     return item;
@@ -435,5 +341,124 @@ void DynamicIconDelegate::paint(
     // Reset painter brush to default after drawing
     painter->setPen(Qt::NoPen);
     painter->setBrush(Qt::NoBrush);
+}
+
+
+template<typename T> T variantValue(std::variant<T, T*> variant)
+{
+    T ret;
+    std::visit([&ret](auto&& v)
+    {
+        using DecayedType = std::decay_t<decltype(v)>;
+        if constexpr (std::is_pointer_v<DecayedType>)
+        {
+            // (v) "target" is T*
+            ret = *v;
+
+        }
+        else if constexpr (std::is_same_v<DecayedType, T>)
+        {
+            // (v) "target" is T
+            ret = v;
+        }
+    }, variant);
+    return ret;
+}
+
+Input::Input(QObject* parent, Options* options) : QObject(parent), options(options)
+{
+    connect(options, &Options::valueChangedInt, this, &Input::receiveIntChange);
+    connect(options, &Options::valueChangedDouble, this, &Input::receiveDoubleChange);
+    connect(options, &Options::valueChangedBool, this, &Input::receiveBoolChange);
+}
+
+SimItemProxyPtr Input::_slider_int(bool realtime, QString name, IntVar target, IntVar min, IntVar max, IntVar step, IntCallback changed)
+{
+    bool already_exists = (items[name] != nullptr);
+
+    // Create new item
+    auto item = createItem(name, AttributeType::SLIDER_INT);
+    item->int_value.provide(target, realtime, already_exists);
+    item->int_min.provide(min, realtime, already_exists);
+    item->int_max.provide(max, realtime, already_exists);
+    item->int_step.provide(step, realtime, already_exists);
+
+    // Create component on GUI thread
+    QMetaObject::invokeMethod(options, [this, name, item]() {
+        options->addInputSliderInt(name, item);
+    });
+
+    return item;
+}
+
+SimItemProxyPtr Input::_slider_double(bool realtime, QString name, DoubleVar target, DoubleVar min, DoubleVar max, DoubleVar step, DoubleCallback changed)
+{
+    bool already_exists = (items[name] != nullptr);
+
+    // Create new item
+    auto item = createItem(name, AttributeType::SLIDER_FLOAT);
+    item->double_value.provide(target, realtime, already_exists);
+    item->double_min.provide(min, realtime, already_exists);
+    item->double_max.provide(max, realtime, already_exists);
+    item->double_step.provide(step, realtime, already_exists);
+
+    // Create component on GUI thread
+    QMetaObject::invokeMethod(options, [this, name, item]() {
+        options->addInputSliderDouble(name, item);
+    });
+
+    return item;
+}
+
+SimItemProxyPtr Input::_checkbox(bool realtime, QString name, BoolVar target, BoolCallback changed)
+{
+    bool already_exists = (items[name] != nullptr);
+
+    // Create new item
+    auto item = createItem(name, AttributeType::CHECKBOX);
+    item->bool_value.provide(target, realtime, already_exists);
+
+    // Create component on GUI thread
+    QMetaObject::invokeMethod(options, [this, name, item]() {
+        options->addInputCheckbox(name, item);
+    });
+
+    return item;
+}
+
+SimItemProxyPtr Input::realtime_slider(QString name, IntVar target, IntVar min, IntVar max, IntVar step, IntCallback changed)
+{
+    return _slider_int(true, name, target, min, max, step, changed);
+}
+
+SimItemProxyPtr Input::starting_slider(QString name, IntVar target, IntVar min, IntVar max, IntVar step, IntCallback changed)
+{
+    return _slider_int(false, name, target, min, max, step, changed);
+}
+
+SimItemProxyPtr Input::realtime_slider(QString name, DoubleVar target, DoubleVar min, DoubleVar max, DoubleVar step, DoubleCallback changed)
+{
+    if (variantValue(step) <= 0)
+        step = (variantValue(max) - variantValue(min)) / 100.0;
+
+    return _slider_double(true, name, target, min, max, step, changed);
+}
+
+SimItemProxyPtr Input::starting_slider(QString name, DoubleVar target, DoubleVar min, DoubleVar max, DoubleVar step, DoubleCallback changed)
+{
+    if (variantValue(step) <= 0)
+        step = (variantValue(max) - variantValue(min)) / 100.0;
+
+    return _slider_double(false, name, target, min, max, step, changed);
+}
+
+SimItemProxyPtr Input::realtime_checkbox(QString name, BoolVar target, BoolCallback changed)
+{
+    return _checkbox(true, name, target, changed);
+}
+
+SimItemProxyPtr Input::starting_checkbox(QString name, BoolVar target, BoolCallback changed)
+{
+    return _checkbox(false, name, target, changed);
 }
 

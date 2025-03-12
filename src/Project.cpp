@@ -25,6 +25,8 @@
 #include "Project.h"
 #include "Canvas2D.h"
 
+#include "FFmpegWorker.h"
+
 void Scene::registerMount(Viewport* viewport)
 {
     options = viewport->options;
@@ -85,6 +87,7 @@ Viewport::Viewport(Layout* layout, Options* options, int viewport_index, int gri
     viewport_grid_y(grid_y)
 {
     camera.viewport = this;
+    print_stream.setString(&print_text);
 }
 
 Viewport::~Viewport()
@@ -121,7 +124,7 @@ void Viewport::draw(QNanoPainter* p)
     // If TOP_LEFT, the world coordinate at top left remains fixed
     // If CENTER, world coordinate at middle of viewport remains fixed
 
-    /// Do transform
+    /// QNanoPainter transformations
     p->translate(
         floor(camera.originPixelOffset().x + camera.panPixelOffset().x),
         floor(camera.originPixelOffset().y + camera.panPixelOffset().y) 
@@ -135,9 +138,52 @@ void Viewport::draw(QNanoPainter* p)
 
     p->scale(camera.zoom_x, camera.zoom_y);
 
+    /// GL Transform/Projection
+    {
+        QMatrix4x4 _projectionMatrix;
+        QMatrix4x4 _transformMatrix;
+        _projectionMatrix.ortho(0, width, height, 0, -1, 1);  // Top-left origin
+        _transformMatrix.setToIdentity();
+
+        // Do transformations
+        _transformMatrix.translate(
+            floor(camera.originPixelOffset().x + camera.panPixelOffset().x),
+            floor(camera.originPixelOffset().y + camera.panPixelOffset().y)
+        );
+        _transformMatrix.rotate(camera.rotation, 0.0f, 0.0f, 1.0f);
+        _transformMatrix.translate(
+            floor(-camera.x * camera.zoom_x),
+            floor(-camera.y * camera.zoom_y)
+        );
+        _transformMatrix.scale(camera.zoom_x, camera.zoom_y);
+
+        projectionMatrix = _projectionMatrix;
+        transformMatrix = _transformMatrix;
+    }
+
+    offscreen_surface.newFrame();
+
+    print_text = "";
+
     // Draw mounted project to this viewport
     scene->camera = &camera;
     scene->viewportDraw(this);
+
+
+
+    save();
+    camera.saveCameraTransform();
+    camera.stageTransform();
+    setTextAlign(TextAlign::ALIGN_LEFT);
+    setTextBaseline(TextBaseline::BASELINE_TOP);
+    setFillStyle(Qt::white);
+
+    auto lines = print_text.split('\n');
+    for (qsizetype i=0; i<lines.size(); i++)
+        fillText(lines[i], 5, 5 + (i * 16));
+
+    camera.restoreCameraTransform();
+    restore();
 }
 
 /// Layout
@@ -203,15 +249,21 @@ void Layout::expandCheck(size_t count)
 }
 
 
-/// ProjectBase
+/// Project
 
-Layout& ProjectBase::newLayout() 
+void Project::setProjectInfoState(ProjectInfo::State state)
+{
+    getProjectInfo()->state = state;
+    options->refreshTreeUI();
+}
+
+Layout& Project::newLayout()
 {
     viewports.clear();
     return viewports;
 }
 
-Layout& ProjectBase::newLayout(int targ_viewports_x, int targ_viewports_y)
+Layout& Project::newLayout(int targ_viewports_x, int targ_viewports_y)
 {
     viewports.options = options;
 
@@ -221,7 +273,7 @@ Layout& ProjectBase::newLayout(int targ_viewports_x, int targ_viewports_y)
     return viewports;
 }
 
-void ProjectBase::configure(int _sim_uid, Canvas2D* _canvas, Options* _options)
+void Project::configure(int _sim_uid, Canvas2D* _canvas, Options* _options)
 {
     sim_uid = _sim_uid;
     canvas = _canvas;
@@ -231,22 +283,26 @@ void ProjectBase::configure(int _sim_uid, Canvas2D* _canvas, Options* _options)
     paused = false;
 }
 
-void ProjectBase::_projectPrepare()
+void Project::_projectPrepare()
 {
     viewports.clear();
 
-    options->clearAllPointers();
-    projectAttributes(options);
+    input_proxy->clearPointers();
+
+    projectAttributes(input_proxy);
+    //input_proxy->forceBroadcast();
 
     // Prepare project and create layout
     // Note: This is where old viewports get replaced
     projectPrepare();
 
     for (Viewport* viewport : this->viewports)
-        viewport->scene->sceneAttributes(options);
+        viewport->scene->sceneAttributes(input_proxy);
+
+    input_proxy->removeUnusedInputs();
 }
 
-void ProjectBase::_projectStart()
+void Project::_projectStart()
 {
     if (paused)
     {
@@ -261,7 +317,7 @@ void ProjectBase::_projectStart()
     // Update layout rects
     updateViewportRects();
 
-    // Call ProjectBase::projectStart()
+    // Call Project::projectStart()
     projectStart();
 
     cache.init("cache.bin");
@@ -271,6 +327,7 @@ void ProjectBase::_projectStart()
     {
         scene->cache = &cache;
         scene->mouse = &mouse;
+        scene->dt_ma_list.clear();
         scene->sceneStart();
     }
 
@@ -289,7 +346,7 @@ void ProjectBase::_projectStart()
     started = true;
 }
 
-void ProjectBase::_projectStop()
+void Project::_projectStop()
 {
     projectStop();
     cache.finalize();
@@ -298,21 +355,24 @@ void ProjectBase::_projectStop()
         finalizeRecording();
 
     setProjectInfoState(ProjectInfo::INACTIVE);
+    shaders_loaded = false;
     started = false;
 }
 
-void ProjectBase::_projectDestroy()
+void Project::_projectDestroy()
 {
+    input_proxy->clearPointers();
+
     setProjectInfoState(ProjectInfo::INACTIVE);
     projectDestroy();
 }
 
-void ProjectBase::_projectPause()
+void Project::_projectPause()
 {
     paused = true;
 }
 
-void ProjectBase::updateViewportRects()
+void Project::updateViewportRects()
 {
     Vec2 surface_size = surfaceSize();
 
@@ -332,7 +392,7 @@ void ProjectBase::updateViewportRects()
     }
 }
 
-Vec2 ProjectBase::surfaceSize()
+Vec2 Project::surfaceSize()
 {
     double w;
     double h;
@@ -354,7 +414,7 @@ Vec2 ProjectBase::surfaceSize()
     return Vec2(w, h);
 }
 
-void ProjectBase::_projectProcess()
+void Project::_projectProcess()
 {
     updateViewportRects();
 
@@ -362,7 +422,7 @@ void ProjectBase::_projectProcess()
     bool attaching_encoder = (recording && !ffmpeg_worker->isInitialized());
     if (!attaching_encoder && !encoder_busy && !paused)
     {
-        dt_timer.start();
+        timer_projectProcess.start();
 
         for (Viewport* viewport : viewports)
         {
@@ -386,10 +446,14 @@ void ProjectBase::_projectProcess()
         // Process each scene scene
         for (Scene* scene : viewports.all_scenes)
         {
-            //scene->updateMouseInfo();
+            scene->dt_call_index = 0;
+            scene->timer_sceneProcess.start();
             scene->mouse = &mouse;
             scene->sceneProcess();
+            scene->dt_sceneProcess = scene->timer_sceneProcess.elapsed();
         }
+
+        dt_projectProcess = timer_projectProcess.elapsed();
 
         // Allow project to handle process on each Viewport
         for (Viewport* viewport : viewports)
@@ -399,14 +463,12 @@ void ProjectBase::_projectProcess()
             viewport->scene->viewportProcess(viewport);
         }
         
-        frame_dt = dt_timer.elapsed();
-
         // Prepare to encode the next frame
         encode_next_paint = true;
     }
 }
 
-void ProjectBase::postProcess()
+void Project::postProcess()
 {
     // Keep delta until entire frame processed and drawn
     mouse.scroll_delta = 0;
@@ -415,7 +477,7 @@ void ProjectBase::postProcess()
     //    viewport->scene->postProcess();
 }
 
-void ProjectBase::_mouseDown(int x, int y, Qt::MouseButton btn)
+void Project::_mouseDown(int x, int y, Qt::MouseButton btn)
 {
     for (Viewport* viewport : viewports)
     {
@@ -441,7 +503,7 @@ void ProjectBase::_mouseDown(int x, int y, Qt::MouseButton btn)
     }
 }
 
-void ProjectBase::_mouseUp(int x, int y, Qt::MouseButton btn)
+void Project::_mouseUp(int x, int y, Qt::MouseButton btn)
 {
     for (Viewport* viewport : viewports)
     {
@@ -469,7 +531,7 @@ void ProjectBase::_mouseUp(int x, int y, Qt::MouseButton btn)
         scene->mouseDown();
 }
 
-void ProjectBase::_mouseMove(int x, int y)
+void Project::_mouseMove(int x, int y)
 {
     mouse.client_x = x;
     mouse.client_y = y;
@@ -497,7 +559,7 @@ void ProjectBase::_mouseMove(int x, int y)
     }
 }
 
-void ProjectBase::_mouseWheel(int x, int y, int delta)
+void Project::_mouseWheel(int x, int y, int delta)
 {
     for (Viewport* viewport : viewports)
     {
@@ -529,24 +591,14 @@ void ProjectBase::_mouseWheel(int x, int y, int delta)
     }
 }
 
-void ProjectBase::_keyPress(QKeyEvent* e)
+void Project::_draw(QNanoPainter* p)
 {
-    for (Scene* scene : viewports.all_scenes)
+    if (!shaders_loaded)
     {
-        scene->keyPressed(e);
+        _loadShaders();
+        shaders_loaded = true;
     }
-}
 
-void ProjectBase::_keyRelease(QKeyEvent* e)
-{
-    for (Scene* scene : viewports.all_scenes)
-    {
-        scene->keyReleased(e);
-    }
-}
-
-void ProjectBase::_draw(QNanoPainter* p)
-{
     Vec2 surface_size = surfaceSize();
 
     p->setFillStyle({ 10,10,15 });
@@ -602,7 +654,7 @@ void ProjectBase::_draw(QNanoPainter* p)
     }
 }
 
-void ProjectBase::onPainted(const std::vector<GLubyte> *frame)
+void Project::onPainted(const std::vector<GLubyte> *frame)
 {
     if (!recording)
         return;
@@ -634,7 +686,7 @@ void ProjectBase::onPainted(const std::vector<GLubyte> *frame)
     }
 }
 
-bool ProjectBase::startRecording()
+bool Project::startRecording()
 {
     if (recording)
         throw "Error, already recording...";
@@ -716,7 +768,7 @@ bool ProjectBase::startRecording()
     connect(ffmpeg_thread, &QThread::started, ffmpeg_worker, &FFmpegWorker::startRecording);
 
     // Listen for frame updates, forward pixel data to FFmpeg encoder
-    connect(this, &ProjectBase::frameReady, ffmpeg_worker, &FFmpegWorker::encodeFrame);
+    connect(this, &Project::frameReady, ffmpeg_worker, &FFmpegWorker::encodeFrame);
 
     // When the frame is succesfully encoded, permit processing the next frame
     connect(ffmpeg_worker, &FFmpegWorker::frameFlushed, ffmpeg_worker, [this]()
@@ -725,7 +777,7 @@ bool ProjectBase::startRecording()
     });
 
     // Wait for "end recording" onClicked signal, then signal FFmpeg worker to finish up
-    connect(this, &ProjectBase::endRecording, ffmpeg_worker, &FFmpegWorker::finalizeRecording);
+    connect(this, &Project::endRecording, ffmpeg_worker, &FFmpegWorker::finalizeRecording);
 
     // Gracefully shut down worker/thread once FFmpeg finalizes encoding
     connect(ffmpeg_worker, &FFmpegWorker::onFinalized, ffmpeg_worker, [this]()
@@ -746,26 +798,33 @@ bool ProjectBase::startRecording()
     return true;
 }
 
-bool ProjectBase::encodeFrame(uint8_t* data)
+bool Project::encodeFrame(uint8_t* data)
 {
     encoder_busy = true;
     emit frameReady(data);
     return true;
 }
 
-void ProjectBase::finalizeRecording()
+void Project::finalizeRecording()
 {
     recording = false;
     canvas->render_to_offscreen = false;
     emit endRecording();
 }
 
-int ProjectBase::canvasWidth()
+void Project::onResize()
 {
-    return canvas->width();
+    canvas_width = canvas->width();
+    canvas_height = canvas->height();
 }
 
-int ProjectBase::canvasHeight()
+int Project::canvasWidth()
 {
-    return canvas->height();
+    return canvas_width;
+    //return canvas->width(); // not thread safe
+}
+
+int Project::canvasHeight()
+{
+    return canvas_height;
 }
