@@ -89,7 +89,7 @@ void BigBang_Scene::sceneStart()
 
     SpaceEngine_Scene::sceneStart();
 
-    auto universe_particles = PlanetGenerator::planetFromParticleCount<Particle>(0, 0, 50, 1000, particle_count);
+    auto universe_particles = PlanetGenerator::planetFromParticleCount<Particle>(0, 0, 50, 1, particle_count);
     //auto universe_particles = PlanetGenerator::randomDistributedPlanet<Particle>(0, 0, 50, particle_count, 1);
 
     /*std::vector<Particle> universe_particles;

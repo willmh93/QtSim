@@ -11,18 +11,6 @@ void EarthMoon_Project::projectPrepare()
 
     for (int i=0; i<1; i++)
         layout << scene;
-
-
-    //layout << createScene(Config(true));
-    //layout << createScene(Config(false));
-
-    //createScene(Config(true))->mountTo(layout);
-    //createScene(Config(false))->mountTo(layout);
-
-    //EarthMoon::createScene()->mountToAll(layout);
-    //EarthMoon::makeScenes(2)->mountTo(layout);
-
-    //setLayout(1).constructAll<EarthMoon_Scene>();
 }
 
 void EarthMoon_Scene::sceneAttributes(Input* options)
