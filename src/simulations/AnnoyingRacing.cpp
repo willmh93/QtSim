@@ -83,109 +83,70 @@ void AnnoyingRacing_Scene::viewportProcess(Viewport* ctx)
     {
         // Human player
     }
-    else
+    else // AI
     {
-        // AI player
-        
-
-        //car.reset_ghost_to_present();
-        //for (int i = 0; i < 500; i++)
-        //{
-        //    car.process_future(ctx, map_img);
-        //}
-
+        // Calculate multiple AI scenarios until crash (at maximum throttle)
         car->reset_ghost_to_present();
-        car->ghost_state.sum_turned = 0;
 
-        bool slow_down = false;
-
-        car->ghost_state.throttle = 1;
+        //car->ghost_state.sum_turned = 0;
         car->ghost_state.max_accelerate_frames = 0;
+        car->ghost_state.throttle = 1;
 
+        // X frames in the future
         for (int i = 0; i < 100; i++)
         {
-            car->getShortestPathAngle(car->ghost_state, map_img);
             if (car->process(car->ghost_state, ctx, map_img, 1.5))
-            {
-                slow_down = true;
                 break;
-                //car.ghost_state.accelerating = false;
-            }
             else
-            {
                 car->ghost_state.max_accelerate_frames++;
-            }
 
-            if (car->ghost_state.best_test_angle < 0)
+            car->determineBestAngle(car->ghost_state, map_img);
+            car->applyAIControls(car->ghost_state);
+        }
+        
+
+        // React to possible throttle scenarios
+        {
+            QColor pixel = car->getPixel(map_img, car->present_state.x, car->present_state.y);
+            if (car->is_road(pixel))
             {
-                // Turn left
-                car->ghost_state.setTurn(-turn_speed);
-                car->ghost_state.sum_turned -= turn_speed;
+                if (car->ghost_state.max_accelerate_frames >= 99)
+                    car->present_state.throttle = 1.5;
+                else if (car->ghost_state.max_accelerate_frames >= 80)
+                {
+                    // Collision far away
+                    car->present_state.throttle = 1;
+                }
+                else if (car->ghost_state.max_accelerate_frames >= 40)
+                {
+                    // Cruise
+                    car->present_state.throttle = 0.9;
+                }
+                else if (car->ghost_state.max_accelerate_frames >= 20)
+                {
+                    // Collision near-ish
+                    if (car->present_state.speed > 1)
+                        car->present_state.throttle = -1;
+                    else
+                        car->present_state.throttle = 0.7;
+                }
+                else
+                {
+                    // Collision very near
+                    if (car->present_state.speed > 2)
+                        car->present_state.throttle = -1;
+                    else
+                        car->present_state.throttle = 0.4;
+                }
             }
             else
             {
-                // Turn right
-                car->ghost_state.setTurn(turn_speed);
-                car->ghost_state.sum_turned += turn_speed;
-            }
-        }
-
-        car->getShortestPathAngle(car->present_state, map_img, true);
-
-        /*if (car.ghost_state.sum_turned > 0)
-            car.present_state.best_test_angle -= 1000 / car.present_state.longest_ray;
-        else
-            car.present_state.best_test_angle += 1000 / car.present_state.longest_ray;*/
-
-        QColor pixel = car->getPixel(map_img, car->present_state.x, car->present_state.y);
-        if (car->is_road(pixel))
-        {
-            if (car->ghost_state.max_accelerate_frames >= 99)
-                car->present_state.throttle = 1.5;
-            else if (car->ghost_state.max_accelerate_frames >= 80)
-            {
-                // Collision far away
                 car->present_state.throttle = 1;
             }
-            else if (car->ghost_state.max_accelerate_frames >= 40)
-            {
-                // Cruise
-                car->present_state.throttle = 0.9;
-            }
-            else if (car->ghost_state.max_accelerate_frames >= 20)
-            {
-                // Collision near-ish
-                if (car->present_state.speed > 1)
-                    car->present_state.throttle = -1;
-                else
-                    car->present_state.throttle = 0.7;
-            }
-            else
-            {
-                // Collision very near
-                if (car->present_state.speed > 2)
-                    car->present_state.throttle = -1;
-                else
-                    car->present_state.throttle = 0.4;
-            }
-        }
-        else
-        {
-            car->present_state.throttle = 1;
         }
 
-        //car.present_state.throttle = car.ghost_state.max_accelerate_frames / 100.0;// !slow_down;
-
-        if (car->present_state.best_test_angle < 0)
-        {
-            // Turn left
-            car->present_state.setTurn(-turn_speed);
-        }
-        else
-        {
-            // Turn right
-            car->present_state.setTurn(turn_speed);
-        }
+        car->determineBestAngle(car->present_state, map_img, true);
+        car->applyAIControls(car->present_state);
    }
 }
 
@@ -202,35 +163,35 @@ void AnnoyingRacing_Scene::viewportDraw(Viewport* ctx)
         car->draw(ctx, car->present_state, car->car_img);
 
         /*car.reset_ghost_to_present();
-        car.ghost_state.turn_bias = turn_speed / 10.0;
+        car.ghost_state.turn_bias = max_turn / 10.0;
 
         for (int i = 0; i < 100; i++)
         {
             bool collided = car.process(car.ghost_state, ctx, map_img, 2);
-            car.getShortestPathAngle(car.ghost_state, map_img);
+            car.determineBestAngle(car.ghost_state, map_img);
 
 
-            if (car.ghost_state.best_test_angle < 0)
+            if (car.ghost_state.best_ray_angle < 0)
             {
                 // Turn left
-                car.ghost_state.setTurn(-turn_speed);
-                car.ghost_state.sum_turned -= turn_speed;
+                car.ghost_state.setTurn(-max_turn);
+                car.ghost_state.sum_turned -= max_turn;
             }
             else
             {
                 // Turn right
-                car.ghost_state.setTurn(turn_speed);
-                car.ghost_state.sum_turned += turn_speed;
+                car.ghost_state.setTurn(max_turn);
+                car.ghost_state.sum_turned += max_turn;
             }
 
             if (i % 20 == 0)
                 car.draw(ctx, car.ghost_state, car_img);
         }
 
-
-        for (auto& ray : car.rays)
+        */
+        /*for (auto& ray : car->rays)
         {
-            double angle = ray.angle * M_PI / 180.0;
+            double angle = ray.ray_angle;
             double d = ray.dist;
 
             ctx->beginPath();
@@ -239,18 +200,39 @@ void AnnoyingRacing_Scene::viewportDraw(Viewport* ctx)
             {
                 ctx->setStrokeStyle(0, 255, 0);
 
-                ctx->moveTo(car.present_state.x, car.present_state.y);
+                ctx->moveTo(car->present_state.x, car->present_state.y);
                 ctx->lineTo(
-                    car.present_state.x + cos(car.present_state.angle + angle) * d,
-                    car.present_state.y + sin(car.present_state.angle + angle) * d
+                    car->present_state.x + cos(angle) * d,
+                    car->present_state.y + sin(angle) * d
+                );
+            }
+            else
+            {
+                ctx->setStrokeStyle(255, 0, 0, 50);
+
+                ctx->moveTo(car->present_state.x, car->present_state.y);
+                ctx->lineTo(
+                    car->present_state.x + cos(angle) * d,
+                    car->present_state.y + sin(angle) * d
                 );
             }
 
+
             ctx->stroke();
-        }*/
+        }
+
+        ctx->setStrokeStyle(255, 255, 0);
+        ctx->beginPath();
+        ctx->moveTo(car->present_state.x, car->present_state.y);
+        double best_angle = car->present_state.ai_target_angle;
+        ctx->lineTo(
+            car->present_state.x + cos(best_angle) * 200,
+            car->present_state.y + sin(best_angle) * 200
+        );
+        ctx->stroke();
 
         ctx->print() << car->ghost_state.max_accelerate_frames << "\n";
-        ctx->print() << car->present_state.speed;
+        ctx->print() << car->present_state.speed;*/
 
         /*if (car.ghost_state.sum_turned < 0)
             ctx->print() << "LEFT";
@@ -274,8 +256,8 @@ void AnnoyingRacing_Scene::keyPressed(QKeyEvent* e)
     {
         // Player 1
         case Qt::Key_Up:    cars[0]->present_state.setThrottle(1.5); break;
-        case Qt::Key_Left:  cars[0]->present_state.setTurn(-turn_speed); break;
-        case Qt::Key_Right: cars[0]->present_state.setTurn(turn_speed); break;
+        case Qt::Key_Left:  cars[0]->present_state.setTurn(-max_turn); break;
+        case Qt::Key_Right: cars[0]->present_state.setTurn(max_turn); break;
         case Qt::Key_Down:  cars[0]->present_state.setThrottle(-1); break;
     }
 
@@ -285,8 +267,8 @@ void AnnoyingRacing_Scene::keyPressed(QKeyEvent* e)
         {
             // Player 2
             case Qt::Key_W: cars[1]->present_state.setThrottle(1.5); break;
-            case Qt::Key_A: cars[1]->present_state.setTurn(-turn_speed); break;
-            case Qt::Key_D: cars[1]->present_state.setTurn(turn_speed);   break;
+            case Qt::Key_A: cars[1]->present_state.setTurn(-max_turn); break;
+            case Qt::Key_D: cars[1]->present_state.setTurn(max_turn);   break;
             case Qt::Key_S: cars[1]->present_state.setThrottle(-1); break;
         }
     }

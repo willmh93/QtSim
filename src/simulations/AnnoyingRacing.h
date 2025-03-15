@@ -5,7 +5,7 @@ SIM_BEG(AnnoyingRacing)
 
 struct Ray
 {
-    double angle;
+    double ray_angle;
     double dist;
     bool shortest;
     bool longest;
@@ -14,7 +14,7 @@ struct Ray
 const double car_w = 20;
 const double car_h = 10;
 const double acceleration = 0.05;
-const double turn_speed = 0.01;
+const double max_turn = 0.01;
 
 struct CarState
 {
@@ -31,9 +31,10 @@ struct CarState
 
     double turn_bias = 0;
 
-    double sum_turned = 0;
-    double best_test_angle;
-    double longest_ray = 0;
+    //double sum_turned = 0;
+    double best_ray_angle;
+    double ai_target_angle = 0;
+    double best_ray = 0;
 
     int max_accelerate_frames = 0;
 
@@ -45,8 +46,13 @@ struct CarState
     }
     void setTurn(double _turn_speed)
     {
-        turningSpeed = _turn_speed;
-        //turningSpeed += (_turn_speed - turningSpeed) * 0.15;
+        if (_turn_speed > max_turn)
+            _turn_speed = max_turn;
+        else if (_turn_speed < -max_turn)
+            _turn_speed = -max_turn;
+
+        //turningSpeed = _turn_speed;
+        turningSpeed += (_turn_speed - turningSpeed) * 0.5;
     }
 };
 
@@ -107,7 +113,7 @@ public:
 
     double project_dist_to_grass(CarState &state, double angle_offset, double ray_width, QImage& map_img)
     {
-        double step = 10.0;
+        double step = 2;
         double test_dist = step;
         double project_angle = state.angle + angle_offset;
 
@@ -227,8 +233,8 @@ public:
         state.vx = cos(state.angle) * state.speed;
         state.vy = sin(state.angle) * state.speed;
 
-        state.x += state.vx * dt;
-        state.y += state.vy * dt;
+        state.x += state.vx * dt;// *0.2;
+        state.y += state.vy * dt;// *0.2;
 
         return on_grass;
     }
@@ -237,7 +243,7 @@ public:
     {
         bool ghost_on_grass = point_on_grass(map_img, state.x, state.y);
 
-        state.angle += state.turningSpeed * state.speed;
+        state.ray_angle += state.turningSpeed * state.speed;
 
 
         // Assume always accelerating
@@ -251,8 +257,8 @@ public:
             state.speed *= 0.9;
         }
 
-        state.vx = cos(state.angle) * state.speed;
-        state.vy = sin(state.angle) * state.speed;
+        state.vx = cos(state.ray_angle) * state.speed;
+        state.vy = sin(state.ray_angle) * state.speed;
 
         state.x += state.vx;
         state.y += state.vy;
@@ -261,12 +267,10 @@ public:
     }*/
 
 
-    void getShortestPathAngle(CarState &state, QImage& map_img, bool save_rays=false)
+    void determineBestAngle(CarState &state, QImage& map_img, bool save_rays=false)
     {
         QColor pixel = getPixel(map_img, state.x, state.y);
         bool on_grass = is_grass(pixel);
-
-        
 
         if (save_rays)
             rays.clear();
@@ -275,62 +279,87 @@ public:
         {
             // Get off the grass by taking shortest route
             double shortest = std::numeric_limits<double>::max();
-            double shortest_angle;
+            double shortest_ray_angle;
             int shortest_ray_index;
 
-            for (double test_angle = -90; test_angle < 90; test_angle += 1)
+            for (double test_angle_offset_deg = -90; test_angle_offset_deg < 90; test_angle_offset_deg += 2.5)
             {
-                double angle = test_angle * M_PI / 180.0;
-                double ray_length = project_dist_to_road(state, angle, map_img);
+                double test_angle_offset_rad = test_angle_offset_deg * M_PI / 180.0;
+
+                double ray_angle = state.angle + (test_angle_offset_deg * M_PI / 180.0);
+                double ray_length = project_dist_to_grass(state, test_angle_offset_rad, 10, map_img);
 
                 if (ray_length < shortest)
                 {
                     // Found new longest ray
                     shortest = ray_length;
-                    shortest_angle = test_angle;
+                    shortest_ray_angle = ray_angle;
                     shortest_ray_index = rays.size();
                 }
 
                 if (save_rays)
-                    rays.push_back({ test_angle, ray_length, false, false });
+                    rays.push_back({ ray_angle, ray_length, false, false });
             }
 
             if (save_rays)
                 rays[shortest].shortest = true;
 
-            state.best_test_angle = shortest_angle;
+            state.best_ray_angle = shortest_ray_angle;
+            state.best_ray = shortest;
         }
         else
         {
 
             double longest = 0;
-            double longest_angle;
+            double longest_ray_angle;
             int longest_ray_index;
 
-            for (double test_angle = -45; test_angle < 45; test_angle += 0.5)
+            for (double test_angle_offset_deg = -72.5; test_angle_offset_deg < 72.5; test_angle_offset_deg += 2.5)
             {
-                double angle = test_angle * M_PI / 180.0;
-                double ray_length = project_dist_to_grass(state, angle, 10, map_img);
+                double test_angle_offset_rad = test_angle_offset_deg * M_PI / 180.0;
+
+                double ray_angle = state.angle + (test_angle_offset_deg * M_PI / 180.0);
+                double ray_length = project_dist_to_grass(state, test_angle_offset_rad, 10, map_img);
 
                 if (ray_length > longest)
                 {
                     // Found new longest ray
                     longest = ray_length;
-                    longest_angle = test_angle;
+                    longest_ray_angle = ray_angle;
                     longest_ray_index = rays.size();
                 }
 
                 if (save_rays)
-                    rays.push_back({ test_angle, ray_length, false, false });
+                {
+                    rays.push_back({ ray_angle, ray_length, false, false });
+                }
             }
 
             if (save_rays)
                 rays[longest_ray_index].longest = true;
 
-            state.best_test_angle = longest_angle;
-            state.longest_ray = longest;
+            state.best_ray_angle = longest_ray_angle;
+            state.best_ray = longest;
         }
-        
+        //state.ai_target_angle = state.best_ray_angle;
+
+        state.ai_target_angle += 0.1 * // (state.best_ray_angle - state.ai_target_angle);
+            closestAngleDifference(state.ai_target_angle, state.best_ray_angle);
+    }
+
+    void applyAIControls(CarState& state)
+    {
+        state.setTurn(closestAngleDifference(state.angle, state.ai_target_angle));
+        /*if (closestAngleDifference(state.angle, state.ai_target_angle) < 0)
+        {
+            // Turn left
+            state.setTurn(-max_turn);
+        }
+        else
+        {
+            // Turn right
+            state.setTurn(max_turn);
+        }*/
     }
 
     void reset_ghost_to_present()
@@ -365,7 +394,7 @@ public:
 
         ctx->save();
         ctx->translate(state.x, state.y);
-        ctx->rotate(state.angle);
+        ctx->rotate(state.ray_angle);
         ctx->fillRect(-car_w / 2 , -car_h / 2, car_w, car_h);
         ctx->restore();
     }*/

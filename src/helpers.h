@@ -5,9 +5,14 @@
 #include <random>
 #include "types.h"
 
-
-double min(double a, double b);
-double max(double a, double b);
+inline float closestAngleDifference(double angle, double target_angle)
+{
+    constexpr double two_pi = 2.0 * M_PI;
+    double diff = std::fmod((target_angle - angle) + M_PI, two_pi);
+    if (diff < 0)
+        diff += two_pi;
+    return diff - M_PI;
+}
 
 FRect lerpRect(const FRect& src, const FRect& targ, double factor);
 
