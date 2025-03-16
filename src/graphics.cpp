@@ -49,10 +49,10 @@ QNanoPainter* OffscreenNanoPainter::begin(int w, int h, bool capture_pixels)
 
     glF.glGetIntegerv(GL_FRAMEBUFFER_BINDING, &previousFBO);
 
-    if (w != m_width || h != m_height)
+    if (w != width || h != height)
     {
-        m_width = w;
-        m_height = h;
+        width = w;
+        height = h;
 
         if (m_fbo)
             delete m_fbo;
@@ -60,7 +60,7 @@ QNanoPainter* OffscreenNanoPainter::begin(int w, int h, bool capture_pixels)
         QOpenGLFramebufferObjectFormat format;
         //format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
         format.setInternalTextureFormat(GL_RGBA8);
-        m_fbo = new QOpenGLFramebufferObject(m_width, m_height, format);
+        m_fbo = new QOpenGLFramebufferObject(width, height, format);
         painter = new QNanoPainter();
     }
 
@@ -73,12 +73,12 @@ QNanoPainter* OffscreenNanoPainter::begin(int w, int h, bool capture_pixels)
     m_fbo->bind();
 
     // Clear the framebuffer
-    glF.glViewport(0, 0, m_width, m_height);
+    glF.glViewport(0, 0, width, height);
     glF.glClearColor(0.0f, 0.0f, 0.0f, 0.0f/*255.0f*/);
     glF.glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     // Create QNanoPainter and begin drawing
-    painter->beginFrame(m_width, m_height);
+    painter->beginFrame(width, height);
     return painter;
 
 }
@@ -102,19 +102,19 @@ void OffscreenNanoPainter::end()
 void OffscreenNanoPainter::drawToPainter(QNanoPainter* p, double x, double y)
 {
     auto offscreenImage = QNanoImage::fromFrameBuffer(m_fbo);
-    p->drawImage(offscreenImage, x, y, m_width, m_height);
+    p->drawImage(offscreenImage, x, y, width, height);
 }
 
 void OffscreenNanoPainter::drawToPainter(QNanoPainter *p, double x, double y, double w, double h)
 {
     auto offscreenImage = QNanoImage::fromFrameBuffer(m_fbo);
-    double scale_x = w / m_width;
-    double scale_y = h / m_height;
+    double scale_x = w / width;
+    double scale_y = h / height;
 
     // Draw the offscreen image onto the target painter
     p->save();
     p->scale(scale_x, scale_y);
-    p->drawImage(offscreenImage, x / scale_x, y / scale_y, m_width, m_height);
+    p->drawImage(offscreenImage, x / scale_x, y / scale_y, width, height);
     p->restore();
 }
 
@@ -122,11 +122,11 @@ void OffscreenNanoPainter::readPixels()
 {
     QOpenGLFunctions glF(QOpenGLContext::currentContext());
 
-    int data_len = m_width * m_height * 4;
+    int data_len = width * height * 4;
     if (data.size() != data_len)
         data.resize(data_len);
 
-    glF.glReadPixels(0, 0, m_width, m_height, GL_RGBA, GL_UNSIGNED_BYTE, data.data());
+    glF.glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, data.data());
 }
 
 const std::vector<GLubyte>& OffscreenNanoPainter::getPixels()
@@ -252,6 +252,7 @@ void Draw::arrow(DrawingContext* ctx, Vec2& a, Vec2& b, QColor color, double arr
     p->fill();
 }
 
+int Bitmap::bmp_index = 0;
 void Bitmap::draw(DrawingContext* ctx, double x, double y, double w, double h)
 {
     img.loadFromData(data.data());

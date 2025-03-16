@@ -3,6 +3,8 @@
 #include <QImage>
 #include <QOpenGLExtraFunctions>
 #include <QOpenGLFramebufferObject>
+#include "glwrappers.h"
+
 #include "qnanopainter.h"
 #include "types.h"
 
@@ -47,11 +49,27 @@ public:
         nano_img = QNanoImage(img, id, smoothing ? QNanoImage::ImageFlag(0) : QNanoImage::ImageFlag::NEAREST);
     }
 
+    void clear(uchar r=0, uchar g=0, uchar b=0, uchar a=255)
+    {
+        int len = bmp_width * bmp_height * 4;
+        for (int i = 0; i < len; i++)
+            data[i] = 0;
+    }
+
     void draw(DrawingContext* ctx, double x, double y, double w, double h);
 
     void draw(DrawingContext* ctx, const Vec2 &pt, const Vec2 &size);
 
     void setPixel(int x, int y, uchar r, uchar g, uchar b, uchar a)
+    {
+        int i = (y * bmp_width + x) * 4;
+        data[i] = r;
+        data[i + 1] = g;
+        data[i + 2] = b;
+        data[i + 3] = a;
+    }
+
+    void setPixelSafe(int x, int y, uchar r, uchar g, uchar b, uchar a)
     {
         if (x < 0 || x >= bmp_width ||
             y < 0 || y >= bmp_height)
@@ -64,44 +82,6 @@ public:
         data[i + 1] = g;
         data[i + 2] = b;
         data[i + 3] = a;
-    }
-};
-
-class OffscreenNanoPainter
-{
-    int m_width = 0;
-    int m_height = 0;
-
-    int old_vw = 0;
-    int old_vh = 0;
-
-    bool capture_frame = false;
-    std::vector<GLubyte> data;
-
-    QNanoPainter* painter = nullptr;
-    QOpenGLFramebufferObject* m_fbo = nullptr; 
-
-    GLint previousFBO = 0;
-    
-   void readPixels();
-
-public:
-
-    OffscreenNanoPainter();
-    ~OffscreenNanoPainter();
-
-    QNanoPainter *begin(int w, int h, bool capture_pixels);
-    void end();
-
-    void drawToPainter(QNanoPainter* p, double x = 0, double y = 0);
-    void drawToPainter(QNanoPainter* p, double x, double y, double w, double h);
-
-    const std::vector<GLubyte> &getPixels();
-
-    QImage toImage() const;
-    QNanoPainter* getPainter()
-    {
-        return painter;
     }
 };
 
@@ -141,6 +121,99 @@ struct FBO_Info
         }
     }
 };
+
+/*
+class Bitmap
+{
+    std::vector<GLubyte> data;
+
+    QOpenGLFramebufferObject* m_fbo = nullptr;
+    GLint previousFBO = 0;
+
+    int width = 0;
+    int height = 0;
+
+public:
+
+    Bitmap()
+    {
+    }
+
+    ~Bitmap()
+    {
+        if (m_fbo)
+        {
+            m_fbo->release();
+            delete m_fbo;
+        }
+    }
+
+    void create(int w, int h, bool smoothing = false)
+    {
+        width = w;
+        height = h;
+    }
+
+    void draw(DrawingContext* ctx, double x, double y)
+    {
+
+    }
+
+    void setPixelSafe(int x, int y, uchar r, uchar g, uchar b, uchar a)
+    {
+        if (x < 0 || x >= width ||
+            y < 0 || y >= height)
+        {
+            return;
+        }
+
+        int i = (y * width + x) * 4;
+        data[i] = r;
+        data[i + 1] = g;
+        data[i + 2] = b;
+        data[i + 3] = a;
+    }
+};
+*/
+class OffscreenNanoPainter
+{
+    int width = 0;
+    int height = 0;
+
+    int old_vw = 0;
+    int old_vh = 0;
+
+    bool capture_frame = false;
+    std::vector<GLubyte> data;
+
+    QNanoPainter* painter = nullptr;
+    QOpenGLFramebufferObject* m_fbo = nullptr; 
+
+    GLint previousFBO = 0;
+    
+   void readPixels();
+
+public:
+
+    OffscreenNanoPainter();
+    ~OffscreenNanoPainter();
+
+    QNanoPainter *begin(int w, int h, bool capture_pixels);
+    void end();
+
+    void drawToPainter(QNanoPainter* p, double x = 0, double y = 0);
+    void drawToPainter(QNanoPainter* p, double x, double y, double w, double h);
+
+    const std::vector<GLubyte> &getPixels();
+
+    QImage toImage() const;
+    QNanoPainter* getPainter()
+    {
+        return painter;
+    }
+};
+
+
 
 class OffscreenGLSurface
 {

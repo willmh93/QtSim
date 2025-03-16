@@ -19,8 +19,8 @@ struct {CLASS_NAME}_Scene : public Scene
     double speed;
 */
 
-    /// --- Sim Variables ---
-    // double speed;
+    /// --- Your variables ---
+    
 
     // --- Scene management ---
     void sceneAttributes(Input* input) override;
@@ -29,8 +29,8 @@ struct {CLASS_NAME}_Scene : public Scene
     void sceneDestroy() override;
     void sceneMounted(Viewport* viewport) override;
 
-    // --- Sim Logic Here ---
-    // void processParticles();
+    /// --- Your per-frame functions ---
+    
 
     void sceneProcess() override;
 

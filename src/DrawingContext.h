@@ -8,15 +8,24 @@ using LineJoin = QNanoPainter::LineJoin;
 using TextAlign = QNanoPainter::TextAlign;
 using TextBaseline = QNanoPainter::TextBaseline;
 
+class Project;
+class Bitmap;
 
 struct DrawingContext
 {
-private:
+    friend class Project;
 
+private:
     double _avgZoom()
     {
         return (camera.zoom_x + camera.zoom_y) * 0.5;
     }
+
+protected:
+
+    double old_width = 0;
+    double old_height = 0;
+    bool just_resized = false;
 
 public:
 
@@ -24,8 +33,13 @@ public:
     double width = 0;
     double height = 0;
 
+    bool resized()
+    {
+        return just_resized;
+    }
+
     Camera camera;
-    QNanoPainter* painter;
+    QNanoPainter* painter = nullptr;
     QTransform default_viewport_transform;
     QNanoFont font;
 
@@ -198,18 +212,6 @@ public:
         painter->moveTo(pt.x, pt.y);
     }
 
-    void moveToSharp(double px, double py)
-    {
-        Vec2 pt = sharp(PT(px, py));
-        painter->moveTo(pt.x, pt.y);
-    }
-
-    void moveToSharp(Vec2 p)
-    {
-        Vec2 pt = sharp(PT(p.x, p.y));
-        painter->moveTo(pt.x, pt.y);
-    }
-
     void lineTo(double px, double py)
     {
         Vec2 pt = PT(px, py);
@@ -222,16 +224,32 @@ public:
         painter->lineTo(pt.x, pt.y);
     }
 
+    void moveToSharp(double px, double py)
+    {
+        moveTo(px, py);
+        //Vec2 pt = sharp(PT(px, py));
+        //painter->moveTo(pt.x, pt.y);
+    }
+
+    void moveToSharp(Vec2 p)
+    {
+        moveTo(p.x, p.y);
+        //Vec2 pt = sharp(PT(p.x, p.y));
+        //painter->moveTo(pt.x, pt.y);
+    }
+
     void lineToSharp(double px, double py)
     {
-        Vec2 pt = sharp(PT(px, py));
-        painter->lineTo(pt.x, pt.y);
+        lineTo(px, py);
+        //Vec2 pt = sharp(PT(px, py));
+        //painter->lineTo(pt.x, pt.y);
     }
 
     void lineToSharp(Vec2 p)
     {
-        Vec2 pt = sharp(PT(p.x, p.y));
-        painter->lineTo(pt.x, pt.y);
+        lineTo(p.x, p.y);
+        //Vec2 pt = sharp(PT(p.x, p.y));
+        //painter->lineTo(pt.x, pt.y);
     }
 
     void strokeRect(double x, double y, double w, double h)
@@ -284,6 +302,8 @@ public:
         );
     }
 
+    void drawBitmap(Bitmap* bmp, double x, double y, double w, double h);;
+
     void setFont(QNanoFont font)
     {
         this->font = font;
@@ -306,6 +326,49 @@ public:
     }
 
     void fillText(const QString& txt, double px, double py)
+    {
+        if (camera.transform_coordinates)
+        {
+            if (camera.scale_lines_text)
+            {
+                painter->fillText(txt, px, py);
+            }
+            else
+            {
+                //double old_linewidth = line_width;
+                //painter->setLineWidth(line_width / _avgZoom());
+                //painter->strokeRect(x, y, w, h);
+                //painter->setLineWidth(old_linewidth);
+                painter->fillText(txt, px, py);
+            }
+        }
+        else
+        {
+            QTransform cur_transform = painter->currentTransform();
+            painter->resetTransform();
+            painter->transform(default_viewport_transform);
+
+            if (camera.scale_lines_text)
+            {
+                //double old_linewidth = line_width;
+                //painter->setLineWidth(line_width * _avgZoom());
+                //painter->strokeRect(x, y, w, h);
+                //painter->setLineWidth(old_linewidth);
+                painter->fillText(txt, px, py);
+            }
+            else
+            {
+                //painter->setLineWidth(line_width); // Refresh cached line width
+                //painter->strokeRect(x, y, w, h);
+                painter->fillText(txt, px, py);
+            }
+
+            painter->resetTransform();
+            painter->transform(cur_transform);
+        }
+    }
+
+    /*void fillText(const QString& txt, double px, double py)
     {
         Vec2 pt = PT(px, py);
 
@@ -338,10 +401,11 @@ public:
             painter->fillText(txt, 0, 0);
             painter->restore();
         }
-    }
+    }*/
 
     void fillText(const QString& txt, const Vec2& pos)
     {
+        painter->setPixelAlignText(QNanoPainter::PixelAlign::PIXEL_ALIGN_NONE);
         fillText(txt, pos.x, pos.y);
     }
 

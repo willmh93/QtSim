@@ -57,54 +57,15 @@ public:
     void setTransformFilters(
         bool _transform_coordinates,
         bool _scale_line_txt, 
-        bool _rotate_text)
-    {
-        transform_coordinates = _transform_coordinates;
-        scale_lines_text = _scale_line_txt;
-        rotate_text = _rotate_text;
-    }
+        bool _rotate_text);
 
-    void setTransformFilters(bool all)
-    {
-        transform_coordinates = all;
-        scale_lines_text = all;
-        rotate_text = all;
-    }
+    void setTransformFilters(bool all);
+    void worldTransform();
+    void stageTransform();
+    void labelTransform();
 
-    void worldTransform()
-    {
-        transform_coordinates = true;
-        scale_lines_text = true;
-        rotate_text = true;
-    }
-
-    void stageTransform()
-    {
-        transform_coordinates = false;
-        scale_lines_text = false;
-        rotate_text = false;
-    }
-
-    void labelTransform()
-    {
-        transform_coordinates = true;
-        scale_lines_text = false;
-        rotate_text = false;
-    }
-
-    void saveCameraTransform()
-    {
-        saved_transform_coordinates = transform_coordinates;
-        saved_scale_lines_text = scale_lines_text;
-        saved_rotate_text = rotate_text;
-    }
-
-    void restoreCameraTransform()
-    {
-        transform_coordinates = saved_transform_coordinates;
-        scale_lines_text = saved_scale_lines_text;
-        rotate_text = saved_rotate_text;
-    }
+    void saveCameraTransform();
+    void restoreCameraTransform();
 
     double stage_ox = 0;
     double stage_oy = 0;

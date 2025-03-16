@@ -75,6 +75,7 @@ class Scene
     std::mt19937 gen;
 
     Options* options = nullptr;
+    Project* project = nullptr; // Project Scene was launched from
 
     QElapsedTimer timer_sceneProcess;
     int dt_sceneProcess;
@@ -153,14 +154,8 @@ public:
     }
 
    
-    int scene_dt(int average_samples=1)
-    {
-        if (dt_call_index >= dt_ma_list.size())
-            dt_ma_list.push_back(MovingAverage::MA(average_samples));
-
-        auto& ma = dt_ma_list[dt_call_index++];
-        return ma.push(dt_sceneProcess);
-    }
+    int scene_dt(int average_samples=1);
+    int project_dt(int average_samples = 1);
 };
 
 class Viewport : public DrawingContext
@@ -383,6 +378,7 @@ class Project : public QObject
 
     Layout viewports;
 
+    bool done_single_process = false;
     bool shaders_loaded = false;
 
     void _loadShaders()
@@ -430,7 +426,7 @@ public:
 
     // Shared Scene creators
     template<typename SceneType>
-    static SceneType* create()
+    SceneType* create()
     {
         auto config = make_shared<typename SceneType::Config>();
         SceneType* scene;
@@ -443,44 +439,56 @@ public:
         else
             scene = new SceneType();
 
+        scene->project = this;
+
         return scene;
     }
 
-    template<typename SceneType> static SceneType* create(typename SceneType::Config config)
+    template<typename SceneType> SceneType* create(typename SceneType::Config config)
     {
         auto config_ptr = make_shared<typename SceneType::Config>(config);
 
         SceneType* scene = new SceneType(*config_ptr);
         scene->temporary_environment = config_ptr;
+        scene->project = this;
         return scene;
     }
 
     template<typename SceneType>
-    static SceneType* create(shared_ptr<typename SceneType::Config> config)
+    SceneType* create(shared_ptr<typename SceneType::Config> config)
     {
         if (!config)
             throw "Launch Config wasn't created";
 
         SceneType* scene = new SceneType(*config);
         scene->temporary_environment = config;
+        scene->project = this;
         return scene;
     }
 
     template<typename SceneType>
-    static shared_ptr<SimSceneList> create(int count)
+    shared_ptr<SimSceneList> create(int count)
     {
         auto ret = make_shared<SimSceneList>();
         for (int i = 0; i < count; i++)
-            ret->push_back(create<SceneType>());
+        {
+            SceneType* scene = create<SceneType>();
+            scene->project = this;
+            ret->push_back(scene);
+        }
         return ret;
     }
 
     template<typename SceneType>
-    static shared_ptr<SimSceneList> create(int count, typename SceneType::Config config)
+    shared_ptr<SimSceneList> create(int count, typename SceneType::Config config)
     {
         auto ret = make_shared<SimSceneList>();
         for (int i = 0; i < count; i++)
-            ret->push_back(create<SceneType>(config));
+        {
+            SceneType* scene = create<SceneType>(config);
+            scene->project = this;
+            ret->push_back(scene);
+        }
         return ret;
     }
 
@@ -491,6 +499,7 @@ protected:
     friend class QtSim;
     friend class ProjectWorker;
     friend class Canvas2D;
+    friend class Scene;
 
     ProjectWorker* worker = nullptr;
 

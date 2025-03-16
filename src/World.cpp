@@ -2,6 +2,61 @@
 #include "Project.h"
 #include <cmath>
 
+void Camera::setTransformFilters(bool _transform_coordinates, bool _scale_line_txt, bool _rotate_text)
+{
+    transform_coordinates = _transform_coordinates;
+    scale_lines_text = _scale_line_txt;
+    rotate_text = _rotate_text;
+    viewport->setLineWidth(viewport->line_width);
+}
+
+void Camera::setTransformFilters(bool all)
+{
+    transform_coordinates = all;
+    scale_lines_text = all;
+    rotate_text = all;
+    viewport->setLineWidth(viewport->line_width);
+}
+
+void Camera::worldTransform()
+{
+    transform_coordinates = true;
+    scale_lines_text = true;
+    rotate_text = true;
+    viewport->setLineWidth(viewport->line_width);
+}
+
+void Camera::stageTransform()
+{
+    transform_coordinates = false;
+    scale_lines_text = false;
+    rotate_text = false;
+    viewport->setLineWidth(viewport->line_width);
+}
+
+void Camera::labelTransform()
+{
+    transform_coordinates = true;
+    scale_lines_text = false;
+    rotate_text = false;
+    viewport->setLineWidth(viewport->line_width);
+}
+
+void Camera::saveCameraTransform()
+{
+    saved_transform_coordinates = transform_coordinates;
+    saved_scale_lines_text = scale_lines_text;
+    saved_rotate_text = rotate_text;
+}
+
+void Camera::restoreCameraTransform()
+{
+    transform_coordinates = saved_transform_coordinates;
+    scale_lines_text = saved_scale_lines_text;
+    rotate_text = saved_rotate_text;
+    viewport->setLineWidth(viewport->line_width);
+}
+
 // Scale world to fit viewport rect
 void Camera::cameraToViewport(
     double left,

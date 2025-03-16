@@ -79,6 +79,24 @@ void Scene::mountToAll(Layout& viewports)
         viewport->mountScene(this);
 }
 
+int Scene::scene_dt(int average_samples)
+{
+    if (dt_call_index >= dt_ma_list.size())
+        dt_ma_list.push_back(MovingAverage::MA(average_samples));
+
+    auto& ma = dt_ma_list[dt_call_index++];
+    return ma.push(dt_sceneProcess);
+}
+
+int Scene::project_dt(int average_samples)
+{
+    if (dt_call_index >= dt_ma_list.size())
+        dt_ma_list.push_back(MovingAverage::MA(average_samples));
+
+    auto& ma = dt_ma_list[dt_call_index++];
+    return ma.push(project->dt_projectProcess);
+}
+
 Viewport::Viewport(Layout* layout, Options* options, int viewport_index, int grid_x, int grid_y) :
     layout(layout),
     options(options),
@@ -110,8 +128,6 @@ Viewport::~Viewport()
 
 void Viewport::draw(QNanoPainter* p)
 {
-    // Attach QNanoPainter for viewport draw operations
-    painter = p;
 
     // Set defaults
     setTextAlign(TextAlign::ALIGN_LEFT);
@@ -311,6 +327,8 @@ void Project::_projectStart()
         return;
     }
 
+    done_single_process = false;
+
     // Prepare layout
     _projectPrepare();
 
@@ -453,19 +471,29 @@ void Project::_projectProcess()
             scene->dt_sceneProcess = scene->timer_sceneProcess.elapsed();
         }
 
-        dt_projectProcess = timer_projectProcess.elapsed();
-
         // Allow project to handle process on each Viewport
         for (Viewport* viewport : viewports)
         {
             viewport->camera.panProcess();
             viewport->scene->camera = &viewport->camera;
+
+            viewport->just_resized =
+                (viewport->width != viewport->old_width) ||
+                (viewport->height != viewport->old_height);
+
             viewport->scene->viewportProcess(viewport);
+
+            viewport->old_width = viewport->width;
+            viewport->old_height = viewport->height;
         }
+
+        dt_projectProcess = timer_projectProcess.elapsed();
         
         // Prepare to encode the next frame
         encode_next_paint = true;
     }
+
+    done_single_process = true;
 }
 
 void Project::postProcess()
@@ -593,6 +621,9 @@ void Project::_mouseWheel(int x, int y, int delta)
 
 void Project::_draw(QNanoPainter* p)
 {
+    if (!done_single_process)
+        return;
+
     if (!shaders_loaded)
     {
         _loadShaders();
@@ -616,6 +647,9 @@ void Project::_draw(QNanoPainter* p)
 
         // Move to viewport position
         p->translate(floor(viewport->x), floor(viewport->y));
+
+        // Attach QNanoPainter for viewport draw operations
+        viewport->painter = p;
 
         // Set default transform
         viewport->camera.worldTransform();

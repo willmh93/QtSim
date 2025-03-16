@@ -19,6 +19,7 @@
 
 #include "DrawingContext.h"
 #include "helpers.h"
+#include "graphics.h"
 
 double roundAxisTickStep(double ideal_step)
 {
@@ -91,6 +92,25 @@ double getAngle(Vec2 a, Vec2 b)
 //{
 //
 //}
+
+void DrawingContext::drawBitmap(Bitmap* bmp, double x, double y, double w, double h)
+{
+    if (camera.transform_coordinates)
+    {
+        painter->strokeRect(x, y, w, h);
+    }
+    else
+    {
+        QTransform cur_transform = painter->currentTransform();
+        painter->resetTransform();
+        painter->transform(default_viewport_transform);
+
+        bmp->draw(this, x, y, w, h);
+
+        painter->resetTransform();
+        painter->transform(cur_transform);
+    }
+}
 
 void DrawingContext::drawWorldAxis(
     double axis_opacity,
@@ -216,6 +236,7 @@ void DrawingContext::drawWorldAxis(
     double world_maxY = std::max({ world_tl.y, world_tr.y, world_br.y, world_bl.y });
 
     // Draw gridlines (big step)
+    if (grid_opacity > 0)
     {
         //setStrokeStyle(255, 255, 255, static_cast<int>(255.0 * grid_opacity));
         //beginPath();
@@ -315,6 +336,8 @@ void DrawingContext::drawWorldAxis(
     setFillStyle(255, 255, 255, static_cast<int>(255.0 * text_opacity));
     beginPath();
 
+    bool draw_text = (text_opacity > 0.01);
+
     // Draw x-axis labels
     for (double wx = ceilAxisValue(world_minX, step_wx); wx < world_maxX; wx += step_wx)
     {
@@ -330,7 +353,7 @@ void DrawingContext::drawWorldAxis(
 
         moveToSharp(stage_pos - x_perp_off);
         lineToSharp(stage_pos + x_perp_off);
-        fillNumberScientific(wx, tick_anchor);
+        if (draw_text) fillNumberScientific(wx, tick_anchor);
     }
 
     // Draw y-axis labels
@@ -349,7 +372,7 @@ void DrawingContext::drawWorldAxis(
 
         moveToSharp(stage_pos - y_perp_off);
         lineToSharp(stage_pos + y_perp_off);
-        fillNumberScientific(wy, tick_anchor);
+        if (draw_text) fillNumberScientific(wy, tick_anchor);
     }
 
     stroke();

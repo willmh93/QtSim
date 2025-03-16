@@ -137,7 +137,7 @@ void Test_Scene::viewportDraw(Viewport* ctx)
 
     // Draw scene
     //ctx->scaleGraphics(scale_graphics);
-    ctx->drawWorldAxis();
+    ctx->drawWorldAxis();// 0.3, 0.04, 0);
     /*ctx->setLineWidth(10);
     ctx->beginPath();
     ctx->moveTo(0, 0);
