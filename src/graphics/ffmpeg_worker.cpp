@@ -17,7 +17,7 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "FFmpegWorker.h"
+#include "ffmpeg_worker.h"
 #include <QDebug>
 
 bool FFmpegWorker::startRecording()

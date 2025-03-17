@@ -17,7 +17,7 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "QtSim.h"
+#include "main_window.h"
 #include <QDebug>
 
 
@@ -139,7 +139,7 @@ void ProjectWorker::stopRecording()
 
 
 
-QtSim::QtSim(QWidget *parent)
+MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
     // Main Menu
@@ -163,8 +163,8 @@ QtSim::QtSim(QWidget *parent)
         fileMenu->addAction(exitAction);
 
         // Connect actions to slots
-        //connect(newAction, &QAction::triggered, this, &QtSim::onSimSelector);
-        connect(exitAction, &QAction::triggered, this, &QtSim::close);
+        //connect(newAction, &QAction::triggered, this, &MainWindow::onSimSelector);
+        connect(exitAction, &QAction::triggered, this, &MainWindow::close);
 
         // Create Help menu
         QMenu* helpMenu = menuBar->addMenu("Help");
@@ -173,7 +173,7 @@ QtSim::QtSim(QWidget *parent)
         QAction* aboutAction = new QAction("About", this);
         helpMenu->addAction(aboutAction);
 
-        connect(aboutAction, &QAction::triggered, this, &QtSim::onAbout);
+        connect(aboutAction, &QAction::triggered, this, &MainWindow::onAbout);
     }*/
 
     // Status bar
@@ -227,7 +227,7 @@ QtSim::QtSim(QWidget *parent)
     options->addSimListEntry(ProjectInfo({ "Python" }));
 
     // Handle Sim Treeview signals
-    connect(options, &Options::onChooseProject, this, &QtSim::setProject);
+    connect(options, &Options::onChooseProject, this, &MainWindow::setProject);
     connect(options, &Options::onForceStartBeginProject, this, [this](int type)
     {
         setProject(type);
@@ -235,13 +235,13 @@ QtSim::QtSim(QWidget *parent)
     });
 
     // Handle FPS change
-    connect(options, &Options::onChangeFPS, this, &QtSim::setFPS);
+    connect(options, &Options::onChangeFPS, this, &MainWindow::setFPS);
 
     // Handle Toolbar signals
-    connect(toolbar, &Toolbar::onPlayPressed, this, &QtSim::startSelectedProject);
-    connect(toolbar, &Toolbar::onStopPressed, this, &QtSim::stopSelectedProject);
-    connect(toolbar, &Toolbar::onPausePressed, this, &QtSim::pauseSelectedProject);
-    connect(toolbar, &Toolbar::onToggleRecordProject, this, &QtSim::toggleRecordSelectedProject);
+    connect(toolbar, &Toolbar::onPlayPressed, this, &MainWindow::startSelectedProject);
+    connect(toolbar, &Toolbar::onStopPressed, this, &MainWindow::stopSelectedProject);
+    connect(toolbar, &Toolbar::onPausePressed, this, &MainWindow::pauseSelectedProject);
+    connect(toolbar, &Toolbar::onToggleRecordProject, this, &MainWindow::toggleRecordSelectedProject);
 
     project_worker = new ProjectWorker();
     project_worker->options = options;
@@ -266,12 +266,12 @@ QtSim::QtSim(QWidget *parent)
     renderTimer->start(1000 / 60); // 60 FPS
 }
 
-QtSim::~QtSim()
+MainWindow::~MainWindow()
 {
     qDebug() << "~QtSim() Destructor Called";
 }
 
-void QtSim::closeEvent(QCloseEvent* event)
+void MainWindow::closeEvent(QCloseEvent* event)
 {
     if (project_thread)
     {
@@ -284,14 +284,14 @@ void QtSim::closeEvent(QCloseEvent* event)
     QMainWindow::closeEvent(event);
 }
 
-void QtSim::resizeEvent(QResizeEvent *e)
+void MainWindow::resizeEvent(QResizeEvent *e)
 {
     QMutexLocker locker(&sim_lock);
     if (project_worker && project_worker->project)
         project_worker->project->onResize();
 }
 
-void QtSim::setFPS(int fps)
+void MainWindow::setFPS(int fps)
 {
     QMetaObject::invokeMethod(project_worker, [this, fps]()
     {
@@ -299,11 +299,11 @@ void QtSim::setFPS(int fps)
     }, Qt::QueuedConnection);
 }
 
-void QtSim::setProject(int sim_uid)
+void MainWindow::setProject(int sim_uid)
 {
     connect(
         project_worker, &ProjectWorker::onProjectSet,
-        this, &QtSim::onProjectSet,
+        this, &MainWindow::onProjectSet,
         static_cast<Qt::ConnectionType>(Qt::QueuedConnection | Qt::UniqueConnection)
     );
 
@@ -313,17 +313,17 @@ void QtSim::setProject(int sim_uid)
     }, Qt::QueuedConnection);
 }
 
-void QtSim::onProjectSet()
+void MainWindow::onProjectSet()
 {
     options->updateListUI();
     toolbar->setButtonStates(false, true, false, true);
 }
 
-void QtSim::startSelectedProject()
+void MainWindow::startSelectedProject()
 {
     connect(
         project_worker, &ProjectWorker::onProjectStarted,
-        this, &QtSim::onProjectStarted,
+        this, &MainWindow::onProjectStarted,
         static_cast<Qt::ConnectionType>(Qt::QueuedConnection | Qt::UniqueConnection)
     );
 
@@ -333,16 +333,16 @@ void QtSim::startSelectedProject()
     }, Qt::QueuedConnection);
 }
 
-void QtSim::onProjectStarted()
+void MainWindow::onProjectStarted()
 {
     toolbar->setButtonStates(true, false, true, true);
 }
 
-void QtSim::stopSelectedProject()
+void MainWindow::stopSelectedProject()
 {
     connect(
         project_worker, &ProjectWorker::onProjectStopped,
-        this, &QtSim::onProjectStopped,
+        this, &MainWindow::onProjectStopped,
         static_cast<Qt::ConnectionType>(Qt::QueuedConnection | Qt::UniqueConnection)
     );
 
@@ -353,14 +353,14 @@ void QtSim::stopSelectedProject()
 
 }
 
-void QtSim::onProjectStopped()
+void MainWindow::onProjectStopped()
 {
     toolbar->setRecordingUI(false);
     toolbar->setButtonStates(false, true, false, true);
     canvas->update();
 }
 
-void QtSim::pauseSelectedProject()
+void MainWindow::pauseSelectedProject()
 {
     QMetaObject::invokeMethod(project_worker, [this]()
     {
@@ -368,7 +368,7 @@ void QtSim::pauseSelectedProject()
     }, Qt::QueuedConnection);
 }
 
-void QtSim::toggleRecordSelectedProject(bool b)
+void MainWindow::toggleRecordSelectedProject(bool b)
 {
     if (project_worker->project)
     {

@@ -17,7 +17,7 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "QtSim.h"
+#include "main_window.h"
 #include <QtWidgets/QApplication>
 
 #include <QProcess>
@@ -130,7 +130,7 @@ int main(int argc, char *argv[])
         loadLibraryAndExecute(getOutputLibraryName("mycode"));
     }*/
 
-    QtSim w;
+    MainWindow w;
     w.setWindowTitle("QtSim v1.0");
     w.setStyleSheet("background: #1B1B2B;");
     w.resize(1024, 768);

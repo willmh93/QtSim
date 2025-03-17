@@ -1,4 +1,17 @@
 #include "helpers.h"
+#include <sstream>
+
+int countDecimals(double num)
+{
+    std::ostringstream out;
+    out << std::fixed << std::setprecision(10) << num;  // Ensure sufficient precision
+    std::string str = out.str();
+
+    size_t pos = str.find('.');
+    if (pos == std::string::npos) return 0;  // No decimal point, so no decimal places
+
+    return str.size() - pos - 1;
+}
 
 FRect lerpRect(const FRect& src, const FRect& targ, double factor)
 {

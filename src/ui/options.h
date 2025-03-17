@@ -8,7 +8,7 @@
 #include <QPainter>
 
 #include "ui_Options.h"
-#include "AttributeList.h"
+#include "attribute_list.h"
 
 //#include "Projects/project_types.h"
 #include "types.h"
@@ -280,19 +280,10 @@ public:
     ~Options();
 
 
-    AttributeItem* int_realtime_slider(QString name, int value, int min, int max, int step=1, IntCallback changed=nullptr);
-    //AttributeItem* int_starting_slider(QString name, int value, int min, int max, int step=1, IntCallback changed=nullptr);
-    
-    ///
-
-    AttributeItem* double_realtime_slider(QString name, double value, double min, double max, double step, DoubleCallback changed=nullptr);
-    //AttributeItem* double_starting_slider(QString name, double value, double min, double max, double step, DoubleCallback changed=nullptr);
-
-    ///
-
+    AttributeItem* int_slider(QString name, int value, int min, int max, int step=1, IntCallback changed=nullptr);
+    AttributeItem* double_slider(QString name, double value, double min, double max, double step, DoubleCallback changed=nullptr);
+    AttributeItem* double_inputbox(QString name, double value, double min, double max, double step, DoubleCallback on_change = nullptr);
     AttributeItem* realtime_checkbox(QString name, bool value, BoolCallback changed = nullptr);
-    //AttributeItem* starting_checkbox(QString name, bool value, BoolCallback changed = nullptr);
-
     ///
 
     /*void clearAllPointers()
@@ -303,7 +294,7 @@ public:
 
     //AttributeItem* slider(const QString& name, double *target, double min, double max, double step=0.1, std::function<void(double)> on_change = nullptr);
     //AttributeItem* number(const QString& name, int min, int max, int step, std::function<void(int)> on_change = nullptr);
-    //AttributeItem* number(const QString& name, double min, double max, double step, std::function<void(double)> on_change = nullptr);
+    
     AttributeItem* combo(const QString& name, const std::vector<QString> &items=std::vector<QString>(), std::function<void(int)> on_change = nullptr);
     
 
@@ -352,7 +343,7 @@ protected slots:
 
     void addInputSliderInt(QString name, SimItemProxyPtr p)
     {
-        int_realtime_slider(name, p->int_value, p->int_min, p->int_max, p->int_step, 
+        int_slider(name, p->int_value, p->int_min, p->int_max, p->int_step, 
             [this, name](int value)
         {
             // On value changed, broadcast
@@ -362,7 +353,17 @@ protected slots:
 
     void addInputSliderDouble(QString name, SimItemProxyPtr p)
     {
-        double_realtime_slider(name, p->double_value, p->double_min, p->double_max, p->double_step,
+        double_slider(name, p->double_value, p->double_min, p->double_max, p->double_step,
+            [this, name](double value)
+        {
+            // On value changed, broadcast
+            emit valueChangedDouble(name, value);
+        });
+    }
+
+    void addInputBoxDouble(QString name, SimItemProxyPtr p)
+    {
+        double_inputbox(name, p->double_value, p->double_min, p->double_max, p->double_step,
             [this, name](double value)
         {
             // On value changed, broadcast
@@ -490,6 +491,9 @@ private:
 
     SimItemProxyPtr _slider_double(bool realtime, QString name,
         DoubleVar target, DoubleVar min, DoubleVar max, DoubleVar step = 1.0, DoubleCallback changed = nullptr);
+
+    SimItemProxyPtr _inputbox_double(bool realtime, QString name,
+        DoubleVar target, DoubleVar min, DoubleVar max, DoubleVar step = 1.0, DoubleCallback changed = nullptr);
     
     SimItemProxyPtr _checkbox(bool realtime, QString name,
         BoolVar target, BoolCallback changed = nullptr);
@@ -509,6 +513,14 @@ public:
 
     SimItemProxyPtr starting_slider(QString name, DoubleVar target,
         DoubleVar min, DoubleVar max, DoubleVar step=-1, DoubleCallback changed = nullptr);
+
+    ///
+
+    SimItemProxyPtr realtime_float(QString name, DoubleVar target,
+        DoubleVar min, DoubleVar max, DoubleVar step = -1, DoubleCallback changed = nullptr);
+
+    SimItemProxyPtr starting_float(QString name, DoubleVar target,
+        DoubleVar min, DoubleVar max, DoubleVar step = -1, DoubleCallback changed = nullptr);
 
     ///
 

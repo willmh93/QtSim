@@ -5,6 +5,8 @@
 #include <random>
 #include "types.h"
 
+int countDecimals(double num);
+
 inline float closestAngleDifference(double angle, double target_angle)
 {
     constexpr double two_pi = 2.0 * M_PI;

@@ -217,7 +217,7 @@ void OffscreenGLSurface::drawToPainter(QNanoPainter* p, double x, double y)
 
 
 
-void Draw::arrow(DrawingContext* ctx, Vec2& a, Vec2& b, QColor color, double arrow_size)
+void Draw::arrow(PaintContext* ctx, Vec2& a, Vec2& b, QColor color, double arrow_size)
 {
     QNanoPainter* p = ctx->painter;
 
@@ -253,14 +253,14 @@ void Draw::arrow(DrawingContext* ctx, Vec2& a, Vec2& b, QColor color, double arr
 }
 
 int Bitmap::bmp_index = 0;
-void Bitmap::draw(DrawingContext* ctx, double x, double y, double w, double h)
+void Bitmap::draw(PaintContext* ctx, double x, double y, double w, double h)
 {
     img.loadFromData(data.data());
     nano_img.updateFrameBuffer(ctx->painter);
     ctx->painter->drawImage(nano_img, x, y, w, h);
 }
 
-void Bitmap::draw(DrawingContext* ctx, const Vec2& pt, const Vec2& size)
+void Bitmap::draw(PaintContext* ctx, const Vec2& pt, const Vec2& size)
 {
     draw(ctx, pt.x, pt.y, size.x, size.y);
 }

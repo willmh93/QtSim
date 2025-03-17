@@ -9,19 +9,10 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-string(FIND "${CMAKE_GENERATOR}" "Visual Studio" VS_FOUND)
-
-message(STATUS "CMAKE_GENERATOR:  ${CMAKE_GENERATOR}")
-message(STATUS "CMAKE_CXX_COMPILER:  ${CMAKE_CXX_COMPILER}")
-message(STATUS "CMAKE_CXX_COMPILER_ID:  ${CMAKE_CXX_COMPILER_ID}")
-message(STATUS "VS_FOUND:  ${VS_FOUND}")
 # packages
 find_package(QT NAMES Qt6 Qt5 REQUIRED)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Gui Widgets Quick Xml OpenGL OpenGLWidgets)
 
-#if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND VS_FOUND GREATER -1)
-#    message(FATAL_ERROR "Error: You are using MinGW but trying to generate a Visual Studio project. Please switch to the correct kit.")
-#endif()
 
 if (EXISTS "${CMAKE_BINARY_DIR}/CMakeCache.txt")
     file(READ "${CMAKE_BINARY_DIR}/CMakeCache.txt" CACHE_CONTENTS)
@@ -38,10 +29,6 @@ if (EXISTS "${CMAKE_BINARY_DIR}/CMakeCache.txt")
         execute_process(COMMAND ${CMAKE_COMMAND} --fresh .)
     endif()
 endif()
-
-#if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC" AND CMAKE_GENERATOR MATCHES "MinGW Makefiles")
-#    message(FATAL_ERROR "Error: You are using MSVC but trying to generate a MinGW Makefiles project. Please switch to the correct kit.")
-#endif()
 
 # sets default startup project in Visual Studio
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT QtSim)
@@ -61,38 +48,45 @@ endif()
 #set(LLVM_CACHE_DIR "${CMAKE_SOURCE_DIR}/_deps/llvm")
 
 
-# Manage Source Files
-message(STATUS "Auto-generating simulations")
-    # Collect all simulation header files
-    file(GLOB SIMULATION_HEADERS CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/simulations/*.h")
-    file(GLOB SIMULATION_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/simulations/*.cpp")
-    list(SORT SIMULATION_HEADERS)
-    list(SORT SIMULATION_SOURCES)
+# Collect all simulation header files
+file(GLOB SIMULATION_HEADERS CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/simulations/*.h")
+file(GLOB SIMULATION_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/simulations/*.cpp")
+list(SORT SIMULATION_HEADERS)
+list(SORT SIMULATION_SOURCES)
 
-    file(GLOB PROJECT_SOURCES CONFIGURE_DEPENDS
-        "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp"
-        "${CMAKE_CURRENT_SOURCE_DIR}/src/*.h"
-        "${CMAKE_CURRENT_SOURCE_DIR}/src/simulations/*.cpp"
-        "${CMAKE_CURRENT_SOURCE_DIR}/src/simulations/*.h"
-        "${CMAKE_CURRENT_SOURCE_DIR}/src/*.ui"
-        "resources.qrc"
-    )
+file(GLOB CORE_SOURCES CONFIGURE_DEPENDS
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/*.h"
 
-    # Remove precompiled/pch.cpp from the glob results
-    list(FILTER PROJECT_SOURCES EXCLUDE REGEX "src/Project\\.h$")
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/core/*.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/core/*.h"
 
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/graphics/*.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/graphics/*.h"
 
-    file(GLOB CORE_SOURCES CONFIGURE_DEPENDS
-        "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp"
-        "${CMAKE_CURRENT_SOURCE_DIR}/src/*.h"
-    )
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/ui/*.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/ui/*.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/ui/*.ui"
 
-    file(GLOB UI_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/*.ui")
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/widgets/*.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/widgets/*.h"
+)
+
+file(GLOB PROJECT_SOURCES CONFIGURE_DEPENDS
+    ${CORE_SOURCES}
+    ${SIMULATION_HEADERS}
+    ${SIMULATION_SOURCES}
+    "resources.qrc"
+)
+
+# Remove precompiled pch.cpp from the glob results
+list(FILTER PROJECT_SOURCES EXCLUDE REGEX "src/core/project\\.h$")
+file(GLOB UI_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/ui/*.ui")
 
 message(STATUS "Setting Source Filters")
-    source_group("Project" FILES ${CORE_SOURCES})
-    source_group("Simulations" FILES ${SIMULATION_HEADERS} ${SIMULATION_SOURCES})
-    source_group("UI" FILES ${UI_SOURCES})
+source_group("Project" FILES ${CORE_SOURCES})
+source_group("Simulations" FILES ${SIMULATION_HEADERS} ${SIMULATION_SOURCES})
+source_group("UI" FILES ${UI_SOURCES})
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
     if (WIN32)
@@ -120,6 +114,10 @@ else()
 endif()
 
 target_include_directories(QtSim PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_include_directories(QtSim PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/core)
+target_include_directories(QtSim PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/graphics)
+target_include_directories(QtSim PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/ui)
+target_include_directories(QtSim PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/widgets)
 target_include_directories(QtSim PRIVATE ${CMAKE_BINARY_DIR})
 
 # Link Qt libraries
@@ -133,7 +131,7 @@ target_link_libraries(QtSim PRIVATE
     Qt${QT_VERSION_MAJOR}::OpenGLWidgets
 )
 
-target_precompile_headers(QtSim PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/Project.h")
+target_precompile_headers(QtSim PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/core/project.h")
 
 # Detect build system
 if (CMAKE_GENERATOR MATCHES "Ninja")
@@ -143,6 +141,9 @@ elseif (CMAKE_GENERATOR MATCHES "Visual Studio")
 else()
     set(BUILD_SYSTEM_NAME "other") # Fallback
 endif()
+
+# Build dependencies (e.g. qnanopainter) and store outside build/
+set(FETCHCONTENT_BASE_DIR ${CMAKE_SOURCE_DIR}/build_fetched)
 
 # FFmpeg
 function(add_ffmpeg)
@@ -260,8 +261,6 @@ function(add_ffmpeg)
         find_library(SWSCALE_LIBRARY swscale PATHS "${FFMPEG_DEST_DIR}/bin/swresample-5.dll")
     endif()
 endfunction()
-
-set(FETCHCONTENT_BASE_DIR ${CMAKE_SOURCE_DIR}/build_fetched) # Everything goes inside 'external'
 
 function(add_qnanopainter)
 

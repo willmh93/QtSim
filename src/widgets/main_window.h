@@ -11,9 +11,9 @@
 #include <QMutexLocker>
 #include <QMutex>
 
-#include "Project.h"
-#include "Canvas2D.h"
-#include "Options.h"
+#include "project.h"
+#include "canvas.h"
+#include "options.h"
 #include "toolbar.h"
 
 class ProjectThread : public QThread
@@ -41,7 +41,7 @@ class ProjectWorker : public QObject
 
 public:
 
-    QtSim* main_window = nullptr;
+    MainWindow* main_window = nullptr;
     Project* project = nullptr;
 
     Options* options = nullptr;
@@ -86,7 +86,7 @@ public slots:
     }
 };
 
-class QtSim : public QMainWindow
+class MainWindow : public QMainWindow
 {
     Q_OBJECT
 
@@ -96,8 +96,8 @@ class QtSim : public QMainWindow
 
 public:
 
-    QtSim(QWidget *parent = nullptr);
-    ~QtSim();
+    MainWindow(QWidget *parent = nullptr);
+    ~MainWindow();
 
 protected:
 

@@ -8,7 +8,7 @@
 #include "qnanopainter.h"
 #include "types.h"
 
-struct DrawingContext;
+struct PaintContext;
 
 class Bitmap
 {
@@ -56,9 +56,9 @@ public:
             data[i] = 0;
     }
 
-    void draw(DrawingContext* ctx, double x, double y, double w, double h);
+    void draw(PaintContext* ctx, double x, double y, double w, double h);
 
-    void draw(DrawingContext* ctx, const Vec2 &pt, const Vec2 &size);
+    void draw(PaintContext* ctx, const Vec2 &pt, const Vec2 &size);
 
     void setPixel(int x, int y, uchar r, uchar g, uchar b, uchar a)
     {
@@ -154,7 +154,7 @@ public:
         height = h;
     }
 
-    void draw(DrawingContext* ctx, double x, double y)
+    void draw(PaintContext* ctx, double x, double y)
     {
 
     }
@@ -252,5 +252,5 @@ public:
 
 namespace Draw
 {
-    void arrow(DrawingContext* ctx, Vec2 &a, Vec2 &b, QColor color = QColor({ 255,255,255 }), double arrow_size=-1.0);
+    void arrow(PaintContext* ctx, Vec2 &a, Vec2 &b, QColor color = QColor({ 255,255,255 }), double arrow_size=-1.0);
 }

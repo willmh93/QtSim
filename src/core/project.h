@@ -25,17 +25,16 @@
 using namespace std;
 
 // Custom includes
-#include "World.h"
+#include "camera.h"
 #include "helpers.h"
-#include "CacheContext.h"
+#include "cache_stream.h"
 
 // Graphics
-//#include "FFmpegWorker.h"
-#include "DrawingContext.h"
+#include "paint_context.h"
 #include "graphics.h"
 
 // UI
-#include "Options.h"
+#include "options.h"
 
 
 // Provide macros for easy Project registration
@@ -63,11 +62,6 @@ class Canvas2D;
 class Layout;
 class Viewport;
 class Project;
-
-//template<typename T>
-//class SceneBase
-//{
-//};
 
 class Scene
 {
@@ -122,7 +116,7 @@ public:
     virtual void sceneMounted(Viewport *ctx) {}
     virtual void sceneStop() {}
     virtual void sceneDestroy() {}
-    virtual void sceneProcess() = 0;
+    virtual void sceneProcess() {}
 
     virtual void loadShaders() {}
 
@@ -158,7 +152,7 @@ public:
     int project_dt(int average_samples = 1);
 };
 
-class Viewport : public DrawingContext
+class Viewport : public PaintContext
 {
 protected:
 
@@ -496,7 +490,7 @@ protected:
 
     CacheContext cache; // todo: Make dynamic and remove include
 
-    friend class QtSim;
+    friend class MainWindow;
     friend class ProjectWorker;
     friend class Canvas2D;
     friend class Scene;

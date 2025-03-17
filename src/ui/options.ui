@@ -348,7 +348,7 @@ QFrame {
            <enum>QTabWidget::TabShape::Rounded</enum>
           </property>
           <property name="currentIndex">
-           <number>1</number>
+           <number>0</number>
           </property>
           <widget class="QWidget" name="attributes_tab">
            <property name="styleSheet">
@@ -960,7 +960,7 @@ background-color: #2A2A3A;</string>
   <customwidget>
    <class>AttributeList</class>
    <extends>QWidget</extends>
-   <header>AttributeList.h</header>
+   <header>attribute_list.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

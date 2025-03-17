@@ -127,7 +127,7 @@ struct ParticleGrid : public std::unordered_map<CellCoord, CellData, CellCoordHa
     double cell_size;
     bool is_gravity;
 
-    void draw(DrawingContext* ctx, Camera &cam, const char *color)
+    void draw(PaintContext* ctx, Camera &cam, const char *color)
     {
         ctx->setStrokeStyle(color);
         ctx->setFillStyle({ 0,0,255 });

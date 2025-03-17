@@ -17,7 +17,7 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "DrawingContext.h"
+#include "paint_context.h"
 #include "helpers.h"
 #include "graphics.h"
 
@@ -93,7 +93,7 @@ double getAngle(Vec2 a, Vec2 b)
 //
 //}
 
-void DrawingContext::drawBitmap(Bitmap* bmp, double x, double y, double w, double h)
+void PaintContext::drawBitmap(Bitmap* bmp, double x, double y, double w, double h)
 {
     if (camera.transform_coordinates)
     {
@@ -112,7 +112,7 @@ void DrawingContext::drawBitmap(Bitmap* bmp, double x, double y, double w, doubl
     }
 }
 
-void DrawingContext::drawWorldAxis(
+void PaintContext::drawWorldAxis(
     double axis_opacity,
     double grid_opacity, 
     double text_opacity)

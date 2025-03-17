@@ -1,24 +1,5 @@
-/*
- * This file is part of QtSim
- *
- * Copyright (C) 2025 William Hemsworth
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program. If not, see <https://www.gnu.org/licenses/>.
- */
-
-#include "AttributeItem.h"
-#include "AttributeList.h"
+#include "attribute_item.h"
+#include "attribute_list.h"
 
 int getDecimalPlaces(double step)
 {
@@ -146,9 +127,6 @@ AttributeItem::AttributeItem(
 
             input = slider;
 
-            // Set input value
-            ///slider->setValue(value_float / slider_float_step);
-
             // Handle change
             connect(slider, &QSlider::valueChanged, this, [this](int v)
             {
@@ -158,9 +136,6 @@ AttributeItem::AttributeItem(
                 value_float = f;
                 if (!manual_refresh)
                 {
-                    ///for (double*& ptr : float_ptrs)
-                    ///    *ptr = f;
-
                     // Invoke callback
                     if (float_change)
                         float_change(f);
@@ -208,11 +183,12 @@ AttributeItem::AttributeItem(
             connect(spinBox, &QDoubleSpinBox::valueChanged, this, [this](double v)
             {
                 /// Update value
-                ///value_float = v;
-
-                // Invoke callback
-                if (float_change)
-                    float_change(v);
+                value_float = v;
+                if (!manual_refresh)
+                {
+                    if (float_change)
+                        float_change(v);
+                }
 
                 updateUIValue();
             });
@@ -438,8 +414,19 @@ void AttributeItem::updateUIValue()
     break;
     case AttributeType::INPUT_FLOAT:
     {
-        QSpinBox* spinBox = (QSpinBox*)input;
+        QDoubleSpinBox* spinBox = (QDoubleSpinBox*)input;
         //spinBox->setValue(*value_float_ptr);
+
+        spinBox->blockSignals(true);
+        spinBox->setSingleStep(slider_float_step);
+        spinBox->setDecimals(countDecimals(slider_float_step));
+        //spinBox->setRange
+        spinBox->setRange(
+            slider_float_min,
+            slider_float_max
+        );
+        spinBox->blockSignals(false);
+
         spinBox->setValue(value_float);
     }
     break;

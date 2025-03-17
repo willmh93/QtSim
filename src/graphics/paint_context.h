@@ -1,7 +1,7 @@
 #pragma once
 
 #include "qnanopainter.h"
-#include "World.h"
+#include "camera.h"
 
 using LineCap = QNanoPainter::LineCap;
 using LineJoin = QNanoPainter::LineJoin;
@@ -11,7 +11,7 @@ using TextBaseline = QNanoPainter::TextBaseline;
 class Project;
 class Bitmap;
 
-struct DrawingContext
+struct PaintContext
 {
     friend class Project;
 
@@ -43,7 +43,7 @@ public:
     QTransform default_viewport_transform;
     QNanoFont font;
 
-    DrawingContext() : font(QNanoFont::FontId::DEFAULT_FONT_NORMAL)
+    PaintContext() : font(QNanoFont::FontId::DEFAULT_FONT_NORMAL)
     {}
 
     Vec2 PT(double x, double y)

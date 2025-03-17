@@ -3,7 +3,7 @@
 #include <QWidget>
 #include <QPushButton>
 #include <QVBoxLayout>
-#include "AttributeItem.h"
+#include "attribute_item.h"
 
 class AttributeList : public QWidget
 {
@@ -22,12 +22,6 @@ public:
 
     AttributeItem* addItem(const QString& name, AttributeType type, bool manual_refresh);
     AttributeItem *getItem(QString name);
-
-    //void forceRefreshPointers()
-    //{
-    //    for (auto *item : item_widgets)
-    //        item->forceRefreshPointers();
-    //}
 
     QSize sizeHint() const override {
         return layout->sizeHint();

@@ -1,22 +1,13 @@
 #pragma once
-
 #include "types.h"
-
-struct WorldObject
-{
-    double x;
-    double y;
-};
 
 class Viewport;
 class Camera
 {
-
 public:
 
     Viewport* viewport = nullptr;
 
-    //bool enabled = true;
     bool panning_enabled = true;
     bool zooming_enabled = true;
 
@@ -186,6 +177,7 @@ public:
     Vec2 toWorld(const Vec2& pt);
     Vec2 toWorld(double x, double y);
     FRect toWorldRect(const FRect& r);
+    FRect toWorldRect(double x1, double y1, double x2, double y2);
 
     Vec2 toStage(const Vec2& pt);
     Vec2 toStage(double x, double y);

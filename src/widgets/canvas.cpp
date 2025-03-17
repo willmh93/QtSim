@@ -1,33 +1,12 @@
-﻿/*
- * This file is part of QtSim
- *
- * Copyright (C) 2025 William Hemsworth
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program. If not, see <https://www.gnu.org/licenses/>.
- */
-
-#include "Canvas2D.h"
-#include "Project.h"
-#include "QtSim.h"
+﻿#include "canvas.h"
+#include "project.h"
+#include "main_window.h"
 
 Canvas2D::Canvas2D(QWidget* parent)
     : QNanoWidget(parent)
 {
-    //setFillColor("#000000");
     setMouseTracking(true);
     setFocusPolicy(Qt::StrongFocus);
-
 }
 
 Canvas2D::~Canvas2D()
@@ -88,7 +67,6 @@ void Canvas2D::initializeGL()
 
 void Canvas2D::paint(QNanoPainter* p)
 {
-    //qDebug() << "Canvas2D::paint() - Thread: " << QThread::currentThread()->objectName();
     QScreen* screen = this->screen();
     qreal scaleFactor = screen->devicePixelRatio();
 

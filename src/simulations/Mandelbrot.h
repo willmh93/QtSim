@@ -5,34 +5,19 @@ SIM_BEG(Mandelbrot)
 
 struct Mandelbrot_Scene : public Scene
 {
-/*  // --- Custom Launch Config Example ---
-       
-    struct Config
-    {
-        double speed = 10.0;
-    };
-
-    Mandelbrot_Scene(Config& info) :
-        speed(info.speed)
-    {}
-
-    double speed;
-*/
-
     /// --- Sim Variables ---
     Bitmap bmp;
 
     QThreadPool pool;
     int thread_count = 1;
-
-    double quality = 10.0;
-    double threshold = 2;
-    double y_mult = 2;
-    int exponent = 2;
-    int version = 0;
-    bool smoothing = 0;
-
     bool gpu_compute = false;
+
+    double quality = 20.0;
+    double threshold = 50;
+    bool thresholding = false;
+    bool smoothing = true;
+
+    int iter_lim;
 
     double camera_x = 0;
     double camera_y = 0;
@@ -40,31 +25,34 @@ struct Mandelbrot_Scene : public Scene
     // --- Scene management ---
     void sceneAttributes(Input* input) override;
     void sceneStart() override;
-    //void sceneStop() override;
     void sceneDestroy() override;
     void sceneMounted(Viewport* viewport) override;
 
     /// --- Sim Logic Here ---
-    std::tuple<uint8_t, uint8_t, uint8_t> smooth_color(double iter, int max_iter);
-    std::tuple<uint8_t, uint8_t, uint8_t> ratio_color(double ratio);
+    void iter_color(double ratio, uint8_t& r, uint8_t& g, uint8_t& b);
 
+    double mandelbrot_basic(double x0, double y0);
 
-    double mandelbrot_basic(double x0, double y0, int max_iter);
-    double mandelbrot_2(double x0, double y0, int max_iter);
-    void   mandelbrot_3(double x0, double y0, int max_iter, Vec2& p, double& smooth_iter);
-   
-    void sceneProcess() override;
+    void cpu_mandelbrot(
+        double fw, double fh,
+        double wx, double wy,
+        double ww, double wh,
+        int pixel_count
+    );
+
+    void gpu_mandelbrot(
+        double fw, double fh,
+        double wx, double wy,
+        double ww, double wh,
+        int pixel_count
+    );
+
 
     // --- Shaders ---
-    //std::unique_ptr<QOpenGLShaderProgram> shader = nullptr;
-
     GlContext context;
     ComputeShader shader;
-    std::vector<float> input;
-    std::vector<float> output;
     ShaderBuffer input_buffer, output_buffer;
-
-    void loadShaders() override;
+    std::vector<float> input, output;
 
     // --- Viewport handling ---
     void viewportProcess(Viewport* ctx) override;
@@ -79,14 +67,7 @@ struct Mandelbrot_Scene : public Scene
 
 struct Mandelbrot_Project : public Project
 {
-    int panel_count = 1;
-
-    void projectAttributes(Input* input) override;
     void projectPrepare() override;
-    //void projectStart() override;
-    //void projectStop() override;
-    //void projectDestroy() override;
-
 };
 
 SIM_END(Mandelbrot)

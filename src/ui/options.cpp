@@ -17,7 +17,7 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "Options.h"
+#include "options.h"
 #include <QDir>
 
 QString getEnvironmentVariable(const char* varName)
@@ -144,7 +144,7 @@ void Options::doubleClickSim(const QModelIndex& index)
 
 
 
-AttributeItem* Options::int_realtime_slider(
+AttributeItem* Options::int_slider(
     QString name, 
     int value, int min, int max, int step,
     IntCallback changed)
@@ -172,9 +172,9 @@ AttributeItem* Options::int_realtime_slider(
     return item;
 }
 
-AttributeItem* Options::double_realtime_slider(
+AttributeItem* Options::double_slider(
     QString name, 
-    double target, double min, double max, double step,
+    double value, double min, double max, double step,
     DoubleCallback changed)
 {
     auto* item = attributeList->getItem(name);
@@ -182,7 +182,27 @@ AttributeItem* Options::double_realtime_slider(
     if (!item)
         item = attributeList->addItem(name, AttributeType::SLIDER_FLOAT, false);
 
-    item->value_float = target;
+    item->value_float = value;
+    item->slider_float_min = min;
+    item->slider_float_max = max;
+    item->slider_float_step = step;
+    item->float_change = changed;
+
+    item->updateUIValue();
+    return item;
+}
+
+AttributeItem* Options::double_inputbox(
+    QString name,
+    double value, double min, double max, double step,
+    DoubleCallback changed)
+{
+    auto* item = attributeList->getItem(name);
+    bool keep_existing_value = (item != nullptr);
+    if (!item)
+        item = attributeList->addItem(name, AttributeType::INPUT_FLOAT, false);
+
+    item->value_float = value;
     item->slider_float_min = min;
     item->slider_float_max = max;
     item->slider_float_step = step;
@@ -410,6 +430,25 @@ SimItemProxyPtr Input::_slider_double(bool realtime, QString name, DoubleVar tar
     return item;
 }
 
+SimItemProxyPtr Input::_inputbox_double(bool realtime, QString name, DoubleVar target, DoubleVar min, DoubleVar max, DoubleVar step, DoubleCallback changed)
+{
+    bool already_exists = (items[name] != nullptr);
+
+    // Create new item
+    auto item = createItem(name, AttributeType::INPUT_FLOAT);
+    item->double_value.provide(target, realtime, already_exists);
+    item->double_min.provide(min, realtime, already_exists);
+    item->double_max.provide(max, realtime, already_exists);
+    item->double_step.provide(step, realtime, already_exists);
+
+    // Create component on GUI thread
+    QMetaObject::invokeMethod(options, [this, name, item]() {
+        options->addInputBoxDouble(name, item);
+    });
+
+    return item;
+}
+
 SimItemProxyPtr Input::_checkbox(bool realtime, QString name, BoolVar target, BoolCallback changed)
 {
     bool already_exists = (items[name] != nullptr);
@@ -426,6 +465,8 @@ SimItemProxyPtr Input::_checkbox(bool realtime, QString name, BoolVar target, Bo
     return item;
 }
 
+///
+
 SimItemProxyPtr Input::realtime_slider(QString name, IntVar target, IntVar min, IntVar max, IntVar step, IntCallback changed)
 {
     return _slider_int(true, name, target, min, max, step, changed);
@@ -435,6 +476,8 @@ SimItemProxyPtr Input::starting_slider(QString name, IntVar target, IntVar min, 
 {
     return _slider_int(false, name, target, min, max, step, changed);
 }
+
+///
 
 SimItemProxyPtr Input::realtime_slider(QString name, DoubleVar target, DoubleVar min, DoubleVar max, DoubleVar step, DoubleCallback changed)
 {
@@ -451,6 +494,27 @@ SimItemProxyPtr Input::starting_slider(QString name, DoubleVar target, DoubleVar
 
     return _slider_double(false, name, target, min, max, step, changed);
 }
+
+///
+
+SimItemProxyPtr Input::realtime_float(QString name, DoubleVar target, DoubleVar min, DoubleVar max, DoubleVar step, DoubleCallback changed)
+{
+    if (variantValue(step) <= 0)
+        step = (variantValue(max) - variantValue(min)) / 100.0;
+
+    return _inputbox_double(true, name, target, min, max, step, changed);
+}
+
+SimItemProxyPtr Input::starting_float(QString name, DoubleVar target, DoubleVar min, DoubleVar max, DoubleVar step, DoubleCallback changed)
+{
+    if (variantValue(step) <= 0)
+        step = (variantValue(max) - variantValue(min)) / 100.0;
+
+    return _inputbox_double(false, name, target, min, max, step, changed);
+}
+
+
+///
 
 SimItemProxyPtr Input::realtime_checkbox(QString name, BoolVar target, BoolCallback changed)
 {

@@ -1,6 +1,6 @@
-#include "World.h"
-#include "Project.h"
 #include <cmath>
+#include "camera.h"
+#include "project.h"
 
 void Camera::setTransformFilters(bool _transform_coordinates, bool _scale_line_txt, bool _rotate_text)
 {
@@ -214,6 +214,13 @@ FRect Camera::toWorldRect(const FRect& r)
 {
     Vec2 tl = toWorld(r.x1, r.y1);
     Vec2 br = toWorld(r.x2, r.y2);
+    return { tl.x, tl.y, br.x, br.y };
+}
+
+FRect Camera::toWorldRect(double x1, double y1, double x2, double y2)
+{
+    Vec2 tl = toWorld(x1, y1);
+    Vec2 br = toWorld(x2, y2);
     return { tl.x, tl.y, br.x, br.y };
 }
 

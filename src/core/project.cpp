@@ -22,10 +22,9 @@
 #include <QDir>
 #include <QRegularExpression>
 
-#include "Project.h"
-#include "Canvas2D.h"
-
-#include "FFmpegWorker.h"
+#include "project.h"
+#include "canvas.h"
+#include "ffmpeg_worker.h"
 
 void Scene::registerMount(Viewport* viewport)
 {
