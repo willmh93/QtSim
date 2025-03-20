@@ -176,7 +176,7 @@ void Viewport::draw(QNanoPainter* p)
         transformMatrix = _transformMatrix;
     }
 
-    offscreen_surface.newFrame();
+    //offscreen_surface.newFrame();
 
     print_text = "";
 
@@ -288,7 +288,7 @@ Layout& Project::newLayout(int targ_viewports_x, int targ_viewports_y)
     return viewports;
 }
 
-void Project::configure(int _sim_uid, Canvas2D* _canvas, Options* _options)
+void Project::configure(int _sim_uid, RecordableCanvasWidget* _canvas, Options* _options)
 {
     sim_uid = _sim_uid;
     canvas = _canvas;
@@ -389,24 +389,20 @@ void Project::_projectPause()
     paused = true;
 }
 
-void Project::updateViewportRects()
+void Project::onResize()
 {
-    Vec2 surface_size = surfaceSize();
+    canvas_width = canvas->width();
+    canvas_height = canvas->height();
+}
 
-    // Update viewport sizes
-    double viewport_width = surface_size.x / viewports.cols;
-    double viewport_height = surface_size.y / viewports.rows;
+int Project::canvasWidth()
+{
+    return canvas_width;
+}
 
-    // Update viewport rects
-    for (Viewport* viewport : viewports)
-    {
-        viewport->x = viewport->viewport_grid_x * viewport_width;
-        viewport->y = viewport->viewport_grid_y * viewport_height;
-        viewport->width = viewport_width - 1;
-        viewport->height = viewport_height - 1;
-        viewport->camera.viewport_w = viewport_width - 1;
-        viewport->camera.viewport_h = viewport_height - 1;
-    }
+int Project::canvasHeight()
+{
+    return canvas_height;
 }
 
 Vec2 Project::surfaceSize()
@@ -429,6 +425,26 @@ Vec2 Project::surfaceSize()
     }
 
     return Vec2(w, h);
+}
+
+void Project::updateViewportRects()
+{
+    Vec2 surface_size = surfaceSize();
+
+    // Update viewport sizes
+    double viewport_width = surface_size.x / viewports.cols;
+    double viewport_height = surface_size.y / viewports.rows;
+
+    // Update viewport rects
+    for (Viewport* viewport : viewports)
+    {
+        viewport->x = viewport->viewport_grid_x * viewport_width;
+        viewport->y = viewport->viewport_grid_y * viewport_height;
+        viewport->width = viewport_width - 1;
+        viewport->height = viewport_height - 1;
+        viewport->camera.viewport_w = viewport_width - 1;
+        viewport->camera.viewport_h = viewport_height - 1;
+    }
 }
 
 void Project::_projectProcess()
@@ -473,7 +489,7 @@ void Project::_projectProcess()
         // Allow project to handle process on each Viewport
         for (Viewport* viewport : viewports)
         {
-            viewport->camera.panProcess();
+            //viewport->camera.panZoomProcess();
             viewport->scene->camera = &viewport->camera;
 
             viewport->just_resized =
@@ -618,7 +634,19 @@ void Project::_mouseWheel(int x, int y, int delta)
     }
 }
 
-void Project::_draw(QNanoPainter* p)
+void Project::_keyPress(QKeyEvent* e)
+{
+    for (Scene* scene : viewports.all_scenes)
+        scene->keyPressed(e);
+}
+
+void Project::_keyRelease(QKeyEvent* e)
+{
+    for (Scene* scene : viewports.all_scenes)
+        scene->keyReleased(e);
+}
+
+void Project::paint(QNanoPainter* p)
 {
     if (!done_single_process)
         return;
@@ -637,6 +665,7 @@ void Project::_draw(QNanoPainter* p)
     p->setFillStyle({ 255,255,255 });
     p->setStrokeStyle({ 255,255,255 });
 
+
     // Draw each viewport
     int i = 0;
     for (Viewport* viewport : viewports)
@@ -652,8 +681,10 @@ void Project::_draw(QNanoPainter* p)
 
         // Set default transform
         viewport->camera.worldTransform();
+        viewport->camera.panZoomProcess();
         
         viewport->scene->camera = &viewport->camera;
+
         viewport->draw(p);
 
         p->restore();
@@ -777,9 +808,11 @@ bool Project::startRecording()
     {
         record_resolution = options->getRecordResolution();
 
-        canvas->render_to_offscreen = true;
-        canvas->offscreen_w = record_resolution.x;
-        canvas->offscreen_h = record_resolution.y;
+        //canvas->render_to_offscreen = true;
+        canvas->useOffscreenSurface(true);
+        canvas->setTargetResolution(record_resolution.x, record_resolution.y);
+        //canvas->offscreen_w = record_resolution.x;
+        //canvas->offscreen_h = record_resolution.y;
     }
 
     // Prepare worker/thread
@@ -841,23 +874,8 @@ bool Project::encodeFrame(uint8_t* data)
 void Project::finalizeRecording()
 {
     recording = false;
-    canvas->render_to_offscreen = false;
+    //canvas->render_to_offscreen = false;
+    canvas->useOffscreenSurface(false);
     emit endRecording();
 }
 
-void Project::onResize()
-{
-    canvas_width = canvas->width();
-    canvas_height = canvas->height();
-}
-
-int Project::canvasWidth()
-{
-    return canvas_width;
-    //return canvas->width(); // not thread safe
-}
-
-int Project::canvasHeight()
-{
-    return canvas_height;
-}

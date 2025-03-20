@@ -423,7 +423,7 @@ QScrollArea {
                  <x>0</x>
                  <y>0</y>
                  <width>315</width>
-                 <height>496</height>
+                 <height>366</height>
                 </rect>
                </property>
                <property name="sizePolicy">
@@ -548,7 +548,7 @@ QLabel {
                  <x>0</x>
                  <y>0</y>
                  <width>315</width>
-                 <height>496</height>
+                 <height>366</height>
                 </rect>
                </property>
                <layout class="QVBoxLayout" name="verticalLayout_6">
@@ -946,6 +946,16 @@ background-color: #2A2A3A;</string>
             </item>
            </layout>
           </widget>
+         </widget>
+        </item>
+        <item>
+         <widget class="QOpenGLWidget" name="openGLWidget">
+          <property name="minimumSize">
+           <size>
+            <width>0</width>
+            <height>200</height>
+           </size>
+          </property>
          </widget>
         </item>
        </layout>

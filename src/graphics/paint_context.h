@@ -1,6 +1,7 @@
 #pragma once
 
 #include "qnanopainter.h"
+#include "graphics.h"
 #include "camera.h"
 
 using LineCap = QNanoPainter::LineCap;
@@ -302,7 +303,10 @@ public:
         );
     }
 
-    void drawBitmap(Bitmap* bmp, double x, double y, double w, double h);;
+    void drawBitmap(Bitmap* bmp, double x, double y, double w, double h);
+
+    void drawSurface(const GLSurface &surface, double x, double y, double w, double h);
+    void drawSurface(GLBitmap& bmp, double x, double y, double w, double h);
 
     void setFont(QNanoFont font)
     {
@@ -527,4 +531,19 @@ public:
         double grid_opacity=0.04, 
         double text_opacity=0.4
     );
+
+    void fillCheckeredGrid(double x, double y, double w, double h, int divisions=10)
+    {
+        double sqw = w / divisions;
+        double sqh = h / divisions;
+        for (int row = 0; row < divisions; row++)
+        {
+            for (int col = row % 2 == 0 ? 0 : 1; col < divisions; col += 2)
+            {
+                double sqx = x + col * sqw;
+                double sqy = y + row * sqh;
+                fillRect(sqx, sqy, sqw, sqh);
+            }
+        }
+    }
 };

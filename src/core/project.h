@@ -32,6 +32,8 @@ using namespace std;
 // Graphics
 #include "paint_context.h"
 #include "graphics.h"
+//#include "gl_engine_abstract.h"
+#include "canvas.h"
 
 // UI
 #include "options.h"
@@ -57,14 +59,16 @@ class FFmpegWorker;
 
 // Forward declare crossreferences
 class QNanoPainter;
-class Canvas2D;
+class CanvasWidget;
 
 class Layout;
 class Viewport;
 class Project;
 
-class Scene
+class Scene : public GLFunctions
 {
+    //Q_OBJECT;
+
     std::random_device rd;
     std::mt19937 gen;
 
@@ -75,6 +79,8 @@ class Scene
     int dt_sceneProcess;
     size_t dt_call_index;
     std::vector<MovingAverage::MA> dt_ma_list;
+
+    ///OffscreenGLSurface offscreen_surface;
 
 protected:
 
@@ -102,7 +108,10 @@ public:
 
     MouseInfo *mouse;
 
-    Scene() : gen(rd()) {}
+    Scene() : gen(rd())
+    {
+    }
+
     //SceneBase(Config& info) : gen(rd()) {}
     virtual ~Scene() = default;
 
@@ -118,7 +127,7 @@ public:
     virtual void sceneDestroy() {}
     virtual void sceneProcess() {}
 
-    virtual void loadShaders() {}
+    virtual void initGL() {}
 
     virtual void viewportProcess(Viewport* ctx) {}
     virtual void viewportDraw(Viewport* ctx) = 0;
@@ -147,7 +156,50 @@ public:
         return camera->toWorldOffset({ stage_offX, stage_offY });
     }
 
-   
+    GLSurface createSurface(int w, int h)
+    {
+        ///GLSurface surface = std::make_shared<GLSurface>();
+        GLSurface surface;
+
+        // Cache currently active FBO for restoring in end()
+        //glGetIntegerv(GL_FRAMEBUFFER_BINDING, &surface->prev_fbo);
+
+        //surface->prepare(w, h);
+        surface.prepare(w, h);
+
+        //surface->fbo->bind();
+
+        return surface;
+    }
+
+    /*void setSurfaceViewport(GLSurface surface, int w, int h)
+    {
+        // Cache currently active FBO for restoring in end()
+        glGetIntegerv(GL_FRAMEBUFFER_BINDING, &surface->prev_fbo);
+
+        // Cache old viewport size for restoring in end()
+        GLint viewport[4];
+        glGetIntegerv(GL_VIEWPORT, viewport);
+        surface->old_width = viewport[2];  // Width of the viewport
+        surface->old_height = viewport[3];  // Height of the viewport
+
+        surface->bind();
+
+        // Clear the framebuffer
+        glViewport(0, 0, surface->width, surface->height);
+        glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    }
+
+    void releaseSurface(GLSurface surface)
+    {
+        surface->fbo->release();
+
+        // Restore previously active FBO / Viewport Size
+        glBindFramebuffer(GL_FRAMEBUFFER, surface->prev_fbo);
+        glViewport(0, 0, surface->old_width, surface->old_height);
+    }*/
+
     int scene_dt(int average_samples=1);
     int project_dt(int average_samples = 1);
 };
@@ -174,7 +226,7 @@ protected:
     QString print_text;
     QTextStream print_stream;
 
-    OffscreenGLSurface offscreen_surface;
+    ///OffscreenGLSurface offscreen_surface;
     
 public:
 
@@ -185,7 +237,12 @@ public:
         return projectionMatrix * transformMatrix;
     }
 
-    QOpenGLExtraFunctions* beginGL()
+    ///GLSurface* newSurface()
+    ///{
+    ///    return offscreen_surface.newSurface();
+    ///}
+
+    /*QOpenGLExtraFunctions* beginGL()
     {
         return offscreen_surface.begin(width, height);
     }
@@ -202,7 +259,24 @@ public:
 
         painter->resetTransform();
         painter->transform(cur_transform);
-    }
+    }*/
+
+    /*void paintSurface(GLSurface surface, double _x, double _y, double _w, double _h)
+    {
+        // Draw FBO to QNanoPainter
+        QTransform cur_transform = painter->currentTransform();
+        painter->resetTransform();
+        painter->transform(default_viewport_transform);
+
+        auto offscreenImage = QNanoImage::fromFrameBuffer(surface->fbo);
+
+        // Note: This does NOT immediately draw the image to painter fbo.
+        // Active FBO must be retained for render pipeline.
+        painter->drawImage(offscreenImage, _x, _y, _w, _h);
+
+        painter->resetTransform();
+        painter->transform(cur_transform);
+    }*/
 
     Viewport(
         Layout *layout,
@@ -343,9 +417,9 @@ struct SimSceneList : public std::vector<Scene*>
     }
 };
 
-class Project : public QObject
+class Project : public CanvasRenderSource
 {
-    Q_OBJECT
+    Q_OBJECT;
 
     int sim_uid = -1;
 
@@ -366,7 +440,8 @@ class Project : public QObject
     QImage window_rgba_image;
     std::vector<GLubyte> frame_buffer; // Not changed until next process
     
-    Canvas2D* canvas = nullptr;
+    RecordableCanvasWidget* canvas = nullptr;
+
     QElapsedTimer timer_projectProcess;
     int dt_projectProcess;
 
@@ -378,7 +453,7 @@ class Project : public QObject
     void _loadShaders()
     {
         for (Scene* scene : viewports.all_scenes)
-            scene->loadShaders();
+            scene->initGL();
     }
 
 public:
@@ -429,11 +504,13 @@ public:
         {
             scene = new SceneType(*config);
             scene->temporary_environment = config;
+
         }
         else
             scene = new SceneType();
 
         scene->project = this;
+        scene->setGLFunctions(canvas->getGLFunctions());
 
         return scene;
     }
@@ -445,6 +522,8 @@ public:
         SceneType* scene = new SceneType(*config_ptr);
         scene->temporary_environment = config_ptr;
         scene->project = this;
+        scene->setGLFunctions(canvas->getGLFunctions());
+
         return scene;
     }
 
@@ -457,6 +536,8 @@ public:
         SceneType* scene = new SceneType(*config);
         scene->temporary_environment = config;
         scene->project = this;
+        scene->setGLFunctions(canvas->getGLFunctions());
+
         return scene;
     }
 
@@ -468,6 +549,8 @@ public:
         {
             SceneType* scene = create<SceneType>();
             scene->project = this;
+            scene->setGLFunctions(canvas->getGLFunctions());
+
             ret->push_back(scene);
         }
         return ret;
@@ -481,6 +564,8 @@ public:
         {
             SceneType* scene = create<SceneType>(config);
             scene->project = this;
+            scene->setGLFunctions(canvas->getGLFunctions());
+
             ret->push_back(scene);
         }
         return ret;
@@ -492,7 +577,7 @@ protected:
 
     friend class MainWindow;
     friend class ProjectWorker;
-    friend class Canvas2D;
+    friend class CanvasWidget;
     friend class Scene;
 
     ProjectWorker* worker = nullptr;
@@ -511,7 +596,7 @@ public:
     Layout& newLayout(int _viewports_x, int _viewports_y);
 
 
-    void configure(int sim_uid, Canvas2D *canvas, Options *options);
+    void configure(int sim_uid, RecordableCanvasWidget* canvas, Options *options);
 
     void onResize(); // Called on main GUI thread
 
@@ -544,18 +629,10 @@ public:
     void _mouseMove(int x, int y);
     void _mouseWheel(int x, int y, int delta);
 
-    void _keyPress(QKeyEvent* e)
-    {
-        for (Scene* scene : viewports.all_scenes)
-            scene->keyPressed(e);
-    }
-    void _keyRelease(QKeyEvent* e)
-    {
-        for (Scene* scene : viewports.all_scenes)
-            scene->keyReleased(e);
-    }
+    void _keyPress(QKeyEvent* e);
+    void _keyRelease(QKeyEvent* e);
 
-    void _draw(QNanoPainter* p);
+    void paint(QNanoPainter* p);
     void onPainted(const std::vector<GLubyte>* frame);
 
     bool startRecording();

@@ -189,6 +189,6 @@ public:
     void panBegin(int _x, int _y);
     void panDrag(int _x, int _y);
     void panEnd(int _x, int _y);
-    void panProcess();
+    void panZoomProcess();
 };
 

@@ -227,7 +227,7 @@ void BigBang_Scene::viewportDraw(Viewport* ctx)
 {
     
     // Particle glow
-    {
+    /*{
         QOpenGLExtraFunctions *glF = ctx->beginGL();
 
         shader->bind();
@@ -313,7 +313,7 @@ void BigBang_Scene::viewportDraw(Viewport* ctx)
         shader->release();
 
         ctx->endGL();
-    }
+    }*/
 }
 
 SIM_END(BigBang)

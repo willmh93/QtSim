@@ -62,7 +62,7 @@ void Superfluid_Scene::sceneProcess()
     /// Process Scene update
 }
 
-void Superfluid_Scene::loadShaders()
+void Superfluid_Scene::initGL()
 {
     shader = std::make_unique<QOpenGLShaderProgram>();
     shader->addShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/superfluid.vert");
@@ -83,7 +83,7 @@ void Superfluid_Scene::viewportProcess(Viewport* ctx)
 void Superfluid_Scene::viewportDraw(Viewport* ctx)
 {
 
-    {
+    /*{
         //shader->setUniformValue("transform", ctx->modelViewMatrix());
         QOpenGLExtraFunctions* gl = ctx->beginGL();
 
@@ -115,14 +115,14 @@ void Superfluid_Scene::viewportDraw(Viewport* ctx)
                 w, h
             };
 
-            /*static const GLfloat vertices[] = {
-                -1.0f, -1.0f, 0.0f, 0.0f,  // Bottom-left
-                 1.0f, -1.0f, 1.0f, 0.0f,  // Bottom-right
-                -1.0f,  1.0f, 0.0f, 1.0f,  // Top-left
-                -1.0f,  1.0f, 0.0f, 1.0f,  // Top-left
-                 1.0f, -1.0f, 1.0f, 0.0f,  // Bottom-right
-                 1.0f,  1.0f, 1.0f, 1.0f   // Top-right
-            };*/
+            ///static const GLfloat vertices[] = {
+            ///    -1.0f, -1.0f, 0.0f, 0.0f,  // Bottom-left
+            ///     1.0f, -1.0f, 1.0f, 0.0f,  // Bottom-right
+            ///    -1.0f,  1.0f, 0.0f, 1.0f,  // Top-left
+            ///    -1.0f,  1.0f, 0.0f, 1.0f,  // Top-left
+            ///     1.0f, -1.0f, 1.0f, 0.0f,  // Bottom-right
+            ///     1.0f,  1.0f, 1.0f, 1.0f   // Top-right
+            ///};
 
 
             gl->glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
@@ -142,7 +142,7 @@ void Superfluid_Scene::viewportDraw(Viewport* ctx)
         shader->release();
 
         ctx->endGL();
-    }
+    }*/
 
     /// Draw Scene to Viewport
     ctx->drawWorldAxis();

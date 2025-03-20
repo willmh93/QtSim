@@ -140,20 +140,21 @@ QImage OffscreenNanoPainter::toImage() const
 }
 
 
-
-OffscreenGLSurface::OffscreenGLSurface()
-{}
-
-OffscreenGLSurface::~OffscreenGLSurface()
+/*GLSurface* OffscreenGLSurface::newSurface()
 {
-    /*if (m_fbo)
+    // Make sure a FBO slot exists for this layer
+    if (current_fbo_index >= fbos.size())
     {
-        m_fbo->release();
-        delete m_fbo;
-    }*/
-}
+        fbos.resize(current_fbo_index + 1);
+        fbos[current_fbo_index] = std::make_unique<GLSurface>();
+    }
 
-QOpenGLExtraFunctions *OffscreenGLSurface::begin(int w, int h)
+    return fbos[fbos.size() - 1].get();
+}*/
+
+
+
+/*QOpenGLExtraFunctions *OffscreenGLSurface::begin(int w, int h)
 {
     //QOpenGLFunctions glF(QOpenGLContext::currentContext());
 
@@ -175,7 +176,7 @@ QOpenGLExtraFunctions *OffscreenGLSurface::begin(int w, int h)
     if (current_fbo_index >= fbos.size())
     {
         fbos.resize(current_fbo_index + 1);
-        fbos[current_fbo_index] = std::make_unique<FBO_Info>();
+        fbos[current_fbo_index] = std::make_unique<GLSurface>();
     }
 
     // Make sure FBO exists with the correct dimensions
@@ -203,16 +204,16 @@ void OffscreenGLSurface::end()
 
     // Restore previously active FBO / Viewport Size
     glF->glBindFramebuffer(GL_FRAMEBUFFER, previousFBO);
-}
+}*/
 
-void OffscreenGLSurface::drawToPainter(QNanoPainter* p, double x, double y)
+/*void OffscreenGLSurface::drawToPainter(QNanoPainter* p, double x, double y)
 {
     auto offscreenImage = QNanoImage::fromFrameBuffer(activeFBO());
 
     // Note: This does NOT immediately draw the image to painter.
     // Active FBO must be retained for render pipeline.
     p->drawImage(offscreenImage, x, y, m_width, m_height);
-}
+}*/
 
 
 
@@ -251,7 +252,7 @@ void Draw::arrow(PaintContext* ctx, Vec2& a, Vec2& b, QColor color, double arrow
     p->closePath();
     p->fill();
 }
-
+/*
 int Bitmap::bmp_index = 0;
 void Bitmap::draw(PaintContext* ctx, double x, double y, double w, double h)
 {
@@ -264,3 +265,4 @@ void Bitmap::draw(PaintContext* ctx, const Vec2& pt, const Vec2& size)
 {
     draw(ctx, pt.x, pt.y, size.x, size.y);
 }
+*/

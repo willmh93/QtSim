@@ -38,7 +38,7 @@ struct Superfluid_Scene : public Scene
     // --- Shaders ---
     std::unique_ptr<QOpenGLShaderProgram> shader = nullptr;
 
-    void loadShaders() override;
+    void initGL() override;
 
     // --- Viewport handling ---
     void viewportProcess(Viewport* ctx) override;

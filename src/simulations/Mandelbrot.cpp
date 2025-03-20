@@ -20,6 +20,7 @@ void Mandelbrot_Scene::sceneAttributes(Input* input)
     input->realtime_checkbox("GPU Compute", &gpu_compute);
 
     // Mandelbrot options
+    input->realtime_checkbox("Discrete Step", &discrete_step);
     input->realtime_slider("Mandelbrot Quality", &quality, 1.0, 150.0);
     input->realtime_checkbox("Smoothing", &smoothing);
 
@@ -229,8 +230,8 @@ void Mandelbrot_Scene::gpu_mandelbrot(
 
 void Mandelbrot_Scene::viewportProcess(Viewport* ctx)
 {
-    camera->targ_pan_x = -camera_x + camera->x;
-    camera->targ_pan_y = -camera_y + camera->y;
+    //camera->targ_pan_x = -camera_x + camera->x;
+    //camera->targ_pan_y = -camera_y + camera->y;
 
     /// Process Viewports running this Scene
     double fw = ctx->width;
@@ -242,7 +243,7 @@ void Mandelbrot_Scene::viewportProcess(Viewport* ctx)
 
     if (ctx->resized())
     {
-        bmp.create(iw, ih, false);
+        bmp.create(iw, ih);
 
         // Allocate input/output buffers for GPU
         input.resize(pixel_count * 2);
@@ -257,7 +258,10 @@ void Mandelbrot_Scene::viewportProcess(Viewport* ctx)
     double ww = wx2 - wx1;
     double wh = wy2 - wy1;
 
-    iter_lim = std::log2(zoom) * quality;
+    if (discrete_step)
+        iter_lim = static_cast<int>(quality);
+    else
+        iter_lim = std::log2(zoom) * quality;
 
     double f_max_iter = static_cast<double>(iter_lim);
     double threshold_sq = threshold * threshold;
@@ -272,7 +276,7 @@ void Mandelbrot_Scene::viewportDraw(Viewport* ctx)
 {
     /// Draw Scene to Viewport
     camera->stageTransform();
-    ctx->drawBitmap(&bmp, 0, 0, ctx->width, ctx->height);
+    ctx->drawSurface(bmp, 0, 0, ctx->width, ctx->height);
     ctx->drawWorldAxis(0.5, 0, 0.5);
 
     ctx->print() << "Frame delta time: " << this->project_dt(10) << " ms\n";

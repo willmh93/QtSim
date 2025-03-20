@@ -49,7 +49,7 @@ void ProjectWorker::setProject(int sim_uid)
     QMutexLocker locker(&main_window->sim_lock);
     qDebug() << "ProjectThread::setProject() - Thread:" << QThread::currentThread()->objectName();
 
-    canvas->setProject(nullptr);
+    canvas->setRenderSource(nullptr);
 
     if (project)
     {
@@ -68,7 +68,7 @@ void ProjectWorker::setProject(int sim_uid)
     project->input_proxy = input_proxy;
     project->configure(sim_uid, canvas, options);
 
-    canvas->setProject(project);
+    canvas->setRenderSource(project);
 
     project->onResize();
     project->_projectPrepare();
@@ -190,7 +190,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     // Add two OpenGL viewports
     options = new Options(this);
-    canvas = new Canvas2D(this);
+    canvas = new RecordableCanvasWidget(this);
     canvas->main_window = this;
 
     QVBoxLayout* simToolbarLayout = new QVBoxLayout(this);

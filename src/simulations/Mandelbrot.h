@@ -6,12 +6,13 @@ SIM_BEG(Mandelbrot)
 struct Mandelbrot_Scene : public Scene
 {
     /// --- Sim Variables ---
-    Bitmap bmp;
+    GLBitmap bmp;
 
     QThreadPool pool;
     int thread_count = 1;
     bool gpu_compute = false;
 
+    bool discrete_step = false;
     double quality = 20.0;
     double threshold = 50;
     bool thresholding = false;

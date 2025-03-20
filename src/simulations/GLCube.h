@@ -1,42 +1,38 @@
 #pragma once
 #include "Project.h"
 
-SIM_BEG({CLASS_NAME})
+SIM_BEG(GLCube)
 
-struct {CLASS_NAME}_Scene : public Scene
-{{
-/*  // --- Custom Launch Config Example ---
-       
-    struct Config
-    {{
-        double speed = 10.0;
-    }};
-
-    {CLASS_NAME}_Scene(Config& info) :
-        speed(info.speed)
-    {{}}
-
-    double speed;
-*/
-
+struct GLCube_Scene : public Scene
+{
     // --- Variables ---
-    
+    GLSurface surface;
+    GLBitmap bmp;
+
+    QOpenGLShaderProgram* shaderProgram = nullptr;
+    GLuint VAO, VBO, EBO;
+    float angle = 0.0f;
+
+    double camera_rotation = 0;
 
     // --- Scene management ---
+
     void sceneAttributes(Input* input) override;
     void sceneStart() override;
-    //void sceneStop() override;
+    ///void sceneStop() override;
     void sceneDestroy() override;
     void sceneMounted(Viewport* viewport) override;
 
     // --- Update methods ---
-    
+
     void sceneProcess() override;
 
     // --- Shaders ---
-    //void loadShaders() override;
+
+    void initGL() override;
 
     // --- Viewport ---
+
     void viewportProcess(Viewport* ctx) override;
     void viewportDraw(Viewport* ctx) override;
 
@@ -45,11 +41,11 @@ struct {CLASS_NAME}_Scene : public Scene
     void mouseUp() override;
     void mouseMove() override;
     void mouseWheel() override;
-}};
+};
 
-struct {CLASS_NAME}_Project : public Project
-{{
-    int panel_count = 1;
+struct GLCube_Project : public Project
+{
+    int panel_count = 2;
 
     void projectAttributes(Input* input) override;
     void projectPrepare() override;
@@ -57,6 +53,6 @@ struct {CLASS_NAME}_Project : public Project
     //void projectStop() override;
     //void projectDestroy() override;
 
-}};
+};
 
-SIM_END({CLASS_NAME})
+SIM_END(GLCube)

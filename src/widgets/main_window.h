@@ -12,6 +12,7 @@
 #include <QMutex>
 
 #include "project.h"
+#include "gl_engine_abstract.h"
 #include "canvas.h"
 #include "options.h"
 #include "toolbar.h"
@@ -47,7 +48,7 @@ public:
     Options* options = nullptr;
     Input* input_proxy = nullptr;
 
-    Canvas2D* canvas = nullptr;
+    RecordableCanvasWidget* canvas = nullptr;
 
    
     ProjectWorker(QObject* parent = nullptr)
@@ -102,7 +103,7 @@ public:
 protected:
 
     friend class ProjectWorker;
-    friend class Canvas2D;
+    friend class CanvasWidget;
 
     QMutex sim_lock;
 
@@ -112,7 +113,8 @@ protected:
 private:
 
     Options* options = nullptr;
-    Canvas2D* canvas = nullptr;
+    //CanvasWidget* canvas = nullptr;
+    RecordableCanvasWidget* canvas = nullptr;
     Toolbar* toolbar = nullptr;
 
     

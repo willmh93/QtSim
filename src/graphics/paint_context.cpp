@@ -19,7 +19,7 @@
 
 #include "paint_context.h"
 #include "helpers.h"
-#include "graphics.h"
+
 
 double roundAxisTickStep(double ideal_step)
 {
@@ -88,16 +88,11 @@ double getAngle(Vec2 a, Vec2 b)
     return (b - a).angle();
 }
 
-//double wrap180(double angle)
-//{
-//
-//}
-
-void PaintContext::drawBitmap(Bitmap* bmp, double x, double y, double w, double h)
+/*void PaintContext::drawBitmap(Bitmap* bmp, double x, double y, double w, double h)
 {
     if (camera.transform_coordinates)
     {
-        painter->strokeRect(x, y, w, h);
+        bmp->draw(this, x, y, w, h);
     }
     else
     {
@@ -110,6 +105,38 @@ void PaintContext::drawBitmap(Bitmap* bmp, double x, double y, double w, double 
         painter->resetTransform();
         painter->transform(cur_transform);
     }
+}*/
+
+void PaintContext::drawSurface(const GLSurface& surface, double x, double y, double w, double h)
+{
+    auto offscreenImage = QNanoImage::fromFrameBuffer(surface.fbo.get(), (QNanoImage::ImageFlag)0);
+
+    if (camera.transform_coordinates)
+    {
+        painter->drawImage(offscreenImage, x, y, w, h);
+    }
+    else
+    {
+        QTransform cur_transform = painter->currentTransform();
+        painter->resetTransform();
+        painter->transform(default_viewport_transform);
+
+
+        // Note: This does NOT immediately draw the image to painter fbo.
+        // Active FBO must be retained for render pipeline.
+        painter->drawImage(offscreenImage, x, y, w, h);
+
+        painter->resetTransform();
+        painter->transform(cur_transform);
+    }
+}
+
+void PaintContext::drawSurface(GLBitmap& bmp, double x, double y, double w, double h)
+{
+    bmp.updatePixels();
+
+    GLSurface& surface = bmp;
+    drawSurface(surface, x, y, w, h);
 }
 
 void PaintContext::drawWorldAxis(

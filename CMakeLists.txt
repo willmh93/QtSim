@@ -79,14 +79,15 @@ file(GLOB PROJECT_SOURCES CONFIGURE_DEPENDS
     "resources.qrc"
 )
 
-# Remove precompiled pch.cpp from the glob results
-list(FILTER PROJECT_SOURCES EXCLUDE REGEX "src/core/project\\.h$")
 file(GLOB UI_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/ui/*.ui")
 
 message(STATUS "Setting Source Filters")
 source_group("Project" FILES ${CORE_SOURCES})
 source_group("Simulations" FILES ${SIMULATION_HEADERS} ${SIMULATION_SOURCES})
 source_group("UI" FILES ${UI_SOURCES})
+
+# Remove precompiled pch.cpp from the glob results
+#list(FILTER PROJECT_SOURCES EXCLUDE REGEX "src/core/project\\.h$")
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
     if (WIN32)
