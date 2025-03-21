@@ -1,25 +1,5 @@
-/*
- * This file is part of QtSim
- *
- * Copyright (C) 2025 William Hemsworth
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program. If not, see <https://www.gnu.org/licenses/>.
- */
-
 #include "paint_context.h"
 #include "helpers.h"
-
 
 double roundAxisTickStep(double ideal_step)
 {
@@ -56,23 +36,6 @@ double roundAxisTickStep(double ideal_step)
     return niceMultiplier * factor;
 }
 
-/*double upperTickStep(double ideal_step, double rounded_step)
-{
-    double base = step / factor;
-    double currentMultiplier = 
-
-    // Choose the largest candidate from {1, 2, 2.5, 5, 10} that is <= base.
-    if (base >= 5)
-        niceMultiplier = 5;
-    else if (base >= 2.5)
-        niceMultiplier = 2.5;
-    else
-        niceMultiplier = 1;
-
-
-    return niceMultiplier * factor;
-}
-*/
 double roundAxisValue(double v, double step)
 {
     return floor(v / step) * step;
@@ -88,11 +51,11 @@ double getAngle(Vec2 a, Vec2 b)
     return (b - a).angle();
 }
 
-/*void PaintContext::drawBitmap(Bitmap* bmp, double x, double y, double w, double h)
+void PaintContext::drawSurface(Bitmap& bmp, double x, double y, double w, double h)
 {
     if (camera.transform_coordinates)
     {
-        bmp->draw(this, x, y, w, h);
+        bmp.draw(this, x, y, w, h);
     }
     else
     {
@@ -100,16 +63,21 @@ double getAngle(Vec2 a, Vec2 b)
         painter->resetTransform();
         painter->transform(default_viewport_transform);
 
-        bmp->draw(this, x, y, w, h);
+        bmp.draw(this, x, y, w, h);
 
         painter->resetTransform();
         painter->transform(cur_transform);
     }
-}*/
+}
+
+void PaintContext::drawSurface(Bitmap* bmp, double x, double y, double w, double h)
+{
+    drawSurface(*bmp, x, y, w, h);
+}
 
 void PaintContext::drawSurface(const GLSurface& surface, double x, double y, double w, double h)
 {
-    auto offscreenImage = QNanoImage::fromFrameBuffer(surface.fbo.get(), (QNanoImage::ImageFlag)0);
+    auto offscreenImage = QNanoImage::fromFrameBuffer(surface.fbo(), (QNanoImage::ImageFlag)0);
 
     if (camera.transform_coordinates)
     {
@@ -129,14 +97,6 @@ void PaintContext::drawSurface(const GLSurface& surface, double x, double y, dou
         painter->resetTransform();
         painter->transform(cur_transform);
     }
-}
-
-void PaintContext::drawSurface(GLBitmap& bmp, double x, double y, double w, double h)
-{
-    bmp.updatePixels();
-
-    GLSurface& surface = bmp;
-    drawSurface(surface, x, y, w, h);
 }
 
 void PaintContext::drawWorldAxis(

@@ -139,85 +139,7 @@ QImage OffscreenNanoPainter::toImage() const
     return m_fbo->toImage();
 }
 
-
-/*GLSurface* OffscreenGLSurface::newSurface()
-{
-    // Make sure a FBO slot exists for this layer
-    if (current_fbo_index >= fbos.size())
-    {
-        fbos.resize(current_fbo_index + 1);
-        fbos[current_fbo_index] = std::make_unique<GLSurface>();
-    }
-
-    return fbos[fbos.size() - 1].get();
-}*/
-
-
-
-/*QOpenGLExtraFunctions *OffscreenGLSurface::begin(int w, int h)
-{
-    //QOpenGLFunctions glF(QOpenGLContext::currentContext());
-
-    QOpenGLExtraFunctions *glF = QOpenGLContext::currentContext()->extraFunctions();
-
-    m_width = w;
-    m_height = h;
-
-    // Cache currently active FBO for restoring in end()
-    glF->glGetIntegerv(GL_FRAMEBUFFER_BINDING, &previousFBO);
-    
-    // Cache old viewport size for restoring in end()
-    GLint viewport[4];
-    glF->glGetIntegerv(GL_VIEWPORT, viewport);
-    old_vw = viewport[2];  // Width of the viewport
-    old_vh = viewport[3];  // Height of the viewport
-
-    // Make sure a FBO slot exists for this layer
-    if (current_fbo_index >= fbos.size())
-    {
-        fbos.resize(current_fbo_index + 1);
-        fbos[current_fbo_index] = std::make_unique<GLSurface>();
-    }
-
-    // Make sure FBO exists with the correct dimensions
-    fbos[current_fbo_index]->prepare(w, h);
-
-    // Bind for offscreen rendering
-    activeFBO()->bind();
-
-    // Clear the framebuffer
-    glF->glViewport(0, 0, m_width, m_height);
-    glF->glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-    glF->glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-    return glF;
-}
-void OffscreenGLSurface::end()
-{
-    QOpenGLExtraFunctions* glF = QOpenGLContext::currentContext()->extraFunctions();
-
-    glF->glViewport(0, 0, old_vw, old_vh);
-
-    // Release the active FBO, prepare for next
-    activeFBO()->release();
-    current_fbo_index++;
-
-    // Restore previously active FBO / Viewport Size
-    glF->glBindFramebuffer(GL_FRAMEBUFFER, previousFBO);
-}*/
-
-/*void OffscreenGLSurface::drawToPainter(QNanoPainter* p, double x, double y)
-{
-    auto offscreenImage = QNanoImage::fromFrameBuffer(activeFBO());
-
-    // Note: This does NOT immediately draw the image to painter.
-    // Active FBO must be retained for render pipeline.
-    p->drawImage(offscreenImage, x, y, m_width, m_height);
-}*/
-
-
-
-
+// todo: Move to PaintContext
 void Draw::arrow(PaintContext* ctx, Vec2& a, Vec2& b, QColor color, double arrow_size)
 {
     QNanoPainter* p = ctx->painter;
@@ -252,12 +174,18 @@ void Draw::arrow(PaintContext* ctx, Vec2& a, Vec2& b, QColor color, double arrow
     p->closePath();
     p->fill();
 }
-/*
+
 int Bitmap::bmp_index = 0;
 void Bitmap::draw(PaintContext* ctx, double x, double y, double w, double h)
 {
     img.loadFromData(data.data());
-    nano_img.updateFrameBuffer(ctx->painter);
+
+    ///nvgUpdateImage(ctx->painter->nvgCtx(), m_imageData->id, img->bits());
+
+    //nano_img = QNanoImage::fromCache(img, "dummy");
+    nano_img.updateImage(ctx->painter);
+
+    //nano_img.updateImage(ctx->painter);
     ctx->painter->drawImage(nano_img, x, y, w, h);
 }
 
@@ -265,4 +193,3 @@ void Bitmap::draw(PaintContext* ctx, const Vec2& pt, const Vec2& size)
 {
     draw(ctx, pt.x, pt.y, size.x, size.y);
 }
-*/

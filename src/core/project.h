@@ -76,9 +76,15 @@ class Scene : public GLFunctions
     Project* project = nullptr; // Project Scene was launched from
 
     QElapsedTimer timer_sceneProcess;
-    int dt_sceneProcess;
-    size_t dt_call_index;
-    std::vector<MovingAverage::MA> dt_ma_list;
+    int dt_sceneProcess = 0;
+
+    std::vector<MovingAverage::MA> dt_scene_ma_list;
+    std::vector<MovingAverage::MA> dt_project_ma_list;
+    std::vector<MovingAverage::MA> dt_project_draw_ma_list;
+
+    size_t dt_call_index = 0;
+    size_t dt_process_call_index = 0;
+    size_t dt_draw_call_index = 0;
 
     ///OffscreenGLSurface offscreen_surface;
 
@@ -201,7 +207,11 @@ public:
     }*/
 
     int scene_dt(int average_samples=1);
-    int project_dt(int average_samples = 1);
+
+    int project_dt(int average_samples);
+
+    int project_draw_dt(int average_samples);
+
 };
 
 class Viewport : public PaintContext
@@ -417,6 +427,66 @@ struct SimSceneList : public std::vector<Scene*>
     }
 };
 
+class RecordManager : public QObject
+{
+    Q_OBJECT;
+
+    QThread* ffmpeg_thread = nullptr;
+    FFmpegWorker* ffmpeg_worker = nullptr;
+
+    bool recording = false;
+    bool encoder_busy = false;
+
+public:
+
+    ~RecordManager();
+
+    bool isRecording()
+    {
+        return recording;
+    }
+
+    bool isInitialized();
+
+    bool encoderBusy()
+    {
+        return encoder_busy;
+    }
+
+    bool attachingEncoder()
+    {
+        return (isRecording() && !isInitialized());
+    }
+
+    bool startRecording(
+        QString filename,
+        Size record_resolution,
+        int record_fps,
+        bool flip);
+
+    void finalizeRecording()
+    {
+        emit endRecording();
+    }
+
+    bool encodeFrame(uint8_t* data)
+    {
+        encoder_busy = true;
+        emit frameReady(data);
+        return true;
+    }
+
+public: signals:
+
+    void onFinalized();
+
+private: signals:
+
+    void frameReady(uint8_t* data);
+    void workerReady();
+    void endRecording();
+};
+
 class Project : public CanvasRenderSource
 {
     Q_OBJECT;
@@ -426,27 +496,29 @@ class Project : public CanvasRenderSource
     Options* options;
     Input* input_proxy;
 
-    QThread* ffmpeg_thread = nullptr;
-    FFmpegWorker* ffmpeg_worker = nullptr;
+    
+    RecordableCanvasWidget* canvas = nullptr;
+    Layout viewports;
+
+    QElapsedTimer timer_projectProcess;
+    QElapsedTimer timer_projectDraw;
+    int dt_projectProcess = 0;
+    int dt_projectDraw = 0;
+
 
     // Recording states
+    RecordManager record_manager;
+
+    // Keep in project
     bool allow_start_recording = true;
     bool record_on_start = false;
-    bool recording = false;
     bool window_capture = false;
-    bool encoder_busy = false;
-    bool encode_next_paint = false;
+    bool encode_next_paint = false; 
     
     QImage window_rgba_image;
     std::vector<GLubyte> frame_buffer; // Not changed until next process
-    
-    RecordableCanvasWidget* canvas = nullptr;
 
-    QElapsedTimer timer_projectProcess;
-    int dt_projectProcess;
-
-    Layout viewports;
-
+    // Shaders
     bool done_single_process = false;
     bool shaders_loaded = false;
 
@@ -632,8 +704,15 @@ public:
     void _keyPress(QKeyEvent* e);
     void _keyRelease(QKeyEvent* e);
 
+    int project_dt(int average_samples = 1);
+    int project_draw_dt(int average_samples = 1);
+
     void paint(QNanoPainter* p);
     void onPainted(const std::vector<GLubyte>* frame);
+
+
+    ///
+
 
     bool startRecording();
     void setRecordOnStart(bool b)
@@ -641,14 +720,9 @@ public:
         record_on_start = b;
     }
 
-    bool encodeFrame(uint8_t* data);
+
     void finalizeRecording();
 
-signals:
-
-    void workerReady();
-    void frameReady(uint8_t* data);
-    void endRecording();
 };
 
 template <typename T>

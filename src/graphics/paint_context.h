@@ -12,11 +12,8 @@ using TextBaseline = QNanoPainter::TextBaseline;
 class Project;
 class Bitmap;
 
-struct PaintContext
+class PaintContext
 {
-    friend class Project;
-
-private:
     double _avgZoom()
     {
         return (camera.zoom_x + camera.zoom_y) * 0.5;
@@ -43,6 +40,7 @@ public:
     QNanoPainter* painter = nullptr;
     QTransform default_viewport_transform;
     QNanoFont font;
+    double line_width = 1;
 
     PaintContext() : font(QNanoFont::FontId::DEFAULT_FONT_NORMAL)
     {}
@@ -125,11 +123,6 @@ public:
         painter->setFillStyle(color);
     }
 
-    //void setFillStyle(const QColor &color)
-    //{
-    //    painter->setFillStyle(QNanoColor::fromQColor(color));
-    //}
-
     void setFillStyle(Qt::GlobalColor color)
     {
         painter->setFillStyle(QNanoColor::fromQColor(color));
@@ -145,7 +138,6 @@ public:
         painter->setStrokeStyle(color);
     }
 
-    double line_width = 1;
     void setLineWidth(double w)
     {
         this->line_width = w;
@@ -303,10 +295,9 @@ public:
         );
     }
 
-    void drawBitmap(Bitmap* bmp, double x, double y, double w, double h);
-
+    void drawSurface(Bitmap& bmp, double x, double y, double w, double h);
+    void drawSurface(Bitmap* bmp, double x, double y, double w, double h);
     void drawSurface(const GLSurface &surface, double x, double y, double w, double h);
-    void drawSurface(GLBitmap& bmp, double x, double y, double w, double h);
 
     void setFont(QNanoFont font)
     {

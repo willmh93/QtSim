@@ -24,7 +24,8 @@ void GLCube_Scene::sceneAttributes(Input* input)
 void GLCube_Scene::sceneStart()
 {
     /// Initialize Scene
-    bmp.create(50, 50);
+    //bmp = new GLBitmap();
+    bmp.create(400, 400);
 }
 
 void GLCube_Scene::sceneDestroy()
@@ -40,14 +41,17 @@ void GLCube_Scene::sceneMounted(Viewport* viewport)
     camera->focusWorldRect(-600, -600, 600, 600);
 }
 
+int i = 0;
 void GLCube_Scene::sceneProcess()
 {
     /// Process Scene update
+    
     for (int y = 0; y < bmp.height(); y++)
     {
         for (int x = 0; x < bmp.width(); x++)
         {
-            bmp.setPixel(x, y, rand() % 255, rand() % 255, rand() % 255, rand() % 255);
+            bmp.setPixel(x, y, i % 255, 0, 0, 255);
+            i++;
         }
     }
 }
@@ -165,6 +169,7 @@ void GLCube_Scene::viewportDraw(Viewport* ctx)
     glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
     glBindVertexArray(0);
 
+    shaderProgram->release();
 
     //ctx->paintSurface(surface, -200, -200, 800, 800);
     //ctx->paintSurface(surface, 200, 200, 1500, 400);
@@ -179,11 +184,12 @@ void GLCube_Scene::viewportDraw(Viewport* ctx)
     ctx->setFillStyle(100, 0, 0, 255);
     ctx->fillCheckeredGrid(0, 0, 500, -500);
 
-    ctx->drawSurface(bmp, 0, 0, 500, 500);
+    surface.release();
+
+    ctx->drawSurface(bmp, 0, 0, bmp.width(), bmp.height());
     //ctx->drawSurface(bmp, 500, 500, 5000, 5000);
 
-    shaderProgram->release();
-    surface.release();
+
 
     ctx->setFillStyle(255, 255, 255, 255);
     ctx->setTextAlign(TextAlign::ALIGN_CENTER);
@@ -195,6 +201,7 @@ void GLCube_Scene::viewportDraw(Viewport* ctx)
     
     //for (int i = 0; i < 10000; i++)
     //    pixels[i] = rand() % 255;
+    ctx->print() << "dt: " << this->project_draw_dt(10);
 }
 
 /// User Interaction

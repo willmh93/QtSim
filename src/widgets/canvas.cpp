@@ -1,6 +1,4 @@
-﻿//#include "canvas.h"
-#include "gl_engine_abstract.h"
-
+﻿#include "canvas.h"
 #include "project.h"
 #include "main_window.h"
 
@@ -161,6 +159,8 @@ void RecordableCanvasWidget::paint(QNanoPainter* p)
 
     if (render_source)
     {
+        QMutexLocker locker(&main_window->sim_lock);
+
         if (!render_to_offscreen)
         {
             render_source->paint(p);

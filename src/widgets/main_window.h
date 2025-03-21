@@ -12,7 +12,6 @@
 #include <QMutex>
 
 #include "project.h"
-#include "gl_engine_abstract.h"
 #include "canvas.h"
 #include "options.h"
 #include "toolbar.h"
@@ -104,6 +103,7 @@ protected:
 
     friend class ProjectWorker;
     friend class CanvasWidget;
+    friend class RecordableCanvasWidget;
 
     QMutex sim_lock;
 

@@ -305,7 +305,7 @@ void Camera::panDrag(int _x, int _y)
 
 void Camera::panZoomProcess()
 {
-    double ease = 0.1;
+    double ease = 1.0;
     pan_x += (targ_pan_x - pan_x) * ease;
     pan_y += (targ_pan_y - pan_y) * ease;
     zoom_x += (targ_zoom_x - zoom_x) * ease;

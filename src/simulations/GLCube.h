@@ -7,7 +7,7 @@ struct GLCube_Scene : public Scene
 {
     // --- Variables ---
     GLSurface surface;
-    GLBitmap bmp;
+    Bitmap bmp;
 
     QOpenGLShaderProgram* shaderProgram = nullptr;
     GLuint VAO, VBO, EBO;

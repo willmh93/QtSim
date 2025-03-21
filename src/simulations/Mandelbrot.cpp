@@ -95,8 +95,7 @@ void Mandelbrot_Scene::sceneMounted(Viewport* viewport)
 
 inline double Mandelbrot_Scene::mandelbrot_basic(double x0, double y0)
 {
-    double x = 0.0, y = 0.0;
-    double xx = 0, yy = 0;
+    double x = 0.0, y = 0.0, xx = 0.0, yy = 0.0;
     int iter = 0;
     while (xx + yy <= 4.0 && iter < iter_lim)
     {
@@ -157,7 +156,7 @@ void Mandelbrot_Scene::cpu_mandelbrot(
                 else
                     iter_color(ratio, r, g, b);
 
-                bmp.setPixel(x, y, r, g, b, 255);
+                bmp->setPixel(x, y, r, g, b, 255);
             }
         });
     }
@@ -224,7 +223,7 @@ void Mandelbrot_Scene::gpu_mandelbrot(
         else
             iter_color(ratio, r, g, b);
 
-        bmp.setPixel(x, y, r, g, b, 255);
+        bmp->setPixel(x, y, r, g, b, 255);
     }
 }
 
@@ -243,7 +242,11 @@ void Mandelbrot_Scene::viewportProcess(Viewport* ctx)
 
     if (ctx->resized())
     {
-        bmp.create(iw, ih);
+        if (bmp)
+            delete bmp;
+
+        bmp = new Bitmap();
+        bmp->create(iw, ih);
 
         // Allocate input/output buffers for GPU
         input.resize(pixel_count * 2);

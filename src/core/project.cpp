@@ -80,19 +80,28 @@ void Scene::mountToAll(Layout& viewports)
 
 int Scene::scene_dt(int average_samples)
 {
-    if (dt_call_index >= dt_ma_list.size())
-        dt_ma_list.push_back(MovingAverage::MA(average_samples));
+    if (dt_call_index >= dt_scene_ma_list.size())
+        dt_scene_ma_list.push_back(MovingAverage::MA(average_samples));
 
-    auto& ma = dt_ma_list[dt_call_index++];
+    auto& ma = dt_scene_ma_list[dt_call_index++];
     return ma.push(dt_sceneProcess);
 }
 
 int Scene::project_dt(int average_samples)
 {
-    if (dt_call_index >= dt_ma_list.size())
-        dt_ma_list.push_back(MovingAverage::MA(average_samples));
+    if (dt_process_call_index >= dt_project_ma_list.size())
+        dt_project_ma_list.push_back(MovingAverage::MA(average_samples));
 
-    auto& ma = dt_ma_list[dt_call_index++];
+    auto& ma = dt_project_ma_list[dt_process_call_index++];
+    return ma.push(project->dt_projectProcess);
+}
+
+int Scene::project_draw_dt(int average_samples)
+{
+    if (dt_draw_call_index >= dt_project_draw_ma_list.size())
+        dt_project_draw_ma_list.push_back(MovingAverage::MA(average_samples));
+
+    auto& ma = dt_project_draw_ma_list[dt_draw_call_index++];
     return ma.push(project->dt_projectProcess);
 }
 
@@ -127,7 +136,6 @@ Viewport::~Viewport()
 
 void Viewport::draw(QNanoPainter* p)
 {
-
     // Set defaults
     setTextAlign(TextAlign::ALIGN_LEFT);
     setTextBaseline(TextBaseline::BASELINE_TOP);
@@ -176,15 +184,11 @@ void Viewport::draw(QNanoPainter* p)
         transformMatrix = _transformMatrix;
     }
 
-    //offscreen_surface.newFrame();
-
     print_text = "";
 
     // Draw mounted project to this viewport
     scene->camera = &camera;
     scene->viewportDraw(this);
-
-
 
     save();
     camera.saveCameraTransform();
@@ -344,7 +348,9 @@ void Project::_projectStart()
     {
         scene->cache = &cache;
         scene->mouse = &mouse;
-        scene->dt_ma_list.clear();
+        scene->dt_scene_ma_list.clear();
+        scene->dt_project_ma_list.clear();
+        scene->dt_project_draw_ma_list.clear();
         scene->sceneStart();
     }
 
@@ -368,7 +374,7 @@ void Project::_projectStop()
     projectStop();
     cache.finalize();
 
-    if (recording)
+    if (record_manager.isRecording())
         finalizeRecording();
 
     setProjectInfoState(ProjectInfo::INACTIVE);
@@ -411,7 +417,7 @@ Vec2 Project::surfaceSize()
     double h;
 
     // Determine surface size to draw to (depends on if recording or not)
-    if (!recording || window_capture)
+    if (!record_manager.isRecording() || window_capture)
     {
         w = canvasWidth();
         h = canvasHeight();
@@ -452,11 +458,9 @@ void Project::_projectProcess()
     updateViewportRects();
 
     // Determine whether to process project this frame or not (depends on recording status)
-    bool attaching_encoder = (recording && !ffmpeg_worker->isInitialized());
-    if (!attaching_encoder && !encoder_busy && !paused)
+    if (!record_manager.attachingEncoder() && !record_manager.encoderBusy())
     {
-        timer_projectProcess.start();
-
+        // Allow panning/zooming, even when paused
         for (Viewport* viewport : viewports)
         {
             double viewport_mx = mouse.client_x - viewport->x;
@@ -473,39 +477,45 @@ void Project::_projectProcess()
                 mouse.stage_y = viewport_my;
                 mouse.world_x = world_mouse.x;
                 mouse.world_y = world_mouse.y;
+                viewport->camera.panZoomProcess();
             }
         }
 
-        // Process each scene scene
-        for (Scene* scene : viewports.all_scenes)
+        if (!paused)
         {
-            scene->dt_call_index = 0;
-            scene->timer_sceneProcess.start();
-            scene->mouse = &mouse;
-            scene->sceneProcess();
-            scene->dt_sceneProcess = scene->timer_sceneProcess.elapsed();
+            timer_projectProcess.start();
+
+            // Process each scene scene
+            for (Scene* scene : viewports.all_scenes)
+            {
+                scene->dt_call_index = 0;
+                scene->timer_sceneProcess.start();
+                scene->mouse = &mouse;
+                scene->sceneProcess();
+                scene->dt_sceneProcess = scene->timer_sceneProcess.elapsed();
+            }
+
+            // Allow project to handle process on each Viewport
+            for (Viewport* viewport : viewports)
+            {
+                //viewport->camera.panZoomProcess();
+                viewport->scene->camera = &viewport->camera;
+
+                viewport->just_resized =
+                    (viewport->width != viewport->old_width) ||
+                    (viewport->height != viewport->old_height);
+
+                viewport->scene->viewportProcess(viewport);
+
+                viewport->old_width = viewport->width;
+                viewport->old_height = viewport->height;
+            }
+
+            dt_projectProcess = timer_projectProcess.elapsed();
+
+            // Prepare to encode the next frame
+            encode_next_paint = true;
         }
-
-        // Allow project to handle process on each Viewport
-        for (Viewport* viewport : viewports)
-        {
-            //viewport->camera.panZoomProcess();
-            viewport->scene->camera = &viewport->camera;
-
-            viewport->just_resized =
-                (viewport->width != viewport->old_width) ||
-                (viewport->height != viewport->old_height);
-
-            viewport->scene->viewportProcess(viewport);
-
-            viewport->old_width = viewport->width;
-            viewport->old_height = viewport->height;
-        }
-
-        dt_projectProcess = timer_projectProcess.elapsed();
-        
-        // Prepare to encode the next frame
-        encode_next_paint = true;
     }
 
     done_single_process = true;
@@ -648,8 +658,8 @@ void Project::_keyRelease(QKeyEvent* e)
 
 void Project::paint(QNanoPainter* p)
 {
-    if (!done_single_process)
-        return;
+    if (!done_single_process) return;
+    if (!started) return;
 
     if (!shaders_loaded)
     {
@@ -665,6 +675,7 @@ void Project::paint(QNanoPainter* p)
     p->setFillStyle({ 255,255,255 });
     p->setStrokeStyle({ 255,255,255 });
 
+    timer_projectDraw.start();
 
     // Draw each viewport
     int i = 0;
@@ -679,17 +690,18 @@ void Project::paint(QNanoPainter* p)
         // Attach QNanoPainter for viewport draw operations
         viewport->painter = p;
 
-        // Set default transform
+        // Set default transform to "World"
         viewport->camera.worldTransform();
-        viewport->camera.panZoomProcess();
-        
+
+        // Draw Scene to Viewport
         viewport->scene->camera = &viewport->camera;
-
         viewport->draw(p);
-
+        
         p->restore();
         p->resetClipping();
     }
+
+    dt_projectDraw = timer_projectDraw.elapsed();
 
     // Draw viewport splitters
     for (Viewport* viewport : viewports)
@@ -720,7 +732,7 @@ void Project::paint(QNanoPainter* p)
 
 void Project::onPainted(const std::vector<GLubyte> *frame)
 {
-    if (!recording)
+    if (!record_manager.isRecording())
         return;
 
     if (encode_next_paint)
@@ -736,7 +748,7 @@ void Project::onPainted(const std::vector<GLubyte> *frame)
             QImage window_image = screen->grabWindow(mainWindow->winId()).toImage();
             window_rgba_image = window_image.convertToFormat(QImage::Format_RGBA8888);
             
-            encodeFrame(window_rgba_image.bits());
+            record_manager.encodeFrame(window_rgba_image.bits());
             encode_next_paint = false;
         }
         else
@@ -744,7 +756,7 @@ void Project::onPainted(const std::vector<GLubyte> *frame)
             // Capture canvas offscreen surface
             frame_buffer = std::move(*frame);
 
-            encodeFrame(frame_buffer.data());
+            record_manager.encodeFrame(frame_buffer.data());
             encode_next_paint = false;
         }
     }
@@ -752,7 +764,7 @@ void Project::onPainted(const std::vector<GLubyte> *frame)
 
 bool Project::startRecording()
 {
-    if (recording)
+    if (record_manager.isRecording())
         throw "Error, already recording...";
 
     if (!allow_start_recording)
@@ -780,7 +792,7 @@ bool Project::startRecording()
         QRegularExpression regex(R"(^clip(\d+)\.\w+$)"); // Match "clip{index}.mp4"
         QRegularExpressionMatch match = regex.match(file);
 
-        if (match.hasMatch()) 
+        if (match.hasMatch())
         {
             int clip_index = match.captured(1).toInt(); // Extract and convert to int
             if (clip_index > max_clip_index)
@@ -789,7 +801,7 @@ bool Project::startRecording()
     }
 
     QString filename = QDir::toNativeSeparators(
-        project_videos_dir + "/clip" + QString::number(max_clip_index+1) + ".mp4"
+        project_videos_dir + "/clip" + QString::number(max_clip_index + 1) + ".mp4"
     );
 
     // Get record options
@@ -808,33 +820,68 @@ bool Project::startRecording()
     {
         record_resolution = options->getRecordResolution();
 
-        //canvas->render_to_offscreen = true;
         canvas->useOffscreenSurface(true);
         canvas->setTargetResolution(record_resolution.x, record_resolution.y);
-        //canvas->offscreen_w = record_resolution.x;
-        //canvas->offscreen_h = record_resolution.y;
     }
 
+    connect(&record_manager, &RecordManager::onFinalized, this, [this]()
+    {
+        allow_start_recording = true;
+        canvas->useOffscreenSurface(false);
+    });
+
+    allow_start_recording = false;
+
+    record_manager.startRecording(
+        filename,
+        record_resolution,
+        record_fps, 
+        !window_capture);
+
+    return true;
+}
+
+
+void Project::finalizeRecording()
+{
+    record_manager.finalizeRecording();
+}
+
+RecordManager::~RecordManager()
+{
+    if (ffmpeg_thread) ffmpeg_worker->deleteLater();
+    if (ffmpeg_worker) ffmpeg_thread->deleteLater();
+    ffmpeg_worker = nullptr;
+    ffmpeg_thread = nullptr;
+}
+
+bool RecordManager::isInitialized()
+{
+    return ffmpeg_worker->isInitialized();
+}
+
+bool RecordManager::startRecording(QString filename, Size record_resolution, int record_fps, bool flip)
+{
     // Prepare worker/thread
     ffmpeg_worker = new FFmpegWorker();
     ffmpeg_thread = new QThread();
     ffmpeg_worker->moveToThread(ffmpeg_thread);
 
     ffmpeg_worker->setOutputInfo(
-        filename.toStdString(), 
+        filename.toStdString(),
         record_resolution.x, // src size
         record_resolution.y, // src size
         record_resolution.x, // dest size
         record_resolution.y, // dest size
         record_fps,
-        !window_capture // flip
+        flip
     );
 
     // When the thread is opened, initialize FFMpeg
     connect(ffmpeg_thread, &QThread::started, ffmpeg_worker, &FFmpegWorker::startRecording);
 
     // Listen for frame updates, forward pixel data to FFmpeg encoder
-    connect(this, &Project::frameReady, ffmpeg_worker, &FFmpegWorker::encodeFrame);
+    connect(this, &RecordManager::frameReady, ffmpeg_worker, &FFmpegWorker::encodeFrame);
 
     // When the frame is succesfully encoded, permit processing the next frame
     connect(ffmpeg_worker, &FFmpegWorker::frameFlushed, ffmpeg_worker, [this]()
@@ -843,7 +890,7 @@ bool Project::startRecording()
     });
 
     // Wait for "end recording" onClicked signal, then signal FFmpeg worker to finish up
-    connect(this, &Project::endRecording, ffmpeg_worker, &FFmpegWorker::finalizeRecording);
+    connect(this, &RecordManager::endRecording, ffmpeg_worker, &FFmpegWorker::finalizeRecording);
 
     // Gracefully shut down worker/thread once FFmpeg finalizes encoding
     connect(ffmpeg_worker, &FFmpegWorker::onFinalized, ffmpeg_worker, [this]()
@@ -852,30 +899,19 @@ bool Project::startRecording()
         ffmpeg_thread->wait();
         ffmpeg_worker->deleteLater();
         ffmpeg_thread->deleteLater();
-        allow_start_recording = true;
+        ffmpeg_worker = nullptr;
+        ffmpeg_thread = nullptr;
+        recording = false;
+
+        emit onFinalized();
+
     });
 
     // Start the thread
     ffmpeg_thread->start();
 
     recording = true;
-    allow_start_recording = false;
+
 
     return true;
 }
-
-bool Project::encodeFrame(uint8_t* data)
-{
-    encoder_busy = true;
-    emit frameReady(data);
-    return true;
-}
-
-void Project::finalizeRecording()
-{
-    recording = false;
-    //canvas->render_to_offscreen = false;
-    canvas->useOffscreenSurface(false);
-    emit endRecording();
-}
-
