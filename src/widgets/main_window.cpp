@@ -190,7 +190,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     // Add two OpenGL viewports
     options = new Options(this);
-    canvas = new RecordableCanvasWidget(this);
+    canvas = new ProjectCanvasWidget(this);
     canvas->main_window = this;
 
     QVBoxLayout* simToolbarLayout = new QVBoxLayout(this);

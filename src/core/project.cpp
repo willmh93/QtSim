@@ -24,7 +24,6 @@
 
 #include "project.h"
 #include "canvas.h"
-#include "ffmpeg_worker.h"
 
 void Scene::registerMount(Viewport* viewport)
 {
@@ -292,7 +291,7 @@ Layout& Project::newLayout(int targ_viewports_x, int targ_viewports_y)
     return viewports;
 }
 
-void Project::configure(int _sim_uid, RecordableCanvasWidget* _canvas, Options* _options)
+void Project::configure(int _sim_uid, ProjectCanvasWidget* _canvas, Options* _options)
 {
     sim_uid = _sim_uid;
     canvas = _canvas;
@@ -530,7 +529,7 @@ void Project::postProcess()
     //    viewport->scene->postProcess();
 }
 
-void Project::_mouseDown(int x, int y, Qt::MouseButton btn)
+void Project::mouseDown(int x, int y, Qt::MouseButton btn)
 {
     for (Viewport* viewport : viewports)
     {
@@ -556,7 +555,7 @@ void Project::_mouseDown(int x, int y, Qt::MouseButton btn)
     }
 }
 
-void Project::_mouseUp(int x, int y, Qt::MouseButton btn)
+void Project::mouseUp(int x, int y, Qt::MouseButton btn)
 {
     for (Viewport* viewport : viewports)
     {
@@ -584,7 +583,7 @@ void Project::_mouseUp(int x, int y, Qt::MouseButton btn)
         scene->mouseDown();
 }
 
-void Project::_mouseMove(int x, int y)
+void Project::mouseMove(int x, int y)
 {
     mouse.client_x = x;
     mouse.client_y = y;
@@ -612,7 +611,7 @@ void Project::_mouseMove(int x, int y)
     }
 }
 
-void Project::_mouseWheel(int x, int y, int delta)
+void Project::mouseWheel(int x, int y, int delta)
 {
     for (Viewport* viewport : viewports)
     {
@@ -644,13 +643,13 @@ void Project::_mouseWheel(int x, int y, int delta)
     }
 }
 
-void Project::_keyPress(QKeyEvent* e)
+void Project::keyPress(QKeyEvent* e)
 {
     for (Scene* scene : viewports.all_scenes)
         scene->keyPressed(e);
 }
 
-void Project::_keyRelease(QKeyEvent* e)
+void Project::keyRelease(QKeyEvent* e)
 {
     for (Scene* scene : viewports.all_scenes)
         scene->keyReleased(e);
@@ -770,6 +769,8 @@ bool Project::startRecording()
     if (!allow_start_recording)
         return false; // Haven't finished finalizing the previous recording yet
 
+    canvas->setBackground(0, 0, 0);
+
     // Determine save paths
     QString projects_dir = options->getProjectsDirectory();
     QString project_dir = QDir::toNativeSeparators(projects_dir + "/" + getProjectInfo()->path.back());
@@ -841,77 +842,9 @@ bool Project::startRecording()
     return true;
 }
 
-
 void Project::finalizeRecording()
 {
     record_manager.finalizeRecording();
+    canvas->setBackground(10, 10, 15);
 }
 
-RecordManager::~RecordManager()
-{
-    if (ffmpeg_thread) ffmpeg_worker->deleteLater();
-    if (ffmpeg_worker) ffmpeg_thread->deleteLater();
-    ffmpeg_worker = nullptr;
-    ffmpeg_thread = nullptr;
-}
-
-bool RecordManager::isInitialized()
-{
-    return ffmpeg_worker->isInitialized();
-}
-
-bool RecordManager::startRecording(QString filename, Size record_resolution, int record_fps, bool flip)
-{
-    // Prepare worker/thread
-    ffmpeg_worker = new FFmpegWorker();
-    ffmpeg_thread = new QThread();
-    ffmpeg_worker->moveToThread(ffmpeg_thread);
-
-    ffmpeg_worker->setOutputInfo(
-        filename.toStdString(),
-        record_resolution.x, // src size
-        record_resolution.y, // src size
-        record_resolution.x, // dest size
-        record_resolution.y, // dest size
-        record_fps,
-        flip
-    );
-
-    // When the thread is opened, initialize FFMpeg
-    connect(ffmpeg_thread, &QThread::started, ffmpeg_worker, &FFmpegWorker::startRecording);
-
-    // Listen for frame updates, forward pixel data to FFmpeg encoder
-    connect(this, &RecordManager::frameReady, ffmpeg_worker, &FFmpegWorker::encodeFrame);
-
-    // When the frame is succesfully encoded, permit processing the next frame
-    connect(ffmpeg_worker, &FFmpegWorker::frameFlushed, ffmpeg_worker, [this]()
-    {
-        encoder_busy = false;
-    });
-
-    // Wait for "end recording" onClicked signal, then signal FFmpeg worker to finish up
-    connect(this, &RecordManager::endRecording, ffmpeg_worker, &FFmpegWorker::finalizeRecording);
-
-    // Gracefully shut down worker/thread once FFmpeg finalizes encoding
-    connect(ffmpeg_worker, &FFmpegWorker::onFinalized, ffmpeg_worker, [this]()
-    {
-        ffmpeg_thread->quit();
-        ffmpeg_thread->wait();
-        ffmpeg_worker->deleteLater();
-        ffmpeg_thread->deleteLater();
-        ffmpeg_worker = nullptr;
-        ffmpeg_thread = nullptr;
-        recording = false;
-
-        emit onFinalized();
-
-    });
-
-    // Start the thread
-    ffmpeg_thread->start();
-
-    recording = true;
-
-
-    return true;
-}

@@ -32,8 +32,8 @@ using namespace std;
 // Graphics
 #include "paint_context.h"
 #include "graphics.h"
-//#include "gl_engine_abstract.h"
 #include "canvas.h"
+#include "ffmpeg_worker.h"
 
 // UI
 #include "options.h"
@@ -55,7 +55,6 @@ std::vector<QString> VectorizeArgs(Ts&&... args) { return { QString::fromUtf8(st
 // Declarations
 class ProjectWorker;
 class Options;
-class FFmpegWorker;
 
 // Forward declare crossreferences
 class QNanoPainter;
@@ -427,66 +426,6 @@ struct SimSceneList : public std::vector<Scene*>
     }
 };
 
-class RecordManager : public QObject
-{
-    Q_OBJECT;
-
-    QThread* ffmpeg_thread = nullptr;
-    FFmpegWorker* ffmpeg_worker = nullptr;
-
-    bool recording = false;
-    bool encoder_busy = false;
-
-public:
-
-    ~RecordManager();
-
-    bool isRecording()
-    {
-        return recording;
-    }
-
-    bool isInitialized();
-
-    bool encoderBusy()
-    {
-        return encoder_busy;
-    }
-
-    bool attachingEncoder()
-    {
-        return (isRecording() && !isInitialized());
-    }
-
-    bool startRecording(
-        QString filename,
-        Size record_resolution,
-        int record_fps,
-        bool flip);
-
-    void finalizeRecording()
-    {
-        emit endRecording();
-    }
-
-    bool encodeFrame(uint8_t* data)
-    {
-        encoder_busy = true;
-        emit frameReady(data);
-        return true;
-    }
-
-public: signals:
-
-    void onFinalized();
-
-private: signals:
-
-    void frameReady(uint8_t* data);
-    void workerReady();
-    void endRecording();
-};
-
 class Project : public CanvasRenderSource
 {
     Q_OBJECT;
@@ -497,7 +436,7 @@ class Project : public CanvasRenderSource
     Input* input_proxy;
 
     
-    RecordableCanvasWidget* canvas = nullptr;
+    ProjectCanvasWidget* canvas = nullptr;
     Layout viewports;
 
     QElapsedTimer timer_projectProcess;
@@ -660,26 +599,8 @@ protected:
     double canvas_width = 0;
     double canvas_height = 0;
 
-public:
+protected:
 
-    MouseInfo mouse;
-
-    Layout& newLayout();
-    Layout& newLayout(int _viewports_x, int _viewports_y);
-
-
-    void configure(int sim_uid, RecordableCanvasWidget* canvas, Options *options);
-
-    void onResize(); // Called on main GUI thread
-
-    int canvasWidth();  // Screen dimensions of canvas
-    int canvasHeight(); // Screen dimensions of canvas
-    int getFrameTimeDelta() { return dt_projectProcess; }
-
-    void updateViewportRects();
-    Vec2 surfaceSize(); // Dimensions of FBO (depends on whether recording or not)
-
-    // Make protected
     void _projectPrepare();
     void _projectStart();
     void _projectStop();
@@ -687,40 +608,50 @@ public:
     void _projectDestroy();
     void _projectProcess();
 
+public:
+
+    MouseInfo mouse;
+
+    Layout& newLayout();
+    Layout& newLayout(int _viewports_x, int _viewports_y);
+
+    void configure(int sim_uid, ProjectCanvasWidget* canvas, Options *options);
+
+    void onResize(); // Called on main GUI thread
+    int canvasWidth();  // Screen dimensions of canvas
+    int canvasHeight(); // Screen dimensions of canvas
+    int getFrameTimeDelta() { return dt_projectProcess; }
+
+    void updateViewportRects();
+    Vec2 surfaceSize(); // Dimensions of FBO (depends on whether recording or not)
+
     virtual void projectAttributes(Input* options) {}
     virtual void projectPrepare() = 0;
     virtual void projectStart() {}
     virtual void projectStop() {}
     virtual void projectDestroy() {}
 
-
     virtual void postProcess();
 
-    void _mouseDown(int x, int y, Qt::MouseButton btn);
-    void _mouseUp(int x, int y, Qt::MouseButton btn);
-    void _mouseMove(int x, int y);
-    void _mouseWheel(int x, int y, int delta);
+    void mouseDown(int x, int y, Qt::MouseButton btn);
+    void mouseUp(int x, int y, Qt::MouseButton btn);
+    void mouseMove(int x, int y);
+    void mouseWheel(int x, int y, int delta);
 
-    void _keyPress(QKeyEvent* e);
-    void _keyRelease(QKeyEvent* e);
-
-    int project_dt(int average_samples = 1);
-    int project_draw_dt(int average_samples = 1);
+    void keyPress(QKeyEvent* e);
+    void keyRelease(QKeyEvent* e);
 
     void paint(QNanoPainter* p);
     void onPainted(const std::vector<GLubyte>* frame);
 
-
     ///
 
-
-    bool startRecording();
     void setRecordOnStart(bool b)
     {
         record_on_start = b;
     }
 
-
+    bool startRecording();
     void finalizeRecording();
 
 };

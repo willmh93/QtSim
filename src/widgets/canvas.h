@@ -25,51 +25,30 @@ struct GLFunctions : public QOpenGLExtraFunctions
 class CanvasRenderSource : public QObject
 {
 public:
-    //CanvasWidget* canvas;
-
     virtual void paint(QNanoPainter* p) {}
     virtual void onPainted(const std::vector<GLubyte>* frame) {}
 
-    virtual void _mouseDown(int x, int y, Qt::MouseButton btn) {}
-    virtual void _mouseUp(int x, int y, Qt::MouseButton btn) {}
-    virtual void _mouseMove(int x, int y) {}
-    virtual void _mouseWheel(int x, int y, int delta) {}
-    virtual void _keyPress(QKeyEvent* e) {}
-    virtual void _keyRelease(QKeyEvent* e) {}
+    virtual void mouseDown(int x, int y, Qt::MouseButton btn) {}
+    virtual void mouseUp(int x, int y, Qt::MouseButton btn) {}
+    virtual void mouseMove(int x, int y) {}
+    virtual void mouseWheel(int x, int y, int delta) {}
+    virtual void keyPress(QKeyEvent* e) {}
+    virtual void keyRelease(QKeyEvent* e) {}
 };
 
-class CanvasWidget : public QNanoWidget, public GLFunctions //GLEngineAbstract
+class CanvasWidget : public QNanoWidget, public GLFunctions
 {
     Q_OBJECT;
 
+    bool render_to_offscreen = false;
+
 protected:
+
     CanvasRenderSource* render_source = nullptr;
 
-public:
-
-    /*// Todo: Completely abstract away Project from Canvas
-    Project* project = nullptr;
-    MainWindow* main_window = nullptr;
-
-    int offscreen_w;
-    int offscreen_h;
-
-    OffscreenNanoPainter offscreen_nano_painter;*/
-
     explicit CanvasWidget(QWidget* parent = nullptr);
-    ~CanvasWidget();
-
-    void setRenderSource(CanvasRenderSource* src)
-    {
-        render_source = src;
-    }
 
     void initializeGL() override;
-
-    /*void setProject(Project* _sim)
-    {
-        project = _sim;
-    }*/
 
     void mousePressEvent(QMouseEvent* event) override;
     void mouseReleaseEvent(QMouseEvent* event) override;
@@ -79,17 +58,20 @@ public:
     void keyPressEvent(QKeyEvent* event) override;
     void keyReleaseEvent(QKeyEvent* event) override;
 
-
-
     void paint(QNanoPainter* p) override;
 
-    bool render_to_offscreen = false;
+public:
+
+    void setRenderSource(CanvasRenderSource* src) {
+        render_source = src;
+    }
+
+    void setBackground(int r, int g, int b) {
+        setFillColor(QColor(r, g, b));
+    }
 };
 
-
-
-
-class RecordableCanvasWidget : public CanvasWidget
+class ProjectCanvasWidget : public CanvasWidget
 {
     Q_OBJECT;
 
@@ -99,13 +81,14 @@ class RecordableCanvasWidget : public CanvasWidget
     int render_width = 0;
     int render_height = 0;
 
-
 public:
 
     MainWindow* main_window = nullptr;
 
-    RecordableCanvasWidget(QWidget *parent) : CanvasWidget(parent)
-    {}
+    ProjectCanvasWidget(QWidget *parent) : CanvasWidget(parent)
+    {
+        setBackground(10, 10, 15);
+    }
 
     void useOffscreenSurface(bool b)
     {

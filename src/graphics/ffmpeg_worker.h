@@ -87,3 +87,63 @@ public slots:
     }
 
 };
+
+class RecordManager : public QObject
+{
+    Q_OBJECT;
+
+    QThread* ffmpeg_thread = nullptr;
+    FFmpegWorker* ffmpeg_worker = nullptr;
+
+    bool recording = false;
+    bool encoder_busy = false;
+
+public:
+
+    ~RecordManager();
+
+    bool isRecording()
+    {
+        return recording;
+    }
+
+    bool isInitialized();
+
+    bool encoderBusy()
+    {
+        return encoder_busy;
+    }
+
+    bool attachingEncoder()
+    {
+        return (isRecording() && !isInitialized());
+    }
+
+    bool startRecording(
+        QString filename,
+        Size record_resolution,
+        int record_fps,
+        bool flip);
+
+    void finalizeRecording()
+    {
+        emit endRecording();
+    }
+
+    bool encodeFrame(uint8_t* data)
+    {
+        encoder_busy = true;
+        emit frameReady(data);
+        return true;
+    }
+
+public: signals:
+
+    void onFinalized();
+
+private: signals:
+
+    void frameReady(uint8_t* data);
+    void workerReady();
+    void endRecording();
+};

@@ -229,3 +229,74 @@ void FFmpegWorker::doFinalize()
     avio_close(format_context->pb);
     avformat_free_context(format_context);
 }
+
+// RecordManager
+
+RecordManager::~RecordManager()
+{
+    if (ffmpeg_thread) ffmpeg_worker->deleteLater();
+    if (ffmpeg_worker) ffmpeg_thread->deleteLater();
+    ffmpeg_worker = nullptr;
+    ffmpeg_thread = nullptr;
+}
+
+bool RecordManager::isInitialized()
+{
+    return ffmpeg_worker->isInitialized();
+}
+
+bool RecordManager::startRecording(QString filename, Size record_resolution, int record_fps, bool flip)
+{
+    // Prepare worker/thread
+    ffmpeg_worker = new FFmpegWorker();
+    ffmpeg_thread = new QThread();
+    ffmpeg_worker->moveToThread(ffmpeg_thread);
+
+    ffmpeg_worker->setOutputInfo(
+        filename.toStdString(),
+        record_resolution.x, // src size
+        record_resolution.y, // src size
+        record_resolution.x, // dest size
+        record_resolution.y, // dest size
+        record_fps,
+        flip
+    );
+
+    // When the thread is opened, initialize FFMpeg
+    connect(ffmpeg_thread, &QThread::started, ffmpeg_worker, &FFmpegWorker::startRecording);
+
+    // Listen for frame updates, forward pixel data to FFmpeg encoder
+    connect(this, &RecordManager::frameReady, ffmpeg_worker, &FFmpegWorker::encodeFrame);
+
+    // When the frame is succesfully encoded, permit processing the next frame
+    connect(ffmpeg_worker, &FFmpegWorker::frameFlushed, ffmpeg_worker, [this]()
+    {
+        encoder_busy = false;
+    });
+
+    // Wait for "end recording" onClicked signal, then signal FFmpeg worker to finish up
+    connect(this, &RecordManager::endRecording, ffmpeg_worker, &FFmpegWorker::finalizeRecording);
+
+    // Gracefully shut down worker/thread once FFmpeg finalizes encoding
+    connect(ffmpeg_worker, &FFmpegWorker::onFinalized, ffmpeg_worker, [this]()
+    {
+        ffmpeg_thread->quit();
+        ffmpeg_thread->wait();
+        ffmpeg_worker->deleteLater();
+        ffmpeg_thread->deleteLater();
+        ffmpeg_worker = nullptr;
+        ffmpeg_thread = nullptr;
+        recording = false;
+
+        emit onFinalized();
+
+    });
+
+    // Start the thread
+    ffmpeg_thread->start();
+
+    recording = true;
+
+
+    return true;
+}

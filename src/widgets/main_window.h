@@ -47,7 +47,7 @@ public:
     Options* options = nullptr;
     Input* input_proxy = nullptr;
 
-    RecordableCanvasWidget* canvas = nullptr;
+    ProjectCanvasWidget* canvas = nullptr;
 
    
     ProjectWorker(QObject* parent = nullptr)
@@ -103,7 +103,7 @@ protected:
 
     friend class ProjectWorker;
     friend class CanvasWidget;
-    friend class RecordableCanvasWidget;
+    friend class ProjectCanvasWidget;
 
     QMutex sim_lock;
 
@@ -114,7 +114,7 @@ private:
 
     Options* options = nullptr;
     //CanvasWidget* canvas = nullptr;
-    RecordableCanvasWidget* canvas = nullptr;
+    ProjectCanvasWidget* canvas = nullptr;
     Toolbar* toolbar = nullptr;
 
     
