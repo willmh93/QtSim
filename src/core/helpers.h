@@ -16,6 +16,22 @@ inline float closestAngleDifference(double angle, double target_angle)
     return diff - M_PI;
 }
 
+inline double wrapRadians(double angle)
+{
+    angle = std::fmod(angle, 2.0 * M_PI);
+    if (angle > M_PI) angle -= 2.0 * M_PI;
+    else if (angle <= -M_PI) angle += 2.0 * M_PI;
+    return angle;
+}
+
+inline double wrapRadians2PI(double angle)
+{
+    angle = std::fmod(angle, 2.0 * M_PI);
+    if (angle < 0.0)
+        angle += 2.0 * M_PI;
+    return angle;
+}
+
 FRect lerpRect(const FRect& src, const FRect& targ, double factor);
 
 template<typename T>

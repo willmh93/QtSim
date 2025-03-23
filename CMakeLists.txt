@@ -70,6 +70,11 @@ file(GLOB CORE_SOURCES CONFIGURE_DEPENDS
 
     "${CMAKE_CURRENT_SOURCE_DIR}/src/widgets/*.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/widgets/*.h"
+
+    #"${CMAKE_CURRENT_SOURCE_DIR}/src/ui/imgui/*.h"
+    #"${CMAKE_CURRENT_SOURCE_DIR}/src/ui/imgui/*.cpp"
+    #"${CMAKE_CURRENT_SOURCE_DIR}/src/ui/imgui/backends/imgui_impl_opengl3.h"
+    #"${CMAKE_CURRENT_SOURCE_DIR}/src/ui/imgui/backends/imgui_impl_opengl3.cpp"
 )
 
 file(GLOB PROJECT_SOURCES CONFIGURE_DEPENDS
@@ -118,6 +123,7 @@ target_include_directories(QtSim PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_include_directories(QtSim PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/core)
 target_include_directories(QtSim PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/graphics)
 target_include_directories(QtSim PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/ui)
+#target_include_directories(QtSim PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/imgui)
 target_include_directories(QtSim PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/widgets)
 target_include_directories(QtSim PRIVATE ${CMAKE_BINARY_DIR})
 
@@ -287,6 +293,55 @@ function(add_qnanopainter)
     target_link_libraries(QtSim PRIVATE qnanopainter)
 endfunction()
 
+function(add_imgui)
+    set(IMGUI_BUILD_DIR ${FETCHCONTENT_BASE_DIR}/${BUILD_SYSTEM_NAME}/imgui)
+
+    FetchContent_Declare(
+        imgui
+        GIT_REPOSITORY https://github.com/willmh93/imgui.git
+        GIT_TAG master
+        SOURCE_DIR ${IMGUI_BUILD_DIR}/src
+        BINARY_DIR ${IMGUI_BUILD_DIR}/build
+        SUBBUILD_DIR ${IMGUI_BUILD_DIR}/subbuild
+    )
+
+    FetchContent_Populate(imgui)
+
+    # Add ImGui source files manually
+    add_library(imgui STATIC
+        ${imgui_SOURCE_DIR}/imconfig.h
+        ${imgui_SOURCE_DIR}/imgui.h
+        ${imgui_SOURCE_DIR}/imgui.cpp
+        ${imgui_SOURCE_DIR}/imgui_internal.h
+        ${imgui_SOURCE_DIR}/imstb_rectpack.h
+        ${imgui_SOURCE_DIR}/imstb_textedit.h
+        ${imgui_SOURCE_DIR}/imstb_truetype.h
+        ${imgui_SOURCE_DIR}/imgui_draw.cpp
+        ${imgui_SOURCE_DIR}/imgui_tables.cpp
+        ${imgui_SOURCE_DIR}/imgui_widgets.cpp
+        ${imgui_SOURCE_DIR}/imgui_demo.cpp
+        ${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.h
+        ${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp
+    )
+
+    # Add headers only for clarity or IDE support (optional)
+    target_sources(imgui PRIVATE
+        ${imgui_SOURCE_DIR}/imgui.h
+        ${imgui_SOURCE_DIR}/imconfig.h
+        ${imgui_SOURCE_DIR}/imgui_internal.h
+        ${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.h
+    )
+
+    # Make ImGui headers available to targets that link to it
+    target_include_directories(imgui PUBLIC
+        ${imgui_SOURCE_DIR}
+        ${imgui_SOURCE_DIR}/backends
+    )
+
+    target_link_libraries(QtSim PRIVATE imgui)
+
+endfunction()
+
 # QNanoPainter
 #function(add_prebuilt_dependencies)
 #    set(QNANOPAINTER_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/dependencies/install/QNanoPainter/include")
@@ -305,13 +360,8 @@ endfunction()
 
 add_ffmpeg()
 add_qnanopainter()
+add_imgui()
 
-
-
-
-
-#add_subdirectory(dependencies)
-#include_directories(external/qnanopainter/src)
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.
 # If you are developing for iOS or macOS you should consider setting an
@@ -336,5 +386,3 @@ install(TARGETS QtSim BUNDLE DESTINATION .
 if(QT_VERSION_MAJOR EQUAL 6)
     qt_finalize_executable(QtSim)
 endif()
-
-#add_subdirectory(plugins/MixedInputList)

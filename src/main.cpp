@@ -23,7 +23,6 @@
 #include <QProcess>
 #include <QLibrary>
 
-
 //#include <clang/Tooling/Tooling.h>
 //#include <clang/Frontend/CompilerScene.h>
 //#include <llvm/Support/Host.h>

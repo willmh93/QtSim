@@ -140,7 +140,7 @@ QImage OffscreenNanoPainter::toImage() const
 }
 
 // todo: Move to PaintContext
-void Draw::arrow(PaintContext* ctx, Vec2& a, Vec2& b, QColor color, double arrow_size)
+/*void Draw::arrow(PaintContext* ctx, Vec2& a, Vec2& b, QColor color, double arrow_size)
 {
     QNanoPainter* p = ctx->painter;
 
@@ -173,7 +173,7 @@ void Draw::arrow(PaintContext* ctx, Vec2& a, Vec2& b, QColor color, double arrow
     p->lineTo(rx2, ry2);
     p->closePath();
     p->fill();
-}
+}*/
 
 int Bitmap::bmp_index = 0;
 void Bitmap::draw(PaintContext* ctx, double x, double y, double w, double h)
@@ -192,4 +192,35 @@ void Bitmap::draw(PaintContext* ctx, double x, double y, double w, double h)
 void Bitmap::draw(PaintContext* ctx, const Vec2& pt, const Vec2& size)
 {
     draw(ctx, pt.x, pt.y, size.x, size.y);
+}
+
+void WorldBitmap::setBitmapSize(int w, int h)
+{
+    if (w < 0) w = 0;
+    if (h < 0) h = 0;
+
+    if (bmp_width != w || bmp_height != h)
+    {
+        fw = static_cast<double>(w);
+        fh = static_cast<double>(h);
+
+        qDebug() << "Resizing";
+        create(w, h);
+        needs_reshading = true;
+    }
+}
+
+void WorldBitmap::setWorldRect(double x0, double y0, double x1, double y1)
+{
+    double w = x1 - x0;
+    double h = y1 - y0;
+
+    if (wx0 != x0 || wy0 != y0 || ww != w || wh != h)
+    {
+        wx0 = x0;
+        wy0 = y0;
+        ww = w;
+        wh = h;
+        needs_reshading = true;
+    }
 }

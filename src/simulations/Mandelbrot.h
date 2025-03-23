@@ -13,6 +13,7 @@ struct Mandelbrot_Scene : public Scene
     bool gpu_compute = false;
 
     bool discrete_step = false;
+    bool radial_mandelbrot = false;
     double quality = 20.0;
     double threshold = 50;
     bool thresholding = false;

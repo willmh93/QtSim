@@ -13,7 +13,7 @@ void CanvasWidget::mousePressEvent(QMouseEvent* event)
 {
     if (!render_source) return;
     QPointF mousePos = event->position();
-    render_source->_mouseDown(mousePos.x(), mousePos.y(), event->button());
+    render_source->mouseDown(mousePos.x(), mousePos.y(), event->button());
     update();
 }
 
@@ -21,7 +21,7 @@ void CanvasWidget::mouseReleaseEvent(QMouseEvent* event)
 {
     if (!render_source) return;
     QPointF mousePos = event->position();
-    render_source->_mouseUp(mousePos.x(), mousePos.y(), event->button());
+    render_source->mouseUp(mousePos.x(), mousePos.y(), event->button());
     update();
 }
 
@@ -29,7 +29,7 @@ void CanvasWidget::mouseMoveEvent(QMouseEvent* event)
 {
     if (!render_source) return;
     QPointF mousePos = event->position();
-    render_source->_mouseMove(mousePos.x(), mousePos.y());
+    render_source->mouseMove(mousePos.x(), mousePos.y());
     update();
 }
 
@@ -37,21 +37,21 @@ void CanvasWidget::wheelEvent(QWheelEvent* event)
 {
     if (!render_source) return;
     QPointF mousePos = event->position();
-    render_source->_mouseWheel(mousePos.x(), mousePos.y(), event->angleDelta().y());
+    render_source->mouseWheel(mousePos.x(), mousePos.y(), event->angleDelta().y());
     update();
 }
 
 void CanvasWidget::keyPressEvent(QKeyEvent* event)
 {
     if (!render_source) return;
-    render_source->_keyPress(event);
+    render_source->keyPress(event);
     update();
 }
 
 void CanvasWidget::keyReleaseEvent(QKeyEvent* event)
 {
     if (!render_source) return;
-    render_source->_keyRelease(event);
+    render_source->keyRelease(event);
     update();
 }
 

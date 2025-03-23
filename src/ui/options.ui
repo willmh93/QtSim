@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>339</width>
-    <height>756</height>
+    <width>400</width>
+    <height>932</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -18,7 +18,7 @@
   </property>
   <property name="minimumSize">
    <size>
-    <width>300</width>
+    <width>400</width>
     <height>0</height>
    </size>
   </property>
@@ -385,103 +385,13 @@ QLabel {
              <number>0</number>
             </property>
             <item>
-             <widget class="QScrollArea" name="scrollArea">
-              <property name="autoFillBackground">
-               <bool>false</bool>
+             <widget class="ImOptions" name="imOptions">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>400</height>
+               </size>
               </property>
-              <property name="styleSheet">
-               <string notr="true">QScrollBar { 
-	all: unset;
-}
-
-QWidget {
-	all: unset;
-}
-
-QScrollArea {
-	background: transparent;
-	border: 1px solid #4A4A7A; /* Stronger contrast on frame edges */
-    border-radius: 6px;
-}
-</string>
-              </property>
-              <property name="frameShape">
-               <enum>QFrame::Shape::NoFrame</enum>
-              </property>
-              <property name="frameShadow">
-               <enum>QFrame::Shadow::Plain</enum>
-              </property>
-              <property name="lineWidth">
-               <number>0</number>
-              </property>
-              <property name="widgetResizable">
-               <bool>true</bool>
-              </property>
-              <widget class="QWidget" name="scrollAreaWidgetContents">
-               <property name="geometry">
-                <rect>
-                 <x>0</x>
-                 <y>0</y>
-                 <width>315</width>
-                 <height>366</height>
-                </rect>
-               </property>
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
-                 <horstretch>0</horstretch>
-                 <verstretch>1</verstretch>
-                </sizepolicy>
-               </property>
-               <property name="minimumSize">
-                <size>
-                 <width>273</width>
-                 <height>0</height>
-                </size>
-               </property>
-               <property name="baseSize">
-                <size>
-                 <width>0</width>
-                 <height>100</height>
-                </size>
-               </property>
-               <property name="styleSheet">
-                <string notr="true">QScrollBar { background: none; border: none; }
-QWidget { background: transparent; }</string>
-               </property>
-               <layout class="QVBoxLayout" name="verticalLayout_8">
-                <property name="spacing">
-                 <number>8</number>
-                </property>
-                <property name="sizeConstraint">
-                 <enum>QLayout::SizeConstraint::SetMinimumSize</enum>
-                </property>
-                <property name="leftMargin">
-                 <number>8</number>
-                </property>
-                <property name="topMargin">
-                 <number>8</number>
-                </property>
-                <property name="rightMargin">
-                 <number>8</number>
-                </property>
-                <property name="bottomMargin">
-                 <number>8</number>
-                </property>
-                <item>
-                 <widget class="AttributeList" name="attributeList" native="true">
-                  <property name="sizePolicy">
-                   <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-                    <horstretch>0</horstretch>
-                    <verstretch>0</verstretch>
-                   </sizepolicy>
-                  </property>
-                  <property name="styleSheet">
-                   <string notr="true">background: transparent;</string>
-                  </property>
-                 </widget>
-                </item>
-               </layout>
-              </widget>
              </widget>
             </item>
            </layout>
@@ -547,8 +457,8 @@ QLabel {
                 <rect>
                  <x>0</x>
                  <y>0</y>
-                 <width>315</width>
-                 <height>366</height>
+                 <width>376</width>
+                 <height>672</height>
                 </rect>
                </property>
                <layout class="QVBoxLayout" name="verticalLayout_6">
@@ -948,16 +858,6 @@ background-color: #2A2A3A;</string>
           </widget>
          </widget>
         </item>
-        <item>
-         <widget class="QOpenGLWidget" name="openGLWidget">
-          <property name="minimumSize">
-           <size>
-            <width>0</width>
-            <height>200</height>
-           </size>
-          </property>
-         </widget>
-        </item>
        </layout>
       </widget>
      </item>
@@ -968,10 +868,9 @@ background-color: #2A2A3A;</string>
  <layoutdefault spacing="6" margin="11"/>
  <customwidgets>
   <customwidget>
-   <class>AttributeList</class>
-   <extends>QWidget</extends>
-   <header>attribute_list.h</header>
-   <container>1</container>
+   <class>ImOptions</class>
+   <extends>QOpenGLWidget</extends>
+   <header>imgui_options.h</header>
   </customwidget>
  </customwidgets>
  <resources/>

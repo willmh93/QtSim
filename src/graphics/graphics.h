@@ -14,9 +14,10 @@ struct PaintContext;
 
 class Bitmap
 {
+protected:
     std::vector<uchar> data;
-    int bmp_width;
-    int bmp_height;
+    int bmp_width = 0;
+    int bmp_height = 0;
 
     QImage img;
     QNanoImage nano_img;
@@ -92,6 +93,95 @@ public:
         data[i + 1] = g;
         data[i + 2] = b;
         data[i + 3] = a;
+    }
+};
+
+class WorldBitmap : public Bitmap
+{
+protected:
+    double fw = 0;
+    double fh = 0;
+    double wx0 = 0;
+    double wy0 = 0;
+    double ww = 0;
+    double wh = 0;
+
+    // Represents stage OR world coordinates, depending on what's picked
+    double _x0;
+    double _y0;
+    double _x1;
+    double _y1;
+
+    FRect old_world_rect;
+    bool needs_reshading = false;
+    bool transform_stage = false;
+
+    void setWorldRect(double x0, double y0, double x1, double y1);
+
+    friend class PaintContext;
+
+public:
+    //std::function<void(void)> shader = nullptr;
+
+    bool reshadingWorld(double x0, double y0, double x1, double y1)
+    {
+        _x0 = x0;
+        _y0 = y0;
+        _x1 = x1;
+        _y1 = y1;
+
+        if (transform_stage)
+        {
+            transform_stage = false;
+            needs_reshading = true;
+        }
+
+        setWorldRect(x0, y0, x1, y1);
+
+        if (needs_reshading)
+        {
+            qDebug() << "Reshading";
+            needs_reshading = false;
+            return true;
+        }
+        return false;
+    }
+
+    bool reshadingStage(Camera* camera, double x0, double y0, double x1, double y1)
+    {
+        _x0 = x0;
+        _y0 = y0;
+        _x1 = x1;
+        _y1 = y1;
+
+        if (!transform_stage)
+        {
+            transform_stage = true;
+            needs_reshading = true;
+        }
+
+        FRect wr = camera->toWorldRect(x0, y0, x1, y1);
+        setWorldRect(wr.x1, wr.y1, wr.x2, wr.y2);
+
+        if (needs_reshading)
+        {
+            qDebug() << "Reshading";
+            needs_reshading = false;
+            return true;
+        }
+        return false;
+    }
+
+    void setBitmapSize(int w, int h);
+
+    inline double wx(int px)
+    {
+        return wx0 + (((static_cast<double>(px)+0.5) / fw) * ww);
+    }
+
+    inline double wy(int py)
+    {
+        return wy0 + (((static_cast<double>(py)+0.5) / fh) * wh);
     }
 };
 
@@ -251,7 +341,7 @@ public:
     }
 };
 
-namespace Draw
+/*namespace Draw
 {
     void arrow(PaintContext* ctx, Vec2 &a, Vec2 &b, QColor color = QColor({ 255,255,255 }), double arrow_size=-1.0);
-}
+}*/

@@ -1,5 +1,7 @@
 #include "Mandelbrot.h"
-SIM_DECLARE(Mandelbrot, "My Projects", "Mandelbrot")
+#include "Cardioid.h"
+
+SIM_DECLARE(Mandelbrot, "Mandelbrot", "Mandelbrot Viewer")
 
 /// Project ///
 
@@ -16,7 +18,26 @@ void Mandelbrot_Scene::sceneAttributes(Input* input)
     thread_count = (int)(1.5 * ((double)QThread::idealThreadCount()));
 
     // CPU/GPU options
-    input->realtime_slider("Thread Count", &thread_count, 1, 32);
+    ImGui::SliderInt("Thread Count", &thread_count, 1, 32);
+    ImGui::Checkbox("GPU Compute", &gpu_compute);
+
+    // Mandelbrot options
+    ImGui::Checkbox("Discrete Step", &discrete_step);
+    ImGui::Checkbox("Radial", &radial_mandelbrot);
+
+
+    ImGui::SliderDouble("Mandelbrot Quality", &quality, 1.0, 150.0);
+    ImGui::Checkbox("Smoothing", &smoothing);
+
+    // CPU only
+    ImGui::Checkbox("Thresholding", &thresholding);
+    ImGui::SliderDouble("Threshold", &threshold, 0, 1000);
+
+    //ImGui::SliderDouble("Real", &camera_x, -2.0, 1);
+    //ImGui::SliderDouble("Imaginary", &camera_y, -1, 1);
+
+    // CPU/GPU options
+    /*input->realtime_slider("Thread Count", &thread_count, 1, 32);
     input->realtime_checkbox("GPU Compute", &gpu_compute);
 
     // Mandelbrot options
@@ -29,7 +50,7 @@ void Mandelbrot_Scene::sceneAttributes(Input* input)
     input->realtime_slider("Threshold", &threshold, 0, 1000);
 
     input->realtime_float("Real", &camera_x, -2.0, 1, 0.001); // updated in realtime
-    input->realtime_float("Imaginary", &camera_y, -1, 1, 0.001); // updated in realtime
+    input->realtime_float("Imaginary", &camera_y, -1, 1, 0.001); // updated in realtime*/
     
 }
 
@@ -135,30 +156,93 @@ void Mandelbrot_Scene::cpu_mandelbrot(
     std::vector<QFuture<void>> futures(thread_count);
 
     auto pixel_ranges = splitRanges(pixel_count, thread_count);
-    for (int ti = 0; ti < thread_count; ti++)
+    if (!radial_mandelbrot)
     {
-        auto& pixel_range = pixel_ranges[ti];
-        futures[ti] = QtConcurrent::run([&]()
+        for (int ti = 0; ti < thread_count; ti++)
         {
-            uint8_t r, g, b;
-            for (int i = pixel_range.first; i < pixel_range.second; i++)
+            auto& pixel_range = pixel_ranges[ti];
+            futures[ti] = QtConcurrent::run([&]()
             {
-                int x = (i % iw), y = (i / iw);
-                double rx = static_cast<double>(x) / fw;
-                double ry = static_cast<double>(y) / fh;
-                double wx = wx0 + (rx * ww);
-                double wy = wy0 + (ry * wh);
-                double smooth_iter = mandelbrot_basic(wx, wy);
-                double ratio = smooth_iter / f_max_iter;
+                uint8_t r, g, b;
+                for (int i = pixel_range.first; i < pixel_range.second; i++)
+                {
+                    int x = (i % iw), y = (i / iw);
+                    double rx = static_cast<double>(x) / fw;
+                    double ry = static_cast<double>(y) / fh;
+                    double wx = wx0 + (rx * ww);
+                    double wy = wy0 + (ry * wh);
+                    double smooth_iter = mandelbrot_basic(wx, wy);
+                    double ratio = smooth_iter / f_max_iter;
 
-                if (thresholding)
-                    r = g = b = (ratio <= 0.9999) ? 127 : 0;
-                else
-                    iter_color(ratio, r, g, b);
+                    if (thresholding)
+                        r = g = b = (ratio <= 0.9999) ? 127 : 0;
+                    else
+                        iter_color(ratio, r, g, b);
 
-                bmp->setPixel(x, y, r, g, b, 255);
-            }
-        });
+                    bmp->setPixel(x, y, r, g, b, 255);
+                }
+            });
+        }
+    }
+    else
+    {
+        // Radial
+        for (int ti = 0; ti < thread_count; ti++)
+        {
+            auto& pixel_range = pixel_ranges[ti];
+            futures[ti] = QtConcurrent::run([&]()
+            {
+                uint8_t r, g, b;
+                for (int i = pixel_range.first; i < pixel_range.second; i++)
+                {
+                    int x = (i % iw), y = (i / iw);
+                    double rx = static_cast<double>(x) / fw;
+                    double ry = static_cast<double>(y) / fh;
+                    double wx = wx0 + (rx * ww);
+                    double wy = wy0 + (ry * wh);
+
+                    double perp_angle = wx;// rx* (2.0 * M_PI);
+                    double point_dist = wy;// -0.75 + (1.25 * ry);
+                    //double 
+                    //double mandelbrot_x = 0.5 * cos(tangent_angle) - 0.25 * cos(tangent_angle * 2.0);
+                    //double mandelbrot_y = 0.5 * sin(tangent_angle) - 0.25 * sin(tangent_angle * 2.0);
+
+                    Vec2 mandel_pt = Cardioid::fromCardioidTransform(perp_angle, -point_dist);
+
+                    //if (mandel_pt.x > -0.75)
+                    {
+                        double smooth_iter = mandelbrot_basic(mandel_pt.x, mandel_pt.y);
+                        double ratio = smooth_iter / f_max_iter;
+
+                        if (thresholding)
+                            r = g = b = (ratio <= 0.9999) ? 127 : 0;
+                        else
+                            iter_color(ratio, r, g, b);
+
+
+                        bmp->setPixel(x, y, r, g, b, 255);
+                    }
+
+                    //double wx = wx0 + (rx * ww);
+                    //double wy = wy0 + (ry * wh);
+                    //
+                    //double tangent_angle;
+                    //double dist;
+                    //Cardioid::cardioidPolarCoord(wx, wy, tangent_x, tangent_y, tangent_angle, dist);
+
+
+                    /*double smooth_iter = mandelbrot_basic(angle, dist);
+                    double ratio = smooth_iter / f_max_iter;
+
+                    if (thresholding)
+                        r = g = b = (ratio <= 0.9999) ? 127 : 0;
+                    else
+                        iter_color(ratio, r, g, b);
+
+                    bmp->setPixel(x, y, r, g, b, 255);*/
+                }
+            });
+        }
     }
 
     for (auto& future : futures)

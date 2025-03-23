@@ -25,6 +25,7 @@
 #include "project.h"
 #include "canvas.h"
 
+
 void Scene::registerMount(Viewport* viewport)
 {
     options = viewport->options;
@@ -296,6 +297,7 @@ void Project::configure(int _sim_uid, ProjectCanvasWidget* _canvas, Options* _op
     sim_uid = _sim_uid;
     canvas = _canvas;
     options = _options;
+    options->setCurrentProject(this);
 
     started = false;
     paused = false;
@@ -307,15 +309,15 @@ void Project::_projectPrepare()
 
     input_proxy->clearPointers();
 
-    projectAttributes(input_proxy);
+    ///projectAttributes(input_proxy);
     //input_proxy->forceBroadcast();
 
     // Prepare project and create layout
     // Note: This is where old viewports get replaced
+    scene_counter = 0;
     projectPrepare();
 
-    for (Viewport* viewport : this->viewports)
-        viewport->scene->sceneAttributes(input_proxy);
+    ImInputManager::updateWithStartingValues();
 
     input_proxy->removeUnusedInputs();
 }
@@ -727,6 +729,8 @@ void Project::paint(QNanoPainter* p)
 
         p->stroke();
     }
+
+    
 }
 
 void Project::onPainted(const std::vector<GLubyte> *frame)

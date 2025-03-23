@@ -217,6 +217,53 @@ public:
         painter->lineTo(pt.x, pt.y);
     }
 
+    void drawArrow(Vec2 a, Vec2 b, QColor color = QColor({ 255,255,255 }))
+    {
+        QNanoPainter* p = painter;
+
+        double dx = b.x - a.x;
+        double dy = b.y - a.y;
+        double len = sqrt(dx * dx + dy * dy);
+        double angle = atan2(dy, dx);
+        constexpr double tip_sharp_angle = 145.0 * M_PI / 180.0;
+        double arrow_size = line_width * 4 / _avgZoom();
+
+        //if (arrow_size < 0)
+        //    arrow_size = len * 0.05;
+
+        //p->setLineCap(QNanoPainter::LineCap::CAP_ROUND);
+        QNanoColor c = QNanoColor::fromQColor(color);
+        p->setFillStyle(c);
+        p->setStrokeStyle(c);
+        p->beginPath();
+        p->moveTo(a);
+        p->lineTo(b);
+        p->stroke();
+
+        double rx1 = b.x + cos(angle + tip_sharp_angle) * arrow_size;
+        double ry1 = b.y + sin(angle + tip_sharp_angle) * arrow_size;
+        double rx2 = b.x + cos(angle - tip_sharp_angle) * arrow_size;
+        double ry2 = b.y + sin(angle - tip_sharp_angle) * arrow_size;
+
+        p->beginPath();
+        p->moveTo(b);
+        p->lineTo(rx1, ry1);
+        p->lineTo(rx2, ry2);
+        p->closePath();
+        p->fill();
+    }
+
+    double arrow_x0 = 0, arrow_y0 = 0;
+    void arrowMoveTo(double px, double py)
+    {
+        arrow_x0 = px;
+        arrow_y0 = py;
+    }
+    void arrowDrawTo(double px, double py, QColor color = QColor({ 255,255,255 }))
+    {
+        drawArrow({ arrow_x0, arrow_y0 }, { px, py }, color);
+    }
+
     void moveToSharp(double px, double py)
     {
         moveTo(px, py);
@@ -295,9 +342,40 @@ public:
         );
     }
 
+    void strokeEllipse(double cx, double cy, double r)
+    {
+        painter->beginPath();
+        painter->ellipse(cx, cy, r, r);
+        painter->stroke();
+    }
+
+    void strokeEllipse(double cx, double cy, double rx, double ry)
+    {
+        painter->beginPath();
+        painter->ellipse(cx, cy, rx, ry);
+        painter->stroke();
+    }
+
+    void fillEllipse(double cx, double cy, double r)
+    {
+        painter->beginPath();
+        painter->ellipse(cx, cy, r, r);
+        painter->fill();
+    }
+
+    void fillEllipse(double cx, double cy, double rx, double ry)
+    {
+        painter->beginPath();
+        painter->ellipse(cx, cy, rx, ry);
+        painter->fill();
+    }
+
     void drawSurface(Bitmap& bmp, double x, double y, double w, double h);
     void drawSurface(Bitmap* bmp, double x, double y, double w, double h);
     void drawSurface(const GLSurface &surface, double x, double y, double w, double h);
+    
+    // Specialized
+    void drawSurface(WorldBitmap& bmp);
 
     void setFont(QNanoFont font)
     {
@@ -330,11 +408,15 @@ public:
             }
             else
             {
-                //double old_linewidth = line_width;
-                //painter->setLineWidth(line_width / _avgZoom());
-                //painter->strokeRect(x, y, w, h);
-                //painter->setLineWidth(old_linewidth);
-                painter->fillText(txt, px, py);
+                QTransform cur_transform = painter->currentTransform();
+                painter->resetTransform();
+                painter->transform(default_viewport_transform);
+
+                Vec2 p = camera.toStage(px, py);
+                painter->fillText(txt, p.x, p.y);
+
+                painter->resetTransform();
+                painter->transform(cur_transform);
             }
         }
         else

@@ -37,6 +37,7 @@ using namespace std;
 
 // UI
 #include "options.h"
+#include "imgui_custom.h"
 
 
 // Provide macros for easy Project registration
@@ -71,6 +72,7 @@ class Scene : public GLFunctions
     std::random_device rd;
     std::mt19937 gen;
 
+
     Options* options = nullptr;
     Project* project = nullptr; // Project Scene was launched from
 
@@ -92,6 +94,7 @@ protected:
     friend class Viewport;
     friend class Project;
 
+    int scene_index;
     std::vector<Viewport*> mounted_to_viewports;
 
     // Mounting to/from viewport
@@ -115,6 +118,16 @@ public:
 
     Scene() : gen(rd())
     {
+    }
+
+    virtual std::string name()
+    {
+        return "Scene";
+    }
+
+    int sceneIndex()
+    {
+        return scene_index;
     }
 
     //SceneBase(Config& info) : gen(rd()) {}
@@ -359,6 +372,11 @@ public:
         clear();
     }
 
+    const std::vector<Scene*>& scenes()
+    {
+        return all_scenes;
+    }
+
     void clear()
     {
         // layout freed each time you call setLayout
@@ -438,6 +456,7 @@ class Project : public CanvasRenderSource
     
     ProjectCanvasWidget* canvas = nullptr;
     Layout viewports;
+    int scene_counter = 0;
 
     QElapsedTimer timer_projectProcess;
     QElapsedTimer timer_projectDraw;
@@ -521,6 +540,7 @@ public:
             scene = new SceneType();
 
         scene->project = this;
+        scene->scene_index = scene_counter++;
         scene->setGLFunctions(canvas->getGLFunctions());
 
         return scene;
@@ -532,6 +552,7 @@ public:
 
         SceneType* scene = new SceneType(*config_ptr);
         scene->temporary_environment = config_ptr;
+        scene->scene_index = scene_counter++;
         scene->project = this;
         scene->setGLFunctions(canvas->getGLFunctions());
 
@@ -546,6 +567,7 @@ public:
 
         SceneType* scene = new SceneType(*config);
         scene->temporary_environment = config;
+        scene->scene_index = scene_counter++;
         scene->project = this;
         scene->setGLFunctions(canvas->getGLFunctions());
 
@@ -614,6 +636,10 @@ public:
 
     Layout& newLayout();
     Layout& newLayout(int _viewports_x, int _viewports_y);
+    Layout& currentLayout()
+    {
+        return viewports;
+    }
 
     void configure(int sim_uid, ProjectCanvasWidget* canvas, Options *options);
 

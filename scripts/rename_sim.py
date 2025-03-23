@@ -64,13 +64,19 @@ def rename_files(source_dir, old_class, new_class):
 
 # Function to generate a simulation
 def rename_simulation():
-    old_class_name = input("Enter current class name (e.g. ParticleSim): ").strip()
-    new_class_name = input("Enter new class name (e.g. FluidSim): ").strip()
+    old_ns = input("Enter current class name (e.g. ParticleSim): ").strip()
+    new_ns = input("Enter new class name (e.g. FluidSim): ").strip()
     #new_sim_name = input("Enter new full simulation name (e.g. Fluid Simulation): ").strip()
 
-    rename_class_in_project(SIMULATIONS_FOLDER, old_class_name, new_class_name)
-    rename_files(SIMULATIONS_FOLDER, old_class_name, new_class_name)
+    old_scene_name   = old_ns + "_Scene"
+    old_project_name = old_ns + "_Project"
+    new_scene_name   = new_ns + "_Scene"
+    new_project_name = new_ns + "_Project"
+
+    rename_class_in_project(SIMULATIONS_FOLDER, old_scene_name, new_scene_name)
+    rename_class_in_project(SIMULATIONS_FOLDER, old_project_name, new_project_name)
+    rename_files(SIMULATIONS_FOLDER, old_ns, new_ns)
 
 if __name__ == "__main__":
     rename_simulation()
-    regenerate_project()
+    #regenerate_project()

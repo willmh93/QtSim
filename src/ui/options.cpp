@@ -49,7 +49,8 @@ Options::Options(QWidget *parent)
     : QWidget(parent)
 {
     ui.setupUi(this);
-    attributeList = ui.attributeList;
+    //attributeList = ui.attributeList;
+    imOptions = ui.imOptions;
 
     ui.simTree->setSelectionMode(QAbstractItemView::SingleSelection);
     ui.simTree->setSelectionBehavior(QAbstractItemView::SelectRows);
@@ -253,15 +254,15 @@ AttributeItem* Options::combo(const QString& name, const std::vector<QString>& i
 
 void Options::clearAttributeList()
 {
-    attributeList->clearItems();
+    ///attributeList->clearItems();
 }
 
 void Options::updateListUI()
 {
-    for (auto& item : attributeList->item_widgets)
-    {
-        item->updateUIValue();
-    }
+    ///for (auto& item : attributeList->item_widgets)
+    ///{
+    ///    item->updateUIValue();
+    ///}
 }
 
 void Options::refreshTreeUI()
@@ -290,6 +291,11 @@ bool Options::isWindowCapture()
 QString Options::getProjectsDirectory()
 {
     return QDir::toNativeSeparators(ui.project_dir_input->text());
+}
+
+void Options::setCurrentProject(Project* _project)
+{
+    this->imOptions->setCurrentProject(_project);
 }
 
 void DynamicIconDelegate::paint(

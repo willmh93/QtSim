@@ -13,7 +13,9 @@ struct GLCube_Scene : public Scene
     GLuint VAO, VBO, EBO;
     float angle = 0.0f;
 
-    double camera_rotation = 0;
+    float camera_rotation = 0;
+
+
 
     // --- Scene management ---
 

@@ -5,7 +5,9 @@ SIM_DECLARE(GLCube, "Framework Tests", "FBO Surfaces")
 
 void GLCube_Project::projectAttributes(Input* input)
 {
-    input->realtime_slider("Panel Count", &panel_count, 1, 16, 1);
+    //input->realtime_slider("Panel Count", &panel_count, 1, 16, 1);
+
+    ImGui::SliderInt("Panel Count", &panel_count, 1, 16);
 }
 
 void GLCube_Project::projectPrepare()
@@ -16,9 +18,19 @@ void GLCube_Project::projectPrepare()
 
 /// Scene ///
 
+
+
+
+
 void GLCube_Scene::sceneAttributes(Input* input)
 {
-    input->realtime_slider("Camera Rotatation", &camera_rotation, 0.0, M_PI * 2.0, 0.0001);
+    //input->realtime_slider("Camera Rotatation", &camera_rotation, 0.0, M_PI * 2.0, 0.0001);
+
+    ///ImGui::SliderFloat("Rotation", start(&camera_rotation), 0.0f, (float)M_PI * 2.0f);
+
+    auto rotation_id = QString("float%0").arg(sceneIndex()).toStdString().c_str();
+
+    ImGui::SliderFloat(rotation_id, &camera_rotation, 0.0f, (float)M_PI * 2.0f);
 }
 
 void GLCube_Scene::sceneStart()
@@ -41,19 +53,19 @@ void GLCube_Scene::sceneMounted(Viewport* viewport)
     camera->focusWorldRect(-600, -600, 600, 600);
 }
 
-int i = 0;
+//int i = 0;
 void GLCube_Scene::sceneProcess()
 {
     /// Process Scene update
     
-    for (int y = 0; y < bmp.height(); y++)
+    /*for (int y = 0; y < bmp.height(); y++)
     {
         for (int x = 0; x < bmp.width(); x++)
         {
             bmp.setPixel(x, y, i % 255, 0, 0, 255);
             i++;
         }
-    }
+    }*/
 }
 
 void GLCube_Scene::initGL()
@@ -138,6 +150,7 @@ void GLCube_Scene::viewportProcess(Viewport* ctx)
 {
     /// Process Viewports running this Scene
     angle += 1.0f;
+    camera->rotation = camera_rotation;
 }
 
 void GLCube_Scene::viewportDraw(Viewport* ctx)
@@ -145,7 +158,7 @@ void GLCube_Scene::viewportDraw(Viewport* ctx)
     //\QOpenGLExtraFunctions glF(QOpenGLContext::currentContext());
 
     /// Draw Scene to Viewport
-    camera->rotation = camera_rotation;
+    
 
 
     //setSurfaceViewport(surface, ctx->width, ctx->height);

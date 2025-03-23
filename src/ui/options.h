@@ -10,6 +10,8 @@
 #include "ui_Options.h"
 #include "attribute_list.h"
 
+
+
 //#include "Projects/project_types.h"
 #include "types.h"
 
@@ -42,7 +44,7 @@ void assign_ptr(std::variant<T, T*>& target, std::vector<T*>& val_ptr, T& val_pl
 
             if (!keep_existing_value)
                 val_placeholder = *v; // Realtime updates, immediately set placeholder to current pointer value
-            else
+            //else
                 *v = val_placeholder; // Only update on start simulation, let it use the cached placeholder until restart
         }
         else if constexpr (std::is_same_v<DecayedType, T>)
@@ -221,6 +223,7 @@ struct SimItemProxy
 using SimItemProxyPtr = std::shared_ptr<SimItemProxy>;
 
 class Input;
+class Project;
 
 
 class DynamicIconDelegate : public QStyledItemDelegate {
@@ -267,11 +270,13 @@ class Options : public QWidget
     Q_OBJECT;
 
     AttributeList* attributeList;
+    ImOptions* imOptions;
 
     SimTreeModel model;
     QStandardItem* rootItem;
     DynamicIconDelegate* icon_delegate;
 
+    
     Input* proxy = nullptr;
 
 public:
@@ -314,6 +319,8 @@ public:
     bool isWindowCapture();
 
     QString getProjectsDirectory();
+
+    void setCurrentProject(Project* project);
 
 signals:
 
@@ -560,3 +567,4 @@ public slots:
             item.broadcast();
     }
 };
+

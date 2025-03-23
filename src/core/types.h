@@ -386,12 +386,34 @@ struct TriangleEqual
     }
 };*/
 
+
+struct Size
+{
+    int x;
+    int y;
+
+    Size(int _x = 0, int _y = 0)
+    {
+        x = _x;
+        y = _y;
+    }
+
+    Size& operator =(const QSize& size)
+    {
+        x = size.width();
+        y = size.height();
+        return *this;
+    }
+};
+
+
+
 struct FRect
 {
-    double x1;
-    double y1;
-    double x2;
-    double y2;
+    double x1 = 0.0;
+    double y1 = 0.0;
+    double x2 = 0.0;
+    double y2 = 0.0;
 
     FRect()
     {}
@@ -475,22 +497,91 @@ struct FRect
     }
 };
 
-struct Size
+struct Rect
 {
-    int x;
-    int y;
+    int x1;
+    int y1;
+    int x2;
+    int y2;
 
-    Size(int _x=0, int _y=0)
+    Rect()
+    {}
+
+    Rect(int _x1, int _y1, int _x2, int _y2)
     {
-        x = _x;
-        y = _y;
+        set(_x1, _y1, _x2, _y2);
     }
 
-    Size& operator =(const QSize& size)
+    Rect(const QRect& r)
     {
-        x = size.width();
-        y = size.height();
-        return *this;
+        x1 = r.left();
+        y1 = r.top();
+        x2 = r.right();
+        y2 = r.bottom();
+    }
+
+    Rect(const Vec2& a, const Vec2& b)
+    {
+        set(a, b);
+    }
+
+    void set(const Rect& r)
+    {
+        x1 = r.x1;
+        y1 = r.y1;
+        x2 = r.x2;
+        y2 = r.y2;
+    }
+
+    void set(double _x1, double _y1, double _x2, double _y2)
+    {
+        x1 = _x1;
+        y1 = _y1;
+        x2 = _x2;
+        y2 = _y2;
+    }
+
+    void set(const Vec2& a, const Vec2& b)
+    {
+        x1 = static_cast<int>(a.x);
+        y1 = static_cast<int>(a.y);
+        x2 = static_cast<int>(b.x);
+        y2 = static_cast<int>(b.y);
+    }
+
+    operator QRect()
+    {
+        return QRect(x1, y1, x2 - x1, y2 - y1);
+    }
+
+    bool hitTest(int x, int y)
+    {
+        return (x >= x1 && y >= y1 && x <= x2 && y <= y2);
+    }
+
+    Rect scaled(double mult)
+    {
+        double cx = static_cast<double>(x1 + x2) * 0.5;
+        double cy = static_cast<double>(y1 + y2) * 0.5;
+        x1 = static_cast<int>(cx + (static_cast<double>(x1) - cx) * mult);
+        y1 = static_cast<int>(cy + (static_cast<double>(y1) - cy) * mult);
+        x2 = static_cast<int>(cx + (static_cast<double>(x2) - cx) * mult);
+        y2 = static_cast<int>(cy + (static_cast<double>(y2) - cy) * mult);
+        return Rect(x1, y1, x2, y2);
+    }
+
+    int width()
+    {
+        return x2 - x1;
+    }
+
+    int height()
+    {
+        return y2 - y1;
+    }
+
+    Size size()
+    {
+        return {x2 - x1, y2 - y1};
     }
 };
-

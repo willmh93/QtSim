@@ -99,6 +99,48 @@ void PaintContext::drawSurface(const GLSurface& surface, double x, double y, dou
     }
 }
 
+void PaintContext::drawSurface(WorldBitmap& bmp)
+{
+    /*if (camera.transform_coordinates)
+    {
+        // Regular draw Bitmap to world
+        bmp.setWorldRect(x, y, x + w, y + h);
+    }
+    else
+    {
+        // Bitmap clamped to stage position, meaning that world 
+        // transformations trigger a reshade. Calculate world-rect
+        // and see if it changed
+        FRect wr = camera.toWorldRect(x, y, x + w, y + h);
+        bmp.setWorldRect(wr.x1, wr.y1, wr.x2, wr.y2);
+    }
+
+    if (bmp.needs_reshading)
+    {
+        if (bmp.shader)
+        {
+            qDebug() << "Reading Bitmap";
+            bmp.shader();
+        }
+        bmp.needs_reshading = false;
+    }*/
+
+    camera.saveCameraTransform();
+    if (bmp.transform_stage)
+    {
+        camera.stageTransform();
+    }
+    else
+    {
+        camera.worldTransform();
+    }
+
+    if (bmp.data.size())
+        drawSurface((Bitmap&)bmp, bmp._x0, bmp._y0, bmp._x1-bmp._x0, bmp._y1-bmp._y0);
+
+    camera.restoreCameraTransform();
+}
+
 void PaintContext::drawWorldAxis(
     double axis_opacity,
     double grid_opacity, 
