@@ -11,7 +11,7 @@ SIM_DECLARE(Test, "Framework Tests", "Canvas Transforms")
 /// Project ///
 ///---------///
 
-void Test_Project::projectAttributes(Input* options)
+void Test_Project::projectAttributes()
 {
     //options->realtime_slider("Viewport Count", &viewport_count, 1, 36, 1);
 }
@@ -30,7 +30,7 @@ void Test_Project::projectPrepare()
 /// SceneBase ///
 ///-----------///
 
-void Test_Scene::sceneAttributes(Input* options)
+void Test_Scene::sceneAttributes()
 {
     // starting_checkbox,   realtime_checkbox
     // starting_combo,      realtime_combo
@@ -39,12 +39,15 @@ void Test_Scene::sceneAttributes(Input* options)
 
     //options->realtime_slider("SceneBase Var 1", &var1, 0.0, 1.0, 0.1); // updated in realtime
     //options->starting_slider("SceneBase Var 2", &var2, 0.0, 1.0, 0.1); // only updated on restart
-    options->realtime_checkbox("Transform coordinates", &transform_coordinates); // updated in realtime
-    options->realtime_checkbox("Scale Lines & Text", &scale_lines_text); // updated in realtime
-    options->realtime_checkbox("Rotate Text", &rotate_text); // updated in realtime
-    options->realtime_slider("Camera Rotatation", &camera_rotation, 0.0, M_PI*2.0, 0.0001); // updated in realtime
-    options->realtime_slider("Camera X", &camera_x, -500.0, 500.0, 1.0); // updated in realtime
-    options->realtime_slider("Camera Y", &camera_y, -500.0, 500.0, 1.0); // updated in realtime
+    ImGui::Checkbox("Transform coordinates", &transform_coordinates); // updated in realtime
+    ImGui::Checkbox("Scale Lines & Text", &scale_lines_text); // updated in realtime
+    ImGui::Checkbox("Scale Sizes", &scale_sizes); // updated in realtime
+    ImGui::Checkbox("Rotate Text", &rotate_text); // updated in realtime
+    ImGui::SliderDouble("Camera Rotatation", &camera_rotation, 0.0, M_PI*2.0); // updated in realtime
+    ImGui::SliderDouble("Camera X", &camera_x, -500.0, 500.0); // updated in realtime
+    ImGui::SliderDouble("Camera Y", &camera_y, -500.0, 500.0); // updated in realtime
+    ImGui::SliderDouble("Zoom X", &zoom_x, -2.0, 2.0); // updated in realtime
+    ImGui::SliderDouble("Zoom Y", &zoom_y, -2.0, 2.0); // updated in realtime
   
 }
 
@@ -112,8 +115,15 @@ void Test_Scene::viewportProcess(Viewport* ctx)
     {
         camera->x = camera_x;
         camera->y = camera_y;
+        camera->zoom_x = zoom_x;
+        camera->zoom_y = zoom_y;
         camera->rotation = camera_rotation;
     }
+
+    obj.align_x = 0.5;
+    obj.align_y = 0.5;
+    
+    //obj.rotation += 0.01;
 
     //ball_pos.x = mouse->world_x;
     //ball_pos.y = mouse->world_y;
@@ -122,18 +132,9 @@ void Test_Scene::viewportProcess(Viewport* ctx)
 void Test_Scene::viewportDraw(Viewport* ctx)
 {
     //camera->x += 1;
-
-    
-    
-
     //ctx->beginPath();
     //ctx->circle(0, 0, 5);
     //ctx->fill();
-
-    
-
-
-    
 
     // Draw scene
     //ctx->scaleGraphics(scale_graphics);
@@ -161,8 +162,23 @@ void Test_Scene::viewportDraw(Viewport* ctx)
     camera->setTransformFilters(
         transform_coordinates,
         scale_lines_text,
+        scale_sizes,
         rotate_text
     );
+
+    obj.align = { -1, -1 };
+    obj.setStageRect(100, 100, ctx->width - 200, ctx->height - 200);
+    obj.setBitmapSize(obj.w, obj.h);
+
+    if (obj.needsReshading(ctx))
+    {
+        qDebug() << "Reshading.........";
+        obj.forEachWorldPixel(ctx, [this](int x, int y, double wx, double wy)
+        {
+            obj.setPixel(x, y, wx, wy, wy, 255);
+        });
+    }
+    ctx->drawSurface(obj);
 
     ctx->setFillStyle(255, 0, 255);
     ctx->beginPath();
@@ -194,14 +210,19 @@ void Test_Scene::viewportDraw(Viewport* ctx)
     //camera->setStageOffset(0, 0);
     //ctx->endTransform();
 
+   
+
     ctx->setTextAlign(TextAlign::ALIGN_LEFT);
     ctx->setTextBaseline(TextBaseline::BASELINE_TOP);
 
     camera->setTransformFilters(
         true,
         false,
+        false,
         false
     );
+
+    ctx->strokeQuad(obj.getQuad());
 
     // Camera
     ctx->setFillStyle(255, 0, 0);
@@ -210,10 +231,10 @@ void Test_Scene::viewportDraw(Viewport* ctx)
     ctx->fill();
     ctx->fillText("Camera", Vec2(camera->x, camera->y) + Offset(20, 20));
 
-    ctx->setFillStyle(0, 255, 255);
+    /*ctx->setFillStyle(0, 255, 255);
     ctx->beginPath();
     ctx->circle(ball_pos, 10);
-    ctx->fill();
+    ctx->fill();*/
 }
 
 /// User Interaction

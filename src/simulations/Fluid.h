@@ -32,7 +32,7 @@ struct Fluid_Scene : public Scene
     double viscosity_strength = 1;
     double viscosity_spring_dist_ratio = 10.0;
     
-    void sceneAttributes(Input* options) override;
+    void sceneAttributes() override;
 
     void sceneStart() override;
     void sceneDestroy() override;
@@ -51,7 +51,7 @@ struct Fluid_Project : public Project
 
     void projectPrepare() override;
     //void projectStart();
-    void projectAttributes(Input* options) override;
+    void projectAttributes() override;
     
 };
 

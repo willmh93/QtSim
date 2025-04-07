@@ -1,5 +1,6 @@
 #include "imgui_options.h"
 #include "project.h"
+#include "main_window.h"
 
 void ImOptions::setCurrentProject(Project* _project)
 {
@@ -94,32 +95,38 @@ void ImOptions::paintGL()
     ImGui::Begin("options", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoResize);
 
     //ImGui::Text("Hello, world!");
-
-    if (project)
+    
     {
-        // Project section
-        //if (ImGui::CollapsingHeader("Project"))
-        ImGui::SeparatorText("Project");
+        //std::lock_guard<std::mutex> lock(project_mutex);
+        QMutexLocker locker(&project_mutex);
+        if (project)
         {
-            ImGui::PushID("project_section");
-            project->projectAttributes(nullptr);
-            ImGui::PopID();
-        }
+            QReadLocker readLock(&project->worker->main_window->simLock);
 
-        ImGui::SeparatorText("Scenes");
-
-        // Scene sections
-        Layout& layout = project->currentLayout();
-        auto &scenes = layout.scenes();
-        for (Scene* scene : scenes)
-        {
-            std::string sceneName = scene->name() + " " + std::to_string(scene->sceneIndex());
-            if (ImGui::CollapsingHeader(sceneName.c_str()))
+            // Project section
+            //if (ImGui::CollapsingHeader("Project"))
+            ImGui::SeparatorText("Project");
             {
-                // Allow Scene to populate inputs for section
-                ImGui::PushID((sceneName + "_section").c_str());
-                scene->sceneAttributes(nullptr);
+                ImGui::PushID("project_section");
+                project->projectAttributes();
                 ImGui::PopID();
+            }
+
+            ImGui::SeparatorText("Scenes");
+
+            // Scene sections
+            Layout& layout = project->currentLayout();
+            auto& scenes = layout.scenes();
+            for (Scene* scene : scenes)
+            {
+                std::string sceneName = scene->name() + " " + std::to_string(scene->sceneIndex());
+                if (ImGui::CollapsingHeader(sceneName.c_str(), ImGuiTreeNodeFlags_DefaultOpen))
+                {
+                    // Allow Scene to populate inputs for section
+                    ImGui::PushID((sceneName + "_section").c_str());
+                    scene->sceneAttributes();
+                    ImGui::PopID();
+                }
             }
         }
     }

@@ -1,6 +1,8 @@
 #include "helpers.h"
 #include <sstream>
 
+
+
 int countDecimals(double num)
 {
     std::ostringstream out;
@@ -236,23 +238,6 @@ bool getRayRectIntersection(Vec2* back_intersect, Vec2* foward_intersect, const 
     return true;
 }
 
-std::vector<std::pair<size_t, size_t>> splitRanges(size_t totalSize, size_t numParts)
-{
-    std::vector<std::pair<size_t, size_t>> ranges;
-
-    size_t partSize = totalSize / numParts;
-    size_t remainder = totalSize % numParts;
-
-    size_t start = 0;
-    for (size_t i = 0; i < numParts; ++i)
-    {
-        size_t thisPartSize = partSize + (i < remainder ? 1 : 0);
-        ranges.emplace_back(start, start + thisPartSize);
-        start += thisPartSize;
-    }
-
-    return ranges;
-}
 
 /*bool getRayRectIntersection(Vec2* targ, const FRect &r, const Ray &ray)
 {

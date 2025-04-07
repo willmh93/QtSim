@@ -8,6 +8,7 @@
 #include <QElapsedTimer>
 #include <QFuture>
 #include <QThreadPool>
+#include <QReadWriteLock>
 #include <QtConcurrent/QtConcurrent>
 
 #include <QOpenGLShaderProgram>
@@ -22,6 +23,7 @@
 #include <set>
 #include <unordered_map>
 #include <fstream>
+#include <typeindex>
 using namespace std;
 
 // Custom includes
@@ -53,9 +55,145 @@ std::vector<QString> VectorizeArgs(Ts&&... args) { return { QString::fromUtf8(st
 //#define CHILD_SORT(...) AutoRegisterProjectOrder register_order(VectorizeArgs(__VA_ARGS__));
 
 
+#include <unordered_map>
+#include <typeindex>
+#include <typeinfo>
+#include <mutex>
+#include <functional>
+#include <utility>
+
+class VariableChangedTracker
+{
+    
+    /// Holds the two maps for a particular type T
+    template <typename T>
+    struct StateMapPair {
+        std::unordered_map<T*, T> current;
+        std::unordered_map<T*, T> previous;
+    };
+
+    /// A simple record to store how we clear and commit for each type
+    struct ClearCommit {
+        std::function<void()> clearer;
+        std::function<void()> committer;
+    };
+
+    std::unordered_map<std::type_index, ClearCommit> registry_;
+    std::mutex mutex_;
+
+
+    /// The per-type map is allocated once per type T via a static local; we also
+    /// register it (lazily) so that global clear/commit can iterate over it.
+    template <typename T>
+    StateMapPair<T>& getStateMap()
+    {
+        static StateMapPair<T> maps;
+        static bool registered = registerType<T>(maps);
+        (void)registered; // silence unused warning
+        return maps;
+    }
+
+    /// Register the given maps clear/commit methods in our registry
+    template <typename T>
+    bool registerType(StateMapPair<T>& maps)
+    {
+        //std::lock_guard<std::mutex> lock(mutex_);
+
+        registry_[std::type_index(typeid(T))] = {
+            // Clearer: reset both 'current' and 'previous'
+            [&]() {
+                maps.current.clear();
+                maps.previous.clear();
+            },
+            // Committer: copy 'current' => 'previous'
+            [&]() {
+                maps.previous = maps.current;
+            }
+        };
+        return true;
+    }
+
+public:
+
+    VariableChangedTracker() = default;
+
+    /// Obtain a single global instance if you want to use it as a singleton
+    static VariableChangedTracker& instance()
+    {
+        static VariableChangedTracker s_instance;
+        return s_instance;
+    }
+
+    /// Returns true if 'var' differs from its last committed value, false otherwise.
+    template <typename T>
+    bool variableChanged(T& var)
+    {
+        auto& maps = getStateMap<T>();
+        auto it = maps.previous.find(&var);
+        if (it != maps.previous.end())
+        {
+            // Compare against the previously committed value
+            bool changed = (var != it->second);
+            // Always update 'current' so that commit will be correct
+            maps.current[&var] = var;
+            return changed;
+        }
+        else
+        {
+            // First time we see this variable; store it but it doesn't "count" as changed yet
+            maps.current[&var] = var;
+            return false;
+        }
+    }
+
+    /// Returns true if any variable among args... has changed
+    template <typename... Args>
+    bool anyChanged(Args&&... args)
+    {
+        return (variableChanged(std::forward<Args>(args)) || ...);
+    }
+
+    /// Explicitly update the 'current' value of a single variable
+    template<typename T>
+    void commitValue(T& var)
+    {
+        getStateMap<T>().current[&var] = var;
+    }
+
+    /// Explicitly update the 'current' values of all variables passed in
+    template<typename... Args>
+    void commitAll(Args&&... args)
+    {
+        (commitValue(std::forward<Args>(args)), ...);
+    }
+
+    /// Clears all tracked data (for every type) so we effectively start fresh
+    void variableChangedClearMaps()
+    {
+        //std::lock_guard<std::mutex> lock(mutex_);
+        for (auto& [_, cc] : registry_)
+        {
+            cc.clearer();
+        }
+    }
+
+    /// Commits all tracked data (for every type), i.e. current => previous
+    /// so that subsequent calls to variableChanged() compare against the newly committed data
+    void variableChangedUpdateCurrent()
+    {
+        //std::lock_guard<std::mutex> lock(mutex_);
+        for (auto& [_, cc] : registry_)
+        {
+            cc.committer();
+        }
+    }
+};
+
+
 // Declarations
 class ProjectWorker;
 class Options;
+class ImOptions;
 
 // Forward declare crossreferences
 class QNanoPainter;
@@ -65,7 +203,7 @@ class Layout;
 class Viewport;
 class Project;
 
-class Scene : public GLFunctions
+class Scene : public GLFunctions, public VariableChangedTracker
 {
     //Q_OBJECT;
 
@@ -104,6 +242,8 @@ protected:
 
 public:
 
+    bool imgui_scene_attributes_visible = true;
+
     std::shared_ptr<void> temporary_environment;
 
     struct Config {};
@@ -138,7 +278,7 @@ public:
     void mountTo(Layout& viewports);
     void mountToAll(Layout& viewports);
     
-    virtual void sceneAttributes(Input* options) {}
+    virtual void sceneAttributes() {}
     virtual void sceneStart() {}
     virtual void sceneMounted(Viewport *ctx) {}
     virtual void sceneStop() {}
@@ -157,6 +297,8 @@ public:
 
     virtual void keyPressed(QKeyEvent* e) {};
     virtual void keyReleased(QKeyEvent* e) {};
+
+    bool keyPressed(int key);
 
     void _destroy()
     {
@@ -223,6 +365,84 @@ public:
     int project_dt(int average_samples);
 
     int project_draw_dt(int average_samples);
+
+    
+
+    /*std::unordered_map<bool*, bool>     old_bools;
+    std::unordered_map<int*, int>       old_ints;
+    std::unordered_map<double*, double> old_doubles;
+
+
+    template <typename... Args>
+    bool anyChanged(Args&&... args)
+    {
+        return (variableChanged(std::forward<Args>(args)) || ...);
+    }
+
+
+
+    bool variableChanged(bool& var)
+    {
+        auto it = old_bools.find(&var);
+        if (it != old_bools.end())
+            return var != it->second;
+        else
+            old_bools[&var] = var;
+        return false;
+    }
+
+    bool variableChanged(int& var)
+    {
+        auto it = old_ints.find(&var);
+        if (it != old_ints.end())
+            return var != it->second;
+        else
+            old_ints[&var] = var;
+        return false;
+    }
+
+    bool variableChanged(double& var)
+    {
+        auto it = old_doubles.find(&var);
+        if (it != old_doubles.end())
+            return var != it->second;
+        else
+            old_doubles[&var] = var;
+        return false;
+    }*/
+
+    /*template<typename T>
+    std::unordered_map<T*, T>& getStateMap()
+    {
+        static std::unordered_map<T*, T> map;
+        return map;
+    }
+
+    template<typename T>
+    bool variableChanged(T& var)
+    {
+        auto& map = getStateMap<T>();
+        auto it = map.find(&var);
+        if (it != map.end())
+            return var != it->second;
+        else
+            map[&var] = var;
+        return false;
+    }
+
+    void variableChangedUpdateCurrent()
+    {
+        for (auto& item : old_bools)    item.second = *item.first;
+        for (auto& item : old_ints)     item.second = *item.first;
+        for (auto& item : old_doubles)  item.second = *item.first;
+    }
+
+    void variableChangedClearMaps()
+    {
+        old_bools.clear();
+        old_ints.clear();
+        old_doubles.clear();
+    }*/
 
 };
 
@@ -451,8 +671,6 @@ class Project : public CanvasRenderSource
     int sim_uid = -1;
 
     Options* options;
-    Input* input_proxy;
-
     
     ProjectCanvasWidget* canvas = nullptr;
     Layout viewports;
@@ -609,6 +827,7 @@ protected:
     CacheContext cache; // todo: Make dynamic and remove include
 
     friend class MainWindow;
+    friend class ImOptions;
     friend class ProjectWorker;
     friend class CanvasWidget;
     friend class Scene;
@@ -651,7 +870,7 @@ public:
     void updateViewportRects();
     Vec2 surfaceSize(); // Dimensions of FBO (depends on whether recording or not)
 
-    virtual void projectAttributes(Input* options) {}
+    virtual void projectAttributes() {}
     virtual void projectPrepare() = 0;
     virtual void projectStart() {}
     virtual void projectStop() {}
@@ -663,6 +882,13 @@ public:
     void mouseUp(int x, int y, Qt::MouseButton btn);
     void mouseMove(int x, int y);
     void mouseWheel(int x, int y, int delta);
+
+    std::unordered_map<int, bool> key_pressed;
+    bool keyPressed(int key) {
+        if (key_pressed.count(key) == 0)
+            key_pressed[key] = false;
+        return key_pressed[key];
+    }
 
     void keyPress(QKeyEvent* e);
     void keyRelease(QKeyEvent* e);

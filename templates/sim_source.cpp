@@ -1,11 +1,11 @@
 #include "{CLASS_NAME}.h"
-SIM_DECLARE({CLASS_NAME}, "My Projects", "{SIM_NAME}")
+SIM_DECLARE({CLASS_NAME}, "New Projects", "{SIM_NAME}")
 
 /// Project ///
 
-void {CLASS_NAME}_Project::projectAttributes(Input* input)
+void {CLASS_NAME}_Project::projectAttributes()
 {{
-    input->realtime_slider("Panel Count", &panel_count, 1, 16, 1);
+    ImGui::SliderInt("Panel Count", Initial(&panel_count), 1, 16);
 }}
 
 void {CLASS_NAME}_Project::projectPrepare()
@@ -27,16 +27,16 @@ void {CLASS_NAME}_Project::projectPrepare()
 
 /// Scene ///
 
-void {CLASS_NAME}_Scene::sceneAttributes(Input* input)
+void {CLASS_NAME}_Scene::sceneAttributes()
 {{
-    //--- Only updated on sceneStart ---//
+    //--- Updating values just prior to sceneStart with: Initial(&var) ---//
 
-    //input->starting_checkbox("Starting Flag", &var1);                
-    //input->starting_slider("Starting Double", &var3, 0.0, 1.0);
+    //ImGui::Checkbox       ("Starting Flag",   Initial(&var1));                
+    //ImGui::SliderDouble   ("Starting Double", Initial(&var3), 0.0, 1.0);
 
     //--- Updated in realtime ---//
 
-    //input->realtime_slider("Realtime Double", &var2, 0.0, 1.0); 
+    //ImGui::SliderDouble  ("Realtime Double", &var2, 0.0, 1.0); 
     
 }}
 
@@ -54,7 +54,12 @@ void {CLASS_NAME}_Scene::sceneMounted(Viewport* viewport)
 {{
     /// Initialize viewport (after sceneStart)
     camera->setOriginViewportAnchor(Anchor::CENTER);
-    //camera->focusWorldRect(0, 0, 300, 300);
+
+    // Focus on {0,0,300,300}
+    camera->focusWorldRect(0, 0, 300, 300);
+
+    // Clamp Viewport Size between {150,150} and {600,600}
+    camera->setRelativeZoomRange(0.5, 2); 
 }}
 
 void {CLASS_NAME}_Scene::sceneProcess()

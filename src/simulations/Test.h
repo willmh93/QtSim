@@ -34,23 +34,26 @@ struct Test_Scene : public Scene
 
     bool transform_coordinates = true;
     bool scale_lines_text = true;
+    bool scale_sizes = true;
     bool rotate_text = true;
     double seed = 0;
 
     double camera_x = 0;
     double camera_y = 0;
     double camera_rotation = 0;
+    double zoom_x = 1;
+    double zoom_y = 1;
 
     Vec2 ball_pos = { 0, 0 };
 
     vector<Particle> particles;
 
-    
+    CanvasBitmapObject obj;
 
     //
 
     // Scene management
-    void sceneAttributes(Input* options) override;
+    void sceneAttributes() override;
     void sceneStart() override;
     void sceneMounted(Viewport *viewport) override;
     void sceneDestroy() override;
@@ -73,7 +76,7 @@ struct Test_Project : public Project
 {
     int viewport_count = 1;
 
-    void projectAttributes(Input* options) override;
+    void projectAttributes() override;
     void projectPrepare() override;
 };
 

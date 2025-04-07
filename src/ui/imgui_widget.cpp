@@ -86,9 +86,9 @@ namespace QtImGui {
         io.BackendPlatformName = "qtimgui";
 
         // Setup keyboard mapping
-        ///for (auto key : keyMap.values()) {
-        ///    io.KeyMap[key] = key;
-        ///}
+        //for (auto key : keyMap.values()) {
+        //    io.KeyMap[key] = key;
+        //}
 
         // io.RenderDrawListsFn = [](ImDrawData *drawData) {
         //    instance()->renderDrawList(drawData);
@@ -339,6 +339,13 @@ namespace QtImGui {
 
         ImGuiIO& io = ImGui::GetIO();
 
+        // Let ImGui know which modifier keys are down this frame
+        io.AddKeyEvent(ImGuiMod_Ctrl, ImGui::GetKeyData(ImGuiKey_LeftCtrl)->Down || ImGui::GetKeyData(ImGuiKey_RightCtrl)->Down);
+        io.AddKeyEvent(ImGuiMod_Shift, ImGui::GetKeyData(ImGuiKey_LeftShift)->Down || ImGui::GetKeyData(ImGuiKey_RightShift)->Down);
+        io.AddKeyEvent(ImGuiMod_Alt, ImGui::GetKeyData(ImGuiKey_LeftAlt)->Down || ImGui::GetKeyData(ImGuiKey_RightAlt)->Down);
+        io.AddKeyEvent(ImGuiMod_Super, ImGui::GetKeyData(ImGuiKey_LeftSuper)->Down || ImGui::GetKeyData(ImGuiKey_RightSuper)->Down);
+
+
         // Setup display size (every frame to accommodate for window resizing)
         io.DisplaySize = ImVec2(m_window->size().width(), m_window->size().height());
         io.DisplayFramebufferScale = ImVec2(m_window->devicePixelRatio(), m_window->devicePixelRatio());
@@ -451,7 +458,6 @@ namespace QtImGui {
         const auto key_it = keyMap.constFind(event->key());
         if (key_it != keyMap.constEnd()) { // Qt's key found in keyMap
             const auto imgui_key = *(key_it);
-            //io.KeysDown[imgui_key] = key_pressed;
             io.AddKeyEvent((ImGuiKey)imgui_key, key_pressed);
         }
 
@@ -459,10 +465,10 @@ namespace QtImGui {
             const QString text = event->text();
             if (text.size() == 1) {
                 io.AddInputCharacter(text.at(0).unicode());
+            }
         }
-    }
 
-        #ifdef Q_OS_MAC
+        /*#ifdef Q_OS_MAC
         io.KeyCtrl = event->modifiers() & Qt::MetaModifier;
         io.KeyShift = event->modifiers() & Qt::ShiftModifier;
         io.KeyAlt = event->modifiers() & Qt::AltModifier;
@@ -472,8 +478,8 @@ namespace QtImGui {
         io.KeyShift = event->modifiers() & Qt::ShiftModifier;
         io.KeyAlt = event->modifiers() & Qt::AltModifier;
         io.KeySuper = event->modifiers() & Qt::MetaModifier;
-        #endif
-}
+        #endif*/
+    }
 
     void ImGuiRenderer::updateCursorShape(const ImGuiIO& io)
     {
@@ -546,9 +552,9 @@ namespace QtImGui {
             default:
                 break;
             }
-  }
+        }
         return QObject::eventFilter(watched, event);
-}
+    }
 
     ImGuiRenderer* ImGuiRenderer::instance() {
         static ImGuiRenderer* instance = nullptr;

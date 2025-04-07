@@ -1,11 +1,11 @@
 #include "Superfluid.h"
-SIM_DECLARE(Superfluid, "My Projects", "Superfluid")
+SIM_DECLARE(Superfluid, "New Projects", "Superfluid")
 
 /// Project ///
 
-void Superfluid_Project::projectAttributes(Input* input)
+void Superfluid_Project::projectAttributes()
 {
-    input->realtime_slider("Panel Count", &panel_count, 1, 16, 1);
+    ImGui::SliderInt("Panel Count", &panel_count, 1, 16);
 }
 
 void Superfluid_Project::projectPrepare()
@@ -27,7 +27,7 @@ void Superfluid_Project::projectPrepare()
 
 /// Scene ///
 
-void Superfluid_Scene::sceneAttributes(Input* input)
+void Superfluid_Scene::sceneAttributes()
 {
     //--- Only updated on sceneStart ---//
 

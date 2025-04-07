@@ -1,9 +1,169 @@
 #pragma once
 #include <QString>
-#include <qmath.h>
+
 #include <unordered_set>
-#include <random>
+#include <type_traits>
+//#include <array>
+#include <tuple>
+
 #include "types.h"
+
+inline Vec2 rotateOffset(double dx, double dy, double rotation)
+{
+    double _cos = cos(rotation);
+    double _sin = sin(rotation);
+    return {
+        (dx * _cos - dy * _sin),
+        (dy * _cos + dx * _sin)
+    };
+}
+inline Vec2 rotateOffset(double dx, double dy, double _cos, double _sin)
+{
+    return {
+        (dx * _cos - dy * _sin),
+        (dy * _cos + dx * _sin)
+    };
+}
+inline Vec2 rotateOffset(const Vec2& offset, double rotation)
+{
+    double _cos = cos(rotation);
+    double _sin = sin(rotation);
+    return {
+        (offset.x * _cos - offset.y * _sin),
+        (offset.y * _cos + offset.x * _sin)
+    };
+}
+inline Vec2 rotateOffset(const Vec2& offset, double _cos, double _sin)
+{
+    return {
+        (offset.x * _cos - offset.y * _sin),
+        (offset.y * _cos + offset.x * _sin)
+    };
+}
+
+inline Vec2 reverseRotateOffset(double dx, double dy, double rotation)
+{
+    double _cos = cos(rotation);
+    double _sin = sin(rotation);
+    return {
+        (dx * _cos + dy * _sin),
+        (dy * _cos - dx * _sin)
+    };
+}
+inline Vec2 reverseRotateOffset(double dx, double dy, double _cos, double _sin)
+{
+    return {
+        (dx * _cos + dy * _sin),
+        (dy * _cos - dx * _sin)
+    };
+}
+inline Vec2 reverseRotateOffset(const Vec2& offset, double rotation)
+{
+    double _cos = cos(rotation);
+    double _sin = sin(rotation);
+    return {
+        (offset.x * _cos + offset.y * _sin),
+        (offset.y * _cos - offset.x * _sin)
+    };
+}
+inline Vec2 reverseRotateOffset(const Vec2& offset, double _cos, double _sin)
+{
+    return {
+        (offset.x * _cos + offset.y * _sin),
+        (offset.y * _cos - offset.x * _sin)
+    };
+}
+
+struct CanvasObject
+{
+    union {
+        Vec2 pos = { 0, 0 };
+        struct { double x, y; };
+    };
+
+    union {
+        Vec2 size = { 0, 0 };
+        struct { double w, h; };
+    };
+
+    union {
+        Vec2 align = { -1, -1 };
+        struct { double align_x, align_y; };
+    };
+
+    double rotation = 0.0;
+    CoordinateType coordinate_type = CoordinateType::WORLD;
+    
+    ~CanvasObject() {}
+
+    void setCoordinateType(CoordinateType type)
+    {
+        coordinate_type = type;
+    }
+
+    void setAlign(int ax, int ay)
+    {
+        align_x = ax;
+        align_y = ay;
+    }
+
+    void setAlign(const Vec2& _align)
+    {
+        align = _align;
+    }
+
+    void setStageRect(double _x, double _y, double _w, double _h)
+    {
+        coordinate_type = CoordinateType::STAGE;
+        x = _x;
+        y = _y;
+        w = _w;
+        h = _h;
+    }
+
+    void setWorldRect(double _x, double _y, double _w, double _h)
+    {
+        coordinate_type = CoordinateType::STAGE;
+        x = _x;
+        y = _y;
+        w = _w;
+        h = _h;
+    }
+
+    Vec2 topLeft()
+    {
+        Vec2 offset = { -(align_x + 1) * 0.5 * w , -(align_y + 1) * 0.5 * h };
+        return rotateOffset(offset, rotation) + pos;
+    }
+
+    FQuad getQuad()
+    {
+        Vec2 pivot = { (align_x + 1) * 0.5 * w , (align_y + 1) * 0.5 * h };
+        FQuad quad = { { 0.0, 0.0 }, { w, 0.0 }, { w, h }, { 0.0, h } };
+
+        // Precompute cos and sin of rotation
+        double _cos = cos(rotation);
+        double _sin = sin(rotation);
+
+        // Shift corner by negative pivot & Rotate around (0,0)
+        quad.a = rotateOffset(quad.a - pivot, _cos, _sin) + pos;
+        quad.b = rotateOffset(quad.b - pivot, _cos, _sin) + pos;
+        quad.c = rotateOffset(quad.c - pivot, _cos, _sin) + pos;
+        quad.d = rotateOffset(quad.d - pivot, _cos, _sin) + pos;
+
+        return quad;
+    }
+
+    double localAlignOffsetX()
+    {
+        return -(align_x + 1) * 0.5 * w;
+    }
+
+    double localAlignOffsetY()
+    {
+        return -(align_y + 1) * 0.5 * h;
+    }
+};
 
 int countDecimals(double num);
 
@@ -31,6 +191,11 @@ inline double wrapRadians2PI(double angle)
         angle += 2.0 * M_PI;
     return angle;
 }
+
+//inline double lerp(double a, double b, double x)
+//{
+//    return (a + (b - a) * x);
+//}
 
 FRect lerpRect(const FRect& src, const FRect& targ, double factor);
 
@@ -109,8 +274,6 @@ std::vector<T> allocDelaunayTriangleMesh(
 
     return points;
 }
-
-
 
 template <typename VecT>
 struct Link {
@@ -367,6 +530,11 @@ public:
 
 //
 
+
+
+
+//
+
 QString normalizeSeconds(double seconds);
 
 #define PI_FLOAT     3.14159265
@@ -401,7 +569,313 @@ std::vector<std::vector<T>> splitVector(const std::vector<T>& objects, size_t nu
     return parts;
 }
 
-std::vector<std::pair<size_t, size_t>> splitRanges(size_t totalSize, size_t numParts);
+inline std::vector<std::pair<size_t, size_t>> splitRanges(size_t totalSize, size_t numParts)
+{
+    std::vector<std::pair<size_t, size_t>> ranges;
+
+    size_t partSize = totalSize / numParts;
+    size_t remainder = totalSize % numParts;
+
+    size_t start = 0;
+    for (size_t i = 0; i < numParts; ++i)
+    {
+        size_t thisPartSize = partSize + (i < remainder ? 1 : 0);
+        ranges.emplace_back(start, start + thisPartSize);
+        start += thisPartSize;
+    }
+
+    return ranges;
+}
+
+template <typename Callback>
+void forEachPixelPos(int iw, int ih, int thread_count, Callback&& callback)
+{
+    int pixel_count = iw * ih;
+    auto pixel_ranges = splitRanges(pixel_count, thread_count);
+    std::vector<QFuture<void>> futures(thread_count);
+
+    for (int ti = 0; ti < thread_count; ++ti)
+    {
+        auto& pixel_range = pixel_ranges[ti];
+
+        futures[ti] = QtConcurrent::run([&, pixel_range]() {
+            for (int i = pixel_range.first; i < pixel_range.second; ++i)
+            {
+                int x = i % iw;
+                int y = i / iw;
+                std::forward<Callback>(callback)(x, y);
+            }
+        });
+    }
+
+    for (auto& future : futures)
+        future.waitForFinished();
+}
+
+
+
+
+template <size_t I, size_t N>
+constexpr auto makeBoolsTuple()
+{
+    // We expand over [0..N-1] and produce a tuple of integral_constant<bool, …>
+    return[]<size_t... Bs>(std::index_sequence<Bs...>) {
+        return std::tuple{
+            std::integral_constant<bool, ((I >> (N - 1 - Bs)) & 1)>{}...
+        };
+    }(std::make_index_sequence<N>{});
+}
+
+// 2) Build the dispatch table by enumerating all bitmask combinations
+//    of the booleans, storing one function for each pattern.
+template <typename F, size_t... Is>
+void dispatchBooleansImpl(const std::array<bool, sizeof...(Is)>& flags,
+    F&& f,
+    std::index_sequence<Is...>)
+{
+    // Compute the flat index from the actual runtime flags
+    int index = 0;
+    const size_t shift = sizeof...(Is) - 1;
+    ((index |= (flags[Is] ? 1 : 0) << (shift - Is)), ...);
+
+    using FnPtr = void(*)(F&&);
+
+    static constexpr std::array<FnPtr, 1 << sizeof...(Is)> dispatch_table = [] {
+        std::array<FnPtr, 1 << sizeof...(Is)> table{};
+
+        [&] <size_t... Idxs>(std::index_sequence<Idxs...>) {
+            ((table[Idxs] = +[](F&& f_inner) constexpr {
+                constexpr auto bools = makeBoolsTuple<Idxs, sizeof...(Is)>();
+                std::apply([&](auto... Bools) {
+                    f_inner(Bools...);
+                }, bools);
+            }), ...);
+        }(std::make_index_sequence<1 << sizeof...(Is)>{});
+
+        return table;
+    }();
+
+
+    // Finally, call the correct entry with the user functor.
+    dispatch_table[index](std::forward<F>(f));
+}
+
+// Helpers that creates a function lookup table for each boolean combination
+// usage:  dispatchBooleans( bools_template(FUNC_NAME, [CAPTURE], FUNC_ARGS), BOOL_ARGS )
+// note:   The function call itself is not likely to get inlined
+template <typename... Bools, typename F>
+void dispatchBooleans(F&& f, Bools... flags)
+{
+    static_assert((std::is_same_v<Bools, bool> && ...), "All flags must be bool");
+    dispatchBooleansImpl({ flags... },
+        std::forward<F>(f),
+        std::make_index_sequence<sizeof...(Bools)>{});
+}
+
+#define boolsTemplate(func, capture, ...) capture<typename... Bools>(Bools... passed) { func<Bools::value...>(__VA_ARGS__); }
+
+/* dispatchBooleans([&]<typename... Bools>(Bools... passed) { func<Bools::value...>(__VA_ARGS__); }, true, false, true, false);
+*/
+///////////////////////////////
+
+
+/////////////////////////////////
+
+
+// Number of entries in the lookup table
+constexpr std::size_t TABLE_SIZE = 360;
+
+// Pi constant
+constexpr double PI = 3.14159265358979323846;
+
+// Structure to hold a pair of cosine and sine values
+struct TrigPair {
+    double cosValue;
+    double sinValue;
+};
+
+// Generate the lookup table at compile time
+constexpr std::array<TrigPair, TABLE_SIZE> generateTrigLookupTable() {
+    std::array<TrigPair, TABLE_SIZE> table{};
+    for (std::size_t i = 0; i < TABLE_SIZE; ++i) {
+        double angle = (2.0 * PI * i) / static_cast<double>(TABLE_SIZE);
+        table[i] = { std::cos(angle), std::sin(angle) };
+    }
+    return table;
+}
+
+// The global constexpr lookup table, computed at compile time
+static auto trigLookupTable = generateTrigLookupTable();
+
+inline double fastCos(double radians) {
+    // Scale from radians to table index
+    constexpr double factor = static_cast<double>(TABLE_SIZE) / (2.0 * PI);
+
+    double idx = radians * factor;
+    idx = std::fmod(idx, static_cast<double>(TABLE_SIZE));
+    if (idx < 0.0) {
+        idx += static_cast<double>(TABLE_SIZE);
+    }
+
+    // Round to nearest integer index
+    std::size_t i = static_cast<std::size_t>(idx + 0.5);
+    if (i >= TABLE_SIZE) {
+        i = 0; // handle wrapping edge case
+    }
+    return trigLookupTable[i].cosValue;
+}
+
+inline double fastSin(double radians) {
+    constexpr double factor = static_cast<double>(TABLE_SIZE) / (2.0 * PI);
+
+    double idx = radians * factor;
+    idx = std::fmod(idx, static_cast<double>(TABLE_SIZE));
+    if (idx < 0.0) {
+        idx += static_cast<double>(TABLE_SIZE);
+    }
+
+    std::size_t i = static_cast<std::size_t>(idx + 0.5);
+    if (i >= TABLE_SIZE) {
+        i = 0;
+    }
+    return trigLookupTable[i].sinValue;
+}
+
+struct ScanLineSegment {
+    int y;
+    int xStart;
+    int xEnd;
+};
+
+static inline void FillFlatSideTriangle(
+    const Vec2& top, 
+    const Vec2& leftFlat, 
+    const Vec2& rightFlat,
+    std::vector<ScanLineSegment>& outSegments)
+{
+    float invSlope1 = 0.0f;
+    float invSlope2 = 0.0f;
+
+    float dy1 = (leftFlat.y - top.y);
+    float dy2 = (rightFlat.y - top.y);
+
+    if (std::fabs(dy1) > 1e-5f) {
+        invSlope1 = (leftFlat.x - top.x) / dy1;
+    }
+    if (std::fabs(dy2) > 1e-5f) {
+        invSlope2 = (rightFlat.x - top.x) / dy2;
+    }
+
+    int yStart = static_cast<int>(std::ceil(std::min(top.y, leftFlat.y)));
+    int yEnd = static_cast<int>(std::ceil(std::max(top.y, leftFlat.y)));
+
+    float curx1 = top.x;
+    float curx2 = top.x;
+
+    for (int scanY = yStart; scanY < yEnd; ++scanY)
+    {
+        int leftX = static_cast<int>(std::floor(std::min(curx1, curx2)));
+        int rightX = static_cast<int>(std::ceil(std::max(curx1, curx2)));
+
+        if (leftX < rightX) 
+        {
+            ScanLineSegment seg;
+            seg.y = scanY;
+            seg.xStart = leftX;
+            seg.xEnd = rightX;
+            outSegments.push_back(seg);
+        }
+
+        curx1 += invSlope1;
+        curx2 += invSlope2;
+    }
+}
+
+static inline void FillTriangleSegments(
+    const Vec2& v1, 
+    const Vec2& v2, 
+    const Vec2& v3,
+    std::vector<ScanLineSegment>& outSegments)
+{
+    Vec2 A = v1, B = v2, C = v3;
+    if (A.y > B.y) std::swap(A, B);
+    if (B.y > C.y) std::swap(B, C);
+    if (A.y > B.y) std::swap(A, B);
+
+    const float EPS = 1e-5f;
+
+    if (std::fabs(A.y - B.y) < EPS)
+        FillFlatSideTriangle(C, A, B, outSegments);
+    else if (std::fabs(B.y - C.y) < EPS)
+        FillFlatSideTriangle(A, B, C, outSegments);
+
+    else
+    {
+        float alpha = (B.y - A.y) / (C.y - A.y + EPS);
+        Vec2 D;
+        D.x = A.x + (C.x - A.x) * alpha;
+        D.y = B.y;
+
+        FillFlatSideTriangle(A, B, D, outSegments);
+
+        FillFlatSideTriangle(C, B, D, outSegments);
+    }
+}
+
+static inline std::vector<ScanLineSegment> FillConvexQuadSegments(
+    const Vec2& A, const Vec2& B, const Vec2& C, const Vec2& D)
+{
+    std::vector<ScanLineSegment> segments;
+    FillTriangleSegments(A, B, C, segments);
+    FillTriangleSegments(A, C, D, segments);
+    return segments;
+}
+
+static inline std::vector<ScanLineSegment> MergeSegments(
+    const std::vector<ScanLineSegment>& inSegments)
+{
+    std::map<int, std::pair<int, int>> rowToSpan;
+
+    for (const auto& seg : inSegments) {
+        int y = seg.y;
+        int xStart = seg.xStart;
+        int xEnd = seg.xEnd;
+
+        auto it = rowToSpan.find(y);
+        if (it == rowToSpan.end()) {
+            rowToSpan[y] = { xStart, xEnd };
+        }
+        else {
+            auto& span = it->second;
+            if (xStart < span.first)  span.first = xStart;
+            if (xEnd > span.second) span.second = xEnd;
+        }
+    }
+
+    std::vector<ScanLineSegment> out;
+    out.reserve(rowToSpan.size());
+    for (auto& kv : rowToSpan) {
+        ScanLineSegment seg;
+        seg.y = kv.first;
+        seg.xStart = kv.second.first;
+        seg.xEnd = kv.second.second;
+        out.push_back(seg);
+    }
+    return out;
+}
+
+static inline std::vector<ScanLineSegment> FillConvexQuadSegmentsMerged(
+    const Vec2& A, const Vec2& B, const Vec2& C, const Vec2& D)
+{
+    std::vector<ScanLineSegment> allSegments;
+    allSegments.reserve(1000);
+    FillTriangleSegments(A, B, C, allSegments);
+    FillTriangleSegments(A, C, D, allSegments);
+    std::vector<ScanLineSegment> merged = MergeSegments(allSegments);
+
+    return merged;
+}
+
 
 namespace MovingAverage
 {

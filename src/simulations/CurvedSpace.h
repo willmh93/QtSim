@@ -75,7 +75,7 @@ struct CurvedSpace_Scene : public Scene
         }
     }
 
-    void sceneAttributes(Input* options) override;
+    void sceneAttributes() override;
 
     //void projectPrepare();
     void sceneStart() override;
@@ -93,7 +93,7 @@ struct CurvedSpace_Project : public Project
     shared_ptr<CurvedSpace_Scene::Config> shared_config = make_shared<CurvedSpace_Scene::Config>();
 
     void projectPrepare() override;
-    void projectAttributes(Input* options) override;
+    void projectAttributes() override;
     
 };
 

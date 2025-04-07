@@ -3,9 +3,9 @@ SIM_DECLARE(AnnoyingRacing, "Lessons", "Annoying Racing")
 
 /// Project ///
 
-void AnnoyingRacing_Project::projectAttributes(Input* options)
+void AnnoyingRacing_Project::projectAttributes()
 {
-    options->realtime_slider("Panel Count", &panel_count, 1, 16, 1);
+    ImGui::SliderInt("Panel Count", &panel_count, 1, 16);
 }
 
 void AnnoyingRacing_Project::projectPrepare()
@@ -18,7 +18,7 @@ void AnnoyingRacing_Project::projectPrepare()
 
 /// Scene ///
 
-void AnnoyingRacing_Scene::sceneAttributes(Input* input)
+void AnnoyingRacing_Scene::sceneAttributes()
 {
     // Only updated on sceneStart()
 
@@ -28,6 +28,7 @@ void AnnoyingRacing_Scene::sceneAttributes(Input* input)
     // Updated in realtime
 
     //options->realtime_slider("Realtime Double", &var2, 0.0, 1.0, 0.1); 
+
     
 }
 

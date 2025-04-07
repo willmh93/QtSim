@@ -25,29 +25,33 @@ void ProjectWorker::tick()
 {
     if (project && project->started)
     {
-        QMutexLocker locker(&main_window->sim_lock);
+        ///QMutexLocker locker(&main_window->sim_lock);
         //qDebug() << "ProjectThread::run() - Mutex LOCKED:" << QThread::currentThread()->objectName();
 
-        project->_projectProcess();
-        //canvas->update();
+        constexpr int maxAttempts = 5;
+        constexpr int delayBetweenAttemptsMs = 1;
 
-        //QMetaObject::invokeMethod(main_window, [this]() {
-        //    main_window->update();
-        //});
+        for (int attempt = 0; attempt < maxAttempts; ++attempt)
+        {
+            if (main_window->simLock.tryLockForWrite())
+            {
+                // Safe to update simulation
+                project->_projectProcess();
+                if (!project->paused)
+                    project->postProcess();
 
-
-        // todo: Move to post-draw on GUI thread?
-        if (!project->paused)
-            project->postProcess();
-
-        //qDebug() << "ProjectThread::run() - Mutex UNLOCKED:" << QThread::currentThread()->objectName();
+                main_window->simLock.unlock();
+                return;
+            }
+            QThread::msleep(delayBetweenAttemptsMs); // Avoid busy-waiting
+        }
     }
 }
 
 void ProjectWorker::setProject(int sim_uid)
 {
-    QMutexLocker locker(&main_window->sim_lock);
-    qDebug() << "ProjectThread::setProject() - Thread:" << QThread::currentThread()->objectName();
+    QWriteLocker locker(&main_window->simLock);
+    //qDebug() << "ProjectThread::setProject() - Thread:" << QThread::currentThread()->objectName();
 
     canvas->setRenderSource(nullptr);
 
@@ -58,14 +62,8 @@ void ProjectWorker::setProject(int sim_uid)
         project = nullptr;
     }
 
-    // Pointers were cleared in _projectDestroy, but when we switch project, 
-    // clean up all components rather than keeping them (which we do in case
-    // we restart the same simulation but want to preserve input values)
-    input_proxy->removeUnusedInputs();
-
     project = Project::findProjectInfo(sim_uid)->creator();
     project->worker = this;
-    project->input_proxy = input_proxy;
     project->configure(sim_uid, canvas, options);
 
     canvas->setRenderSource(project);
@@ -222,9 +220,9 @@ MainWindow::MainWindow(QWidget *parent)
     {
         options->addSimListEntry(factory_info);
     }
-    options->addSimListEntry(ProjectInfo({ "3D" }));
-    options->addSimListEntry(ProjectInfo({ "Javascript" }));
-    options->addSimListEntry(ProjectInfo({ "Python" }));
+    ///options->addSimListEntry(ProjectInfo({ "3D" }));
+    ///options->addSimListEntry(ProjectInfo({ "Javascript" }));
+    ///options->addSimListEntry(ProjectInfo({ "Python" }));
 
     // Handle Sim Treeview signals
     connect(options, &Options::onChooseProject, this, &MainWindow::setProject);
@@ -245,14 +243,15 @@ MainWindow::MainWindow(QWidget *parent)
 
     project_worker = new ProjectWorker();
     project_worker->options = options;
-    project_worker->input_proxy = new Input(this, options);
     project_worker->canvas = canvas;
 
     project_thread = new ProjectThread(this);
     project_worker->main_window = this;
     project_worker->moveToThread(project_thread);
 
-    QMutexLocker locker(&sim_lock);
+    //QMutexLocker locker(&simLock);
+    QWriteLocker locker(&simLock);
+
     if (project_worker && project_worker->project)
         project_worker->project->onResize();
 
@@ -261,6 +260,7 @@ MainWindow::MainWindow(QWidget *parent)
     QTimer* renderTimer = new QTimer(this);
     connect(renderTimer, &QTimer::timeout, this, [this]()
     {
+        // Queue a paint
         canvas->update();
     });
     renderTimer->start(1000 / 60); // 60 FPS
@@ -286,7 +286,8 @@ void MainWindow::closeEvent(QCloseEvent* event)
 
 void MainWindow::resizeEvent(QResizeEvent *e)
 {
-    QMutexLocker locker(&sim_lock);
+    //QMutexLocker locker(&simLock);
+    QWriteLocker locker(&simLock);
     if (project_worker && project_worker->project)
         project_worker->project->onResize();
 }
@@ -315,7 +316,6 @@ void MainWindow::setProject(int sim_uid)
 
 void MainWindow::onProjectSet()
 {
-    options->updateListUI();
     toolbar->setButtonStates(false, true, false, true);
 }
 

@@ -56,7 +56,7 @@ void BigBang_Project::projectPrepare()
 
 }*/
 
-void BigBang_Scene::sceneAttributes(Input* input)
+void BigBang_Scene::sceneAttributes()
 {
     steps_per_frame = 1;
     step_seconds = 0.001;
@@ -70,10 +70,10 @@ void BigBang_Scene::sceneAttributes(Input* input)
     world_size = 5000;
 
     //input->realtime_slider("Start Zoom", &camera->targ_zoom_x, 0.1, 10);
-    input->realtime_slider("Zoom", &zoom, 1, 10);
-    input->realtime_slider("Particle Count", &particle_count, 10, 50000);
+    ImGui::SliderDouble("Zoom", &zoom, 1.0, 10.0);
+    ImGui::SliderInt("Particle Count", &particle_count, 10, 50000);
 
-    SpaceEngine_Scene::sceneAttributes(input);
+    SpaceEngine_Scene::sceneAttributes();
 }
 
 void BigBang_Scene::sceneStart()

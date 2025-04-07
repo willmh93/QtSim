@@ -16,13 +16,13 @@ struct Multithreading_Scene : public Scene
 {
     /// --- Sim Variables ---
     QThreadPool pool;
-    int thread_count = 0;
+    int thread_count = 4;
 
     vector<Particle> particles;
     double acceleration = 0.0000002;
 
     /// --- Scene management ---
-    void sceneAttributes(Input* options) override;
+    void sceneAttributes() override;
     void sceneStart() override;
     //void sceneStop() override;
     void sceneDestroy() override;
@@ -51,7 +51,7 @@ struct Multithreading_Project : public Project
 {
     int panel_count = 1;
 
-    void projectAttributes(Input* options) override;
+    void projectAttributes() override;
     void projectPrepare() override;
     //void projectStart() override;
     //void projectStop() override;

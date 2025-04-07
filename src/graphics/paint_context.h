@@ -16,7 +16,7 @@ class PaintContext
 {
     double _avgZoom()
     {
-        return (camera.zoom_x + camera.zoom_y) * 0.5;
+        return (abs(camera.zoom_x) + abs(camera.zoom_y)) * 0.5;
     }
 
 protected:
@@ -170,7 +170,7 @@ public:
     void circle(double cx, double cy, double r)
     {
         Vec2 pt = PT(cx, cy);
-        if (camera.scale_lines_text)
+        if (camera.scale_sizes)
         {
             painter->circle(pt.x, pt.y, r);
         }
@@ -183,7 +183,7 @@ public:
     void circle(Vec2 cen, double r)
     {
         Vec2 pt = PT(cen.x, cen.y);
-        if (camera.scale_lines_text)
+        if (camera.scale_sizes)
         {
             painter->circle(pt.x, pt.y, r);
         }
@@ -292,6 +292,16 @@ public:
         //painter->lineTo(pt.x, pt.y);
     }
 
+    template<typename PointT>
+    void drawPath(const std::vector<PointT>& path)
+    {
+        if (path.size() < 2) return;
+        size_t len = path.size();
+        moveTo(path[0]);
+        for (size_t i = 1; i < len; i++)
+            lineTo(path[i]);
+    }
+
     void strokeRect(double x, double y, double w, double h)
     {
         if (camera.transform_coordinates)
@@ -345,28 +355,61 @@ public:
     void strokeEllipse(double cx, double cy, double r)
     {
         painter->beginPath();
-        painter->ellipse(cx, cy, r, r);
+        if (camera.scale_sizes)
+        {
+            painter->ellipse(cx, cy, r, r);
+        }
+        else
+        {
+            painter->ellipse(cx, cy, r / camera.zoom_x, r / camera.zoom_y);
+        }
         painter->stroke();
     }
 
     void strokeEllipse(double cx, double cy, double rx, double ry)
     {
         painter->beginPath();
-        painter->ellipse(cx, cy, rx, ry);
+        if (camera.scale_sizes)
+        {
+            painter->ellipse(cx, cy, rx, ry);
+        }
+        else
+        {
+            painter->ellipse(cx, cy, rx / camera.zoom_x, ry / camera.zoom_y);
+        }
         painter->stroke();
     }
 
     void fillEllipse(double cx, double cy, double r)
     {
+        //painter->beginPath();
+        //painter->ellipse(cx, cy, r, r);
+        //painter->fill();
+
+        Vec2 pt = PT(cx, cy);
         painter->beginPath();
-        painter->ellipse(cx, cy, r, r);
+        if (camera.scale_sizes)
+        {
+            painter->ellipse(cx, cy, r, r);
+        }
+        else
+        {
+            painter->ellipse(cx, cy, r / camera.zoom_x, r / camera.zoom_y);
+        }
         painter->fill();
     }
 
     void fillEllipse(double cx, double cy, double rx, double ry)
     {
         painter->beginPath();
-        painter->ellipse(cx, cy, rx, ry);
+        if (camera.scale_sizes)
+        {
+            painter->ellipse(cx, cy, rx, ry);
+        }
+        else
+        {
+            painter->ellipse(cx, cy, rx / camera.zoom_x, ry / camera.zoom_y);
+        }
         painter->fill();
     }
 
@@ -375,7 +418,7 @@ public:
     void drawSurface(const GLSurface &surface, double x, double y, double w, double h);
     
     // Specialized
-    void drawSurface(WorldBitmap& bmp);
+    void drawSurface(CanvasBitmapObject& bmp);
 
     void setFont(QNanoFont font)
     {
@@ -386,6 +429,17 @@ public:
     void fillRect(double x, double y, double w, double h)
     {
         painter->fillRect(x, y, w, h);
+    }
+
+    void strokeQuad(const FQuad &quad)
+    {
+        beginPath();
+        moveTo(quad.a);
+        lineTo(quad.b);
+        lineTo(quad.c);
+        lineTo(quad.d);
+        lineTo(quad.a);
+        stroke();
     }
 
     void fillRect(const FRect& r)

@@ -233,7 +233,7 @@ struct SpaceEngine_Scene : public Scene
     bool optimize_gravity = false;
     bool optimize_collisions = false;
 
-    void sceneAttributes(Input* options) override;
+    void sceneAttributes() override;
     void sceneStart() override;
     void sceneDestroy() override;
     void sceneProcess() override;

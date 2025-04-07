@@ -10,7 +10,7 @@ class QMouseEvent;
 class QWheelEvent;
 class QKeyEvent;
 
-#include "imgui.h"
+#include "imgui_custom.h"
 
 namespace QtImGui {
 

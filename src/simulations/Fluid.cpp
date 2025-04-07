@@ -4,10 +4,10 @@ SIM_DECLARE(Fluid, "Physics", "Fabric")
 // Shared variables (available to all scenes)
 
 
-void Fluid_Project::projectAttributes(Input* options)
+void Fluid_Project::projectAttributes()
 {
     // Project settings
-    options->realtime_slider("Viewport Count", &viewport_count, 1, 36, 1);
+    ImGui::SliderInt("Viewport Count", &viewport_count, 1, 36);
 }
 
 void Fluid_Project::projectPrepare()
@@ -23,16 +23,16 @@ void Fluid_Project::projectPrepare()
     //}
 }
 
-void Fluid_Scene::sceneAttributes(Input* options)
+void Fluid_Scene::sceneAttributes()
 {
     // SceneBase Settings
-    options->realtime_slider("Timestep", &timestep, 0.01, 0.1, 0.01);
-    options->realtime_slider("Particle Count", &particle_count, 10, 1000, 10);
-    options->realtime_slider("Spring Distance", &spring_dist, 10.0, 100.0, 10.0);
-    options->realtime_slider("Spring Stiffness", &spring_stiffness, 0.0, 1.0, 0.01);
-    options->realtime_slider("Spring Damping", &spring_damping, 0.0001, 0.1, 0.0001);
-    options->realtime_slider("Viscosity Strength", &viscosity_strength, 0.0, 1.0, 0.01);
-    options->realtime_slider("Viscosity Spring Dist-Ratio", &viscosity_spring_dist_ratio, 1.0, 100.0, 0.1);
+    ImGui::SliderDouble("Timestep", &timestep, 0.01, 0.1);
+    ImGui::SliderInt("Particle Count", &particle_count, 10, 1000);
+    ImGui::SliderDouble("Spring Distance", &spring_dist, 10.0, 100.0);
+    ImGui::SliderDouble("Spring Stiffness", &spring_stiffness, 0.0, 1.0);
+    ImGui::SliderDouble("Spring Damping", &spring_damping, 0.0001, 0.1);
+    ImGui::SliderDouble("Viscosity Strength", &viscosity_strength, 0.0, 1.0);
+    ImGui::SliderDouble("Viscosity Spring Dist-Ratio", &viscosity_spring_dist_ratio, 1.0, 100.0);
 }
 
 

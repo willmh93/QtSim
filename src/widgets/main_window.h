@@ -43,13 +43,9 @@ public:
 
     MainWindow* main_window = nullptr;
     Project* project = nullptr;
-
     Options* options = nullptr;
-    Input* input_proxy = nullptr;
-
     ProjectCanvasWidget* canvas = nullptr;
 
-   
     ProjectWorker(QObject* parent = nullptr)
         : QObject(parent)
     {
@@ -103,9 +99,12 @@ protected:
 
     friend class ProjectWorker;
     friend class CanvasWidget;
+    friend class ImOptions;
     friend class ProjectCanvasWidget;
 
-    QMutex sim_lock;
+    //QMutex sim_lock;
+
+    QReadWriteLock simLock;
 
     void closeEvent(QCloseEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;

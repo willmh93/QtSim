@@ -194,33 +194,10 @@ void Bitmap::draw(PaintContext* ctx, const Vec2& pt, const Vec2& size)
     draw(ctx, pt.x, pt.y, size.x, size.y);
 }
 
-void WorldBitmap::setBitmapSize(int w, int h)
+FQuad CanvasBitmapObject::getWorldQuad(PaintContext* ctx)
 {
-    if (w < 0) w = 0;
-    if (h < 0) h = 0;
-
-    if (bmp_width != w || bmp_height != h)
-    {
-        fw = static_cast<double>(w);
-        fh = static_cast<double>(h);
-
-        qDebug() << "Resizing";
-        create(w, h);
-        needs_reshading = true;
-    }
-}
-
-void WorldBitmap::setWorldRect(double x0, double y0, double x1, double y1)
-{
-    double w = x1 - x0;
-    double h = y1 - y0;
-
-    if (wx0 != x0 || wy0 != y0 || ww != w || wh != h)
-    {
-        wx0 = x0;
-        wy0 = y0;
-        ww = w;
-        wh = h;
-        needs_reshading = true;
-    }
+    if (coordinate_type == CoordinateType::WORLD)
+        return getQuad();
+    else
+        return ctx->camera.toWorldQuad(getQuad());
 }

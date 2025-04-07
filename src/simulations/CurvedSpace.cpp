@@ -3,10 +3,10 @@
 SIM_DECLARE(CurvedSpace, "Physics", "Experimental", "Space Curvature")
 
 
-void CurvedSpace_Project::projectAttributes(Input* options)
+void CurvedSpace_Project::projectAttributes()
 {
-    options->realtime_slider("Viewport Count", &viewport_count, 1, 36, 1);
-    options->realtime_slider("Start Radius Mult", &shared_config->radius_mult, 0.1, 2.0, 0.1); // Never add same pointer twice
+    ImGui::SliderInt("Viewport Count", &viewport_count, 1, 36);
+    ImGui::SliderDouble("Start Radius Mult", &shared_config->radius_mult, 0.1, 2.0);
 }
 
 void CurvedSpace_Project::projectPrepare()
@@ -44,10 +44,10 @@ void CurvedSpace_Project::projectPrepare()
 
 
 
-void CurvedSpace_Scene::sceneAttributes(Input* options)
+void CurvedSpace_Scene::sceneAttributes()
 {
-    options->realtime_slider("Gravity", &gravity, 0.0, 1.0, 0.1);
-    options->starting_checkbox("Custom Color", &custom_color);
+    ImGui::SliderDouble("Gravity", &gravity, 0.0, 1.0);
+    ImGui::Checkbox("Custom Color", &custom_color);
 }
 
 

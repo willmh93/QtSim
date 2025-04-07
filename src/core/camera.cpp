@@ -2,10 +2,11 @@
 #include "camera.h"
 #include "project.h"
 
-void Camera::setTransformFilters(bool _transform_coordinates, bool _scale_line_txt, bool _rotate_text)
+void Camera::setTransformFilters(bool _transform_coordinates, bool _scale_line_txt, bool _scale_sizes, bool _rotate_text)
 {
     transform_coordinates = _transform_coordinates;
     scale_lines_text = _scale_line_txt;
+    scale_sizes = _scale_sizes;
     rotate_text = _rotate_text;
     viewport->setLineWidth(viewport->line_width);
 }
@@ -14,6 +15,7 @@ void Camera::setTransformFilters(bool all)
 {
     transform_coordinates = all;
     scale_lines_text = all;
+    scale_sizes = all;
     rotate_text = all;
     viewport->setLineWidth(viewport->line_width);
 }
@@ -22,6 +24,7 @@ void Camera::worldTransform()
 {
     transform_coordinates = true;
     scale_lines_text = true;
+    scale_sizes = true;
     rotate_text = true;
     viewport->setLineWidth(viewport->line_width);
 }
@@ -30,6 +33,7 @@ void Camera::stageTransform()
 {
     transform_coordinates = false;
     scale_lines_text = false;
+    scale_sizes = true; // Make sure zoom doesn't affect circle/shape sizes
     rotate_text = false;
     viewport->setLineWidth(viewport->line_width);
 }
@@ -38,6 +42,7 @@ void Camera::labelTransform()
 {
     transform_coordinates = true;
     scale_lines_text = false;
+    //scale_sizes = true; // leave unchanged
     rotate_text = false;
     viewport->setLineWidth(viewport->line_width);
 }
@@ -46,6 +51,7 @@ void Camera::saveCameraTransform()
 {
     saved_transform_coordinates = transform_coordinates;
     saved_scale_lines_text = scale_lines_text;
+    saved_scale_sizes = scale_sizes;
     saved_rotate_text = rotate_text;
 }
 
@@ -53,8 +59,42 @@ void Camera::restoreCameraTransform()
 {
     transform_coordinates = saved_transform_coordinates;
     scale_lines_text = saved_scale_lines_text;
+    scale_sizes = saved_scale_sizes;
     rotate_text = saved_rotate_text;
     viewport->setLineWidth(viewport->line_width);
+}
+
+
+void Camera::setOriginViewportAnchor(double ax, double ay)
+{
+    focal_anchor_x = ax;
+    focal_anchor_y = ay;
+}
+
+void Camera::setOriginViewportAnchor(Anchor anchor)
+{
+    switch (anchor)
+    {
+    case Anchor::TOP_LEFT:
+        focal_anchor_x = 0;
+        focal_anchor_y = 0;
+        break;
+    case Anchor::CENTER:
+        focal_anchor_x = 0.5;
+        focal_anchor_y = 0.5;
+        break;
+    }
+}
+
+Vec2 Camera::originPixelOffset()
+{
+    double viewport_cx = (viewport->width / 2.0);
+    double viewport_cy = (viewport->height / 2.0);
+
+    return Vec2(
+        viewport_cx + viewport->width * (focal_anchor_x - 0.5),
+        viewport_cy + viewport->height * (focal_anchor_y - 0.5)
+    );
 }
 
 // Scale world to fit viewport rect
@@ -78,7 +118,10 @@ void Camera::cameraToViewport(
     y = (port_h / 2) / zoom_y;
 }
 
-void Camera::focusWorldRect(double left, double top, double right, double bottom, bool stretch)
+void Camera::focusWorldRect(
+    double left, double top, 
+    double right, double bottom, 
+    bool stretch)
 {
     double world_w = right - left;
     double world_h = bottom - top;
@@ -92,8 +135,8 @@ void Camera::focusWorldRect(double left, double top, double right, double bottom
         targ_zoom_y = zoom_y = (viewport_h / world_h);
 
         Vec2 _originWorldOffset = originWorldOffset();
-        x = left + _originWorldOffset.x; /*+ (viewport_w / 2) / zoom_x*/;
-        y = top + _originWorldOffset.y; /*+ (viewport_h / 2) / zoom_y*/;
+        x = left + _originWorldOffset.x;
+        y = top + _originWorldOffset.y;
     }
     else
     {
@@ -132,15 +175,10 @@ void Camera::focusWorldRect(double left, double top, double right, double bottom
             x = _originWorldOffset.x + left - world_ox;
             y = _originWorldOffset.y + top - world_oy;
         }
-
-        //x = (left + (viewport_w / 2) / zoom_x);
-        //y = (top + (viewport_h / 2) / zoom_y);
     }
-}
 
-void Camera::focusWorldRect(const FRect& r, bool stretch)
-{
-    focusWorldRect(r.x1, r.y1, r.x2, r.y2, stretch);
+    reference_zoom_x = zoom_x;
+    reference_zoom_y = zoom_y;
 }
 
 void Camera::originToCenterViewport()
@@ -149,146 +187,29 @@ void Camera::originToCenterViewport()
     y = 0;
 }
 
-Vec2 Camera::originPixelOffset()
+
+void Camera::setRelativeZoomRange(double min, double max)
 {
-    double viewport_cx = (viewport->width / 2.0);
-    double viewport_cy = (viewport->height / 2.0);
-
-    return Vec2(
-         viewport_cx +  viewport->width * (focal_anchor_x - 0.5),// * zoom_x,
-         viewport_cy +  viewport->height * (focal_anchor_y - 0.5)// * zoom_y
-    );
-}
-
-Vec2 Camera::originWorldOffset()
-{
-    return originPixelOffset() / Vec2(zoom_x, zoom_y);
-}
-
-Vec2 Camera::panPixelOffset()
-{
-    return Vec2(
-        pan_x * zoom_x,
-        pan_y * zoom_y
-    );
-}
-
-Vec2 Camera::toWorld(const Vec2& pt)
-{
-    // World coordinate
-    double px = pt.x;
-    double py = pt.y;
-
-    double cos_r = cos(rotation);
-    double sin_r = sin(rotation);
-
-    
-
-    double origin_ox = originPixelOffset().x;//(viewport->width * (focal_anchor_x - 0.5) * zoom_x);
-    double origin_oy = originPixelOffset().y;//(viewport->height * (focal_anchor_y - 0.5) * zoom_y);
-
-    px -= origin_ox;
-    py -= origin_oy;
-
-    px -= panPixelOffset().x; //pan_x * zoom_x;
-    py -= panPixelOffset().y; //pan_y * zoom_y;
-
-    double world_x = (px * cos_r + py * sin_r);
-    double world_y = (py * cos_r - px * sin_r);
-
-    world_x -= -this->x * zoom_x;
-    world_y -= -this->y * zoom_y;
-
-    world_x /= zoom_x;
-    world_y /= zoom_y;
-
-    return { world_x, world_y };
-}
-
-Vec2 Camera::toWorld(double x, double y)
-{
-    return toWorld({ x, y });
-}
-
-FRect Camera::toWorldRect(const FRect& r)
-{
-    Vec2 tl = toWorld(r.x1, r.y1);
-    Vec2 br = toWorld(r.x2, r.y2);
-    return { tl.x, tl.y, br.x, br.y };
-}
-
-FRect Camera::toWorldRect(double x1, double y1, double x2, double y2)
-{
-    Vec2 tl = toWorld(x1, y1);
-    Vec2 br = toWorld(x2, y2);
-    return { tl.x, tl.y, br.x, br.y };
-}
-
-Vec2 Camera::toStage(const Vec2& pt)
-{
-    // World coordinate
-    double px = pt.x;
-    double py = pt.y;
-
-    double cos_r = cos(rotation);
-    double sin_r = sin(rotation);
-
-    double origin_ox   = originPixelOffset().x;//(viewport->width * (focal_anchor_x - 0.5) * zoom_x);
-    double origin_oy   = originPixelOffset().y;//(viewport->height * (focal_anchor_y - 0.5) * zoom_y);
-
-    /// Do transform
-
-    px *= zoom_x;
-    py *= zoom_y;
-
-    px += -this->x * zoom_x;
-    py += -this->y * zoom_y;
-
-    double ret_x = (px * cos_r - py * sin_r);
-    double ret_y = (py * cos_r + px * sin_r);
-
-    ret_x += panPixelOffset().x;//pan_x * zoom_x;
-    ret_y += panPixelOffset().y;//pan_y * zoom_y;
-
-    ret_x += origin_ox;
-    ret_y += origin_oy;
-
-    return { ret_x, ret_y };
-}
-
-Vec2 Camera::toStage(double x, double y)
-{
-    return toStage({ x, y });
-}
-
-Vec2 Camera::toStageSize(const Vec2& size)
-{
-    return { size.x * zoom_x, size.y * zoom_y };
-}
-
-Vec2 Camera::toStageSize(double w, double h)
-{
-    return { w * zoom_x, h * zoom_y };
-}
-
-FRect Camera::toStageRect(double x0, double y0, double x1, double y1)
-{
-    Vec2 p1 = toStage({ x0, y0 });
-    Vec2 p2 = toStage({ x1, y1 });
-    return { p1.x, p1.y, p2.x, p2.y };
-}
-
-FRect Camera::toStageRect(const Vec2& pt1, const Vec2& pt2)
-{
-    return toStageRect(pt1.x, pt1.y, pt2.x, pt2.y);
+    min_zoom = min;
+    max_zoom = max;
 }
 
 void Camera::panBegin(int _x, int _y)
 {
     pan_down_mx = _x;
     pan_down_my = _y;
-    pan_beg_x = targ_pan_x;
-    pan_beg_y = targ_pan_y;
+
+    if (use_panning_offset)
+    {
+        pan_beg_x = targ_pan_x;
+        pan_beg_y = targ_pan_y;
+    }
+    else
+    {
+        //Vec2 world_mouse = toWorld(x, y);
+        pan_beg_x = x;
+        pan_beg_y = y;
+    }
     panning = true;
 }
 
@@ -296,16 +217,43 @@ void Camera::panDrag(int _x, int _y)
 {
     if (panning)
     {
-        int dx = _x - pan_down_mx;
-        int dy = _y - pan_down_my;
-        targ_pan_x = pan_beg_x + (double)(dx / zoom_x) * pan_mult;
-        targ_pan_y = pan_beg_y + (double)(dy / zoom_y) * pan_mult;
+        if (use_panning_offset)
+        {
+            int dx = _x - pan_down_mx;
+            int dy = _y - pan_down_my;
+            targ_pan_x = pan_beg_x + (double)(dx / zoom_x) * pan_mult;
+            targ_pan_y = pan_beg_y + (double)(dy / zoom_y) * pan_mult;
+        }
+        else
+        {
+            Vec2 world_mouse = toWorld(_x, _y);
+            //double dx = world_mouse.x - pan_down_mx;
+            //double dy = world_mouse.y - pan_down_my;
+            int dx = _x - pan_down_mx;
+            int dy = _y - pan_down_my;
+            Vec2 world_offset = toWorldOffset(dx, dy);
+            //qDebug() << "(dx,dy) = (" << dx << ", " << dy << ")";
+
+            x = pan_beg_x - world_offset.x * pan_mult;
+            y = pan_beg_y - world_offset.y * pan_mult;
+        }
     }
 }
 
 void Camera::panZoomProcess()
 {
     double ease = 1.0;
+
+    /*if (targ_zoom_x < reference_zoom_x*min_zoom) targ_zoom_x = reference_zoom_x*min_zoom;
+    if (targ_zoom_y < reference_zoom_y*min_zoom) targ_zoom_y = reference_zoom_y*min_zoom;
+    if (zoom_x < reference_zoom_x*min_zoom) zoom_x = reference_zoom_x*min_zoom;
+    if (zoom_y < reference_zoom_y*min_zoom) zoom_y = reference_zoom_y*min_zoom;
+
+    if (targ_zoom_x > reference_zoom_x * max_zoom) targ_zoom_x = reference_zoom_x * max_zoom;
+    if (targ_zoom_y > reference_zoom_y * max_zoom) targ_zoom_y = reference_zoom_y * max_zoom;
+    if (zoom_x > reference_zoom_x * max_zoom) zoom_x = reference_zoom_x * max_zoom;
+    if (zoom_y > reference_zoom_y * max_zoom) zoom_y = reference_zoom_y * max_zoom;
+    */
     pan_x += (targ_pan_x - pan_x) * ease;
     pan_y += (targ_pan_y - pan_y) * ease;
     zoom_x += (targ_zoom_x - zoom_x) * ease;

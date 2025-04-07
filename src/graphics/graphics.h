@@ -96,34 +96,75 @@ public:
     }
 };
 
-class WorldBitmap : public Bitmap
+class CanvasBitmapObject : public Bitmap, public CanvasObject
 {
 protected:
-    double fw = 0;
-    double fh = 0;
-    double wx0 = 0;
-    double wy0 = 0;
-    double ww = 0;
-    double wh = 0;
+    double bmp_fw = 0;
+    double bmp_fh = 0;
 
-    // Represents stage OR world coordinates, depending on what's picked
-    double _x0;
-    double _y0;
-    double _x1;
-    double _y1;
-
-    FRect old_world_rect;
+    ///FRect old_world_rect;
     bool needs_reshading = false;
-    bool transform_stage = false;
-
-    void setWorldRect(double x0, double y0, double x1, double y1);
+    FQuad prev_world_quad;
 
     friend class PaintContext;
 
 public:
     //std::function<void(void)> shader = nullptr;
 
-    bool reshadingWorld(double x0, double y0, double x1, double y1)
+    /*CanvasBitmapObject(CoordinateType t)
+    {
+        coordinate_type = t;
+    }*/
+
+    void setNeedsReshading(bool b = true)
+    {
+        needs_reshading = b;
+    }
+
+    bool needsReshading(PaintContext* ctx)
+    {
+        FQuad world_quad = getWorldQuad(ctx);
+        if (needs_reshading || (world_quad != prev_world_quad))
+        {
+            needs_reshading = false; // todo: Move to when drawn?
+            prev_world_quad = world_quad;
+            return true;
+        }
+        prev_world_quad = world_quad;
+        return false;
+    }
+
+    /*bool needsReshadingStage(PaintContext* ctx)
+    {
+        coordinate_type = CoordinateType::STAGE;
+
+        FQuad world_quad = getWorldQuad(ctx);
+        if (needs_reshading || (world_quad != prev_world_quad))
+        {
+            needs_reshading = false; // todo: Move to when drawn?
+            prev_world_quad = world_quad;
+            return true;
+        }
+        prev_world_quad = world_quad;
+        return false;
+    }
+
+    bool needsReshadingWorld(PaintContext* ctx)
+    {
+        coordinate_type = CoordinateType::WORLD;
+
+        FQuad world_quad = getWorldQuad(ctx);
+        if (needs_reshading || (world_quad != prev_world_quad))
+        {
+            needs_reshading = false; // todo: Move to when drawn?
+            prev_world_quad = world_quad;
+            return true;
+        }
+        prev_world_quad = world_quad;
+        return false;
+    }*/
+
+    /*bool reshadingWorld(double x0, double y0, double x1, double y1)
     {
         _x0 = x0;
         _y0 = y0;
@@ -165,23 +206,119 @@ public:
 
         if (needs_reshading)
         {
-            qDebug() << "Reshading";
             needs_reshading = false;
             return true;
         }
         return false;
+    }*/
+
+    void setBitmapSize(int bmp_w, int bmp_h)
+    {
+        if (bmp_w < 0) bmp_w = 0;
+        if (bmp_h < 0) bmp_h = 0;
+
+        if (bmp_width != bmp_w || bmp_height != bmp_h)
+        {
+            bmp_fw = static_cast<double>(bmp_w);
+            bmp_fh = static_cast<double>(bmp_h);
+
+            qDebug() << "Resizing";
+            create(bmp_w, bmp_h);
+            needs_reshading = true;
+        }
     }
 
-    void setBitmapSize(int w, int h);
+    FQuad getWorldQuad(PaintContext* ctx);
 
-    inline double wx(int px)
+    // Callback format: void(int x, int y, double wx, double wy)
+    template<typename Callback>
+    void forEachWorldPixel(
+        PaintContext* ctx, 
+        Callback&& callback, 
+        int thread_count = QThread::idealThreadCount())
     {
-        return wx0 + (((static_cast<double>(px)+0.5) / fw) * ww);
-    }
+        static_assert(std::is_invocable_r_v<void, Callback, int, int, double, double>,
+            "Callback must be: void(int x, int y, double wx, double wy)");
 
-    inline double wy(int py)
-    {
-        return wy0 + (((static_cast<double>(py)+0.5) / fh) * wh);
+        FQuad world_quad = getWorldQuad(ctx);
+
+        double step_wx = (world_quad.b.x - world_quad.a.x) / bmp_fw;
+        double step_wy = (world_quad.b.y - world_quad.a.y) / bmp_fw;
+
+        double scanline_origin_dx = (world_quad.d.x - world_quad.a.x) / bmp_fh;
+        double scanline_origin_dy = (world_quad.d.y - world_quad.a.y) / bmp_fh;
+
+        double scanline_origin_dist_x = (world_quad.d.x - world_quad.a.x);
+        double scanline_origin_dist_y = (world_quad.d.y - world_quad.a.y);
+
+        double scanline_origin_ax = world_quad.a.x;
+        double scanline_origin_ay = world_quad.a.y;
+
+        auto row_ranges = splitRanges(bmp_height, thread_count);
+        std::vector<QFuture<void>> futures(thread_count);
+
+        if (thread_count > 0)
+        {
+            for (int ti = 0; ti < thread_count; ++ti)
+            {
+                auto& row_range = row_ranges[ti];
+                futures[ti] = QtConcurrent::run([&, row_range]()
+                {
+                    double ax = world_quad.a.x;
+                    double ay = world_quad.a.y;
+                    double bx = world_quad.b.x;
+                    double by = world_quad.b.y;
+                    double cx = world_quad.c.x;
+                    double cy = world_quad.c.y;
+                    double dx = world_quad.d.x;
+                    double dy = world_quad.d.y;
+
+                    for (int bmp_y = row_range.first; bmp_y < row_range.second; ++bmp_y)
+                    {
+                        double v = static_cast<double>(bmp_y) / static_cast<double>(bmp_fh);
+
+                        // Interpolate left and right edges of the scanline
+                        double scan_left_x = world_quad.a.x + (world_quad.d.x - world_quad.a.x) * v;
+                        double scan_left_y = world_quad.a.y + (world_quad.d.y - world_quad.a.y) * v;
+
+                        double scan_right_x = world_quad.b.x + (world_quad.c.x - world_quad.b.x) * v;
+                        double scan_right_y = world_quad.b.y + (world_quad.c.y - world_quad.b.y) * v;
+
+                        for (int bmp_x = 0; bmp_x < bmp_width; ++bmp_x)
+                        {
+                            double u = static_cast<double>(bmp_x) / static_cast<double>(bmp_fw);
+
+                            double wx = scan_left_x + (scan_right_x - scan_left_x) * u;
+                            double wy = scan_left_y + (scan_right_y - scan_left_y) * u;
+
+                            std::forward<Callback>(callback)(bmp_x, bmp_y, wx, wy);
+                        }
+                    }
+                });
+            }
+
+            for (auto& future : futures)
+                future.waitForFinished();
+        }
+        else
+        {
+            double origin_x = world_quad.a.x;
+            double origin_y = world_quad.a.y;
+
+            for (int bmp_y = 0; bmp_y < bmp_height; bmp_y++)
+            {
+                double wx = origin_x;
+                double wy = origin_y;
+                for (int bmp_x = 0; bmp_x < bmp_width; bmp_x++)
+                {
+                    std::forward<Callback>(callback)(bmp_x, bmp_y, wx, wy);
+                    wx += step_wx;
+                    wy += step_wy;
+                }
+                origin_x += scanline_origin_dx;
+                origin_y += scanline_origin_dy;
+            }
+        }
     }
 };
 

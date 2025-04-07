@@ -5,6 +5,22 @@
 class Project;
 using CreatorFunc = std::function<Project*()>;
 
+// Enums
+
+enum Anchor
+{
+    TOP_LEFT,
+    CENTER
+};
+
+enum CoordinateType
+{
+    STAGE,
+    WORLD
+};
+
+// Types
+
 struct ProjectInfo
 {
     enum State
@@ -43,12 +59,6 @@ struct MouseInfo
     Qt::MouseButton btn = Qt::MouseButton::NoButton;
 };
 
-enum Anchor
-{
-    TOP_LEFT,
-    CENTER
-};
-
 struct Vec2
 {
     double x;
@@ -66,6 +76,10 @@ struct Vec2
     operator QPointF()
     {
         return QPointF(x, y);
+    }
+
+    Vec2 operator-() const {
+        return Vec2(-x, -y);
     }
 
     bool operator==(const Vec2& other) const
@@ -108,6 +122,16 @@ struct Vec2
         return atan2(y, x);
     }
 
+    double average() const
+    {
+        return (x + y) / 2.0;
+    }
+
+    double magnitude() const
+    {
+        return sqrt(x * x + y * y);
+    }
+
     double angleTo(const Vec2& b) const
     {
         return atan2(b.y - y, b.x - x);
@@ -132,6 +156,14 @@ struct Vec2
         return {
             round(x) + offset,
             round(y) + offset
+        };
+    }
+
+    static Vec2 lerp(const Vec2& a, const Vec2& b, double ratio)
+    {
+        return {
+            (a.x + (b.x - a.x) * ratio),
+            (a.y + (b.y - a.y) * ratio)
         };
     }
 };
@@ -406,8 +438,6 @@ struct Size
     }
 };
 
-
-
 struct FRect
 {
     double x1 = 0.0;
@@ -585,3 +615,18 @@ struct Rect
         return {x2 - x1, y2 - y1};
     }
 };
+
+struct FQuad
+{
+    Vec2 a, b, c, d;
+
+    bool operator ==(const FQuad& rhs)
+    {
+        return (a == rhs.a && b == rhs.b && c == rhs.c && d == rhs.d);
+    }
+    bool operator !=(const FQuad& rhs)
+    {
+        return (a != rhs.a || b != rhs.b || c != rhs.c || d != rhs.d);
+    }
+};
+

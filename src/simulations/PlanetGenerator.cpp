@@ -10,9 +10,8 @@ double particleRadiusForPlanet(double planet_radius, int subparticle_count)
 
 /// Project ///
 
-void PlanetGenerator_Project::projectAttributes(Input* input)
+void PlanetGenerator_Project::projectAttributes()
 {
-    //options->realtime_slider("Panel Count", &panel_count, 1, 16, 1);
 }
 
 void PlanetGenerator_Project::projectPrepare()
@@ -34,7 +33,7 @@ void PlanetGenerator_Project::projectPrepare()
 
 /// Scene ///
 
-void PlanetGenerator_Scene::sceneAttributes(Input* input)
+void PlanetGenerator_Scene::sceneAttributes()
 {
     //--- Only updated on sceneStart ---//
 
@@ -43,10 +42,10 @@ void PlanetGenerator_Scene::sceneAttributes(Input* input)
 
     //--- Updated in realtime ---//
 
-    input->realtime_slider("Particle Count", &particle_count, 1, 1000);
-    input->realtime_slider("Planet Radius", &planet_radius, 10, 1000.0);
-    input->realtime_slider("Push Multiple", &push_mult, 0.1, 10.0);
-    input->realtime_slider("Steps", &push_steps, 1, 10000);
+    ImGui::SliderInt("Particle Count", &particle_count, 1, 1000);
+    ImGui::SliderDouble("Planet Radius", &planet_radius, 10.0, 1000.0);
+    ImGui::SliderDouble("Push Multiple", &push_mult, 0.1, 10.0);
+    ImGui::SliderInt("Steps", &push_steps, 1, 10000);
     
 }
 

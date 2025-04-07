@@ -22,7 +22,7 @@ struct BigBang_Scene : public SpaceEngine_Scene
 
     void loadShaders();
 
-    void sceneAttributes(Input* input);
+    void sceneAttributes();
     void sceneStart() override;
     void sceneProcess() override;
     void sceneMounted(Viewport* ctx) override;

@@ -7,7 +7,7 @@ void SpaceEngine_Project::projectPrepare()
     create<SpaceEngine_Scene>(1)->mountTo(newLayout());
 }
 
-void SpaceEngine_Scene::sceneAttributes(Input* options)
+void SpaceEngine_Scene::sceneAttributes()
 {
     //camera.enable();
 
@@ -29,24 +29,20 @@ void SpaceEngine_Scene::sceneAttributes(Input* options)
     //options->slider("Particles", &particle_count, 10, 20000);
 
 
-    options->realtime_checkbox("Optimize Gravity", &optimize_gravity);
-    options->realtime_checkbox("Optimize Collisions", &optimize_collisions);
+    ImGui::Checkbox("Optimize Gravity", &optimize_gravity);
+    ImGui::Checkbox("Optimize Collisions", &optimize_collisions);
 
-    options->realtime_checkbox("Draw Gravity Grid", &draw_gravity_grid);
-    options->realtime_checkbox("Draw Collision Grid", &draw_collision_grid);
+    ImGui::Checkbox("Draw Gravity Grid", &draw_gravity_grid);
+    ImGui::Checkbox("Draw Collision Grid", &draw_collision_grid);
 
-    options->realtime_slider("Steps Per Frame", &steps_per_frame, 1, 100);
+    ImGui::SliderInt("Steps Per Frame", &steps_per_frame, 1, 100);
     
     //step_seconds = 0.1;
 
-    auto timestep_slider = options->realtime_slider("Time step (seconds)",
+    auto timestep_slider = ImGui::SliderDouble("Time step (seconds)",
         &step_seconds,
-        0,//step_seconds * 0.5,
-        step_seconds * 10,
-        step_seconds * 0.1);
-        //&step_seconds_min, 
-        //&step_seconds_max, 
-        //&step_seconds_step);
+        0.0,//step_seconds * 0.5,
+        step_seconds * 10.0);
 
     ///timestep_slider->label_value = [this](double seconds)
     ///{
@@ -55,11 +51,13 @@ void SpaceEngine_Scene::sceneAttributes(Input* options)
     ///};
 
 
-    options->realtime_slider("Collision Substeps", &collision_substeps, 1, 20, 1);
+    ImGui::SliderInt("Collision Substeps", &collision_substeps, 1, 20);
 
 
-    options->realtime_slider("Gravity Cell Ratio", &gravity_cell_near_ratio, 0.001, 0.1, 0.001);
-    options->realtime_slider("Gravity Near-Distance Cells", &gravity_cell_near_grid_radius, 1, 10, 1);
+    ImGui::SliderDouble("Gravity Cell Ratio", &gravity_cell_near_ratio, 0.001, 0.1);
+    ImGui::SliderInt("Gravity Near-Distance Cells", &gravity_cell_near_grid_radius, 1, 10);
+
+    
 
     //options->slider("Gravity Cell Far-Ratio", &gravity_cell_far_ratio, 0.01, 0.5, 0.01);
     //options->slider("Collision Cell Size", &collision_cell_size, &collision_cell_size_min, &collision_cell_size_max, &collision_cell_size_step);
@@ -1111,7 +1109,7 @@ void SpaceEngine_Scene::viewportDraw(Viewport*ctx)
     ctx->print() << "Time elapsed: " << normalizeSeconds(time_elapsed) << "\n\n";
     ctx->print() << "dt: " << scene_dt(20) << "\n";
 
-    /*camera->setTransformFilters(false, false, false);
+    /*camera->setTransformFilters(false, false, false, false);
 
     int ty = 5;
     int row_h = 18;

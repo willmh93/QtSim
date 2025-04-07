@@ -42,7 +42,7 @@ struct EarthMoon_Scene : public SpaceEngine_Scene
 
     bool planet_subparticles = false;
 
-    void sceneAttributes(Input* options);
+    void sceneAttributes();
     void sceneStart() override;
     void sceneMounted(Viewport* ctx);
     void viewportProcess(Viewport* ctx);

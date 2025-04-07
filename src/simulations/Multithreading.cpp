@@ -3,9 +3,9 @@ SIM_DECLARE(Multithreading, "Framework Tests", "Multithreading")
 
 /// Project ///
 
-void Multithreading_Project::projectAttributes(Input* options)
+void Multithreading_Project::projectAttributes()
 {
-    options->realtime_slider("Panel Count", &panel_count, 1, 16, 1);
+    ImGui::SliderInt("Panel Count", &panel_count, 1, 16);
 }
 
 void Multithreading_Project::projectPrepare()
@@ -27,14 +27,14 @@ void Multithreading_Project::projectPrepare()
 
 /// Scene ///
 
-void Multithreading_Scene::sceneAttributes(Input* options)
+void Multithreading_Scene::sceneAttributes()
 {
     ///--- Only updated on sceneStart ---///
-    thread_count = 4;// QThread::idealThreadCount();
+    thread_count = QThread::idealThreadCount();
 
     //options->starting_checkbox("Starting Flag", &var1);                
-    options->starting_slider("Thread Count", &thread_count, 1, 32);
-    options->realtime_slider("Acceleration", &acceleration, 0, 0.000002);
+    ImGui::SliderInt("Thread Count", &thread_count, 1, 32);
+    ImGui::SliderDouble("Acceleration", &acceleration, 0.0, 0.000002);
 
     ///--- Updated in realtime ---///
 

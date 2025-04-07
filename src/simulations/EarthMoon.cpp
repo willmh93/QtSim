@@ -13,7 +13,7 @@ void EarthMoon_Project::projectPrepare()
         layout << scene;
 }
 
-void EarthMoon_Scene::sceneAttributes(Input* options)
+void EarthMoon_Scene::sceneAttributes()
 {
 
     steps_per_frame = 100;
@@ -58,16 +58,16 @@ void EarthMoon_Scene::sceneAttributes(Input* options)
     world_size_max = solar_system_size * 10;*/
 
 
-    options->realtime_checkbox("Show Moon", &show_moon);
-    options->starting_slider("Earth Particles", &earth_particle_count, 10, 2000);
-    options->realtime_slider("Bounce Coefficient", &particle_bounce, 0.0, 1.0, 0.01);
-    options->starting_slider("Particle Speed (m/s^2)", &particle_speed, 0.0, 1e11, 1e5);
+    ImGui::Checkbox("Show Moon", &show_moon);
+    ImGui::SliderInt("Earth Particles", &earth_particle_count, 10, 2000);
+    ImGui::SliderDouble("Bounce Coefficient", &particle_bounce, 0.0, 1.0);
+    ImGui::SliderDouble("Particle Speed (m/s^2)", &particle_speed, 0.0, 1e11);
     
     //options->starting_checkbox("Show Moon", &show_moon);
     //options->starting_slider("Particle Radius (gm)", &particle_radius, particle_radius_min, particle_radius_max, particle_radius_step);
     //options->slider("Particle Mass (zg)", &start_particle_mass, &particle_mass_min, &particle_mass_max, &particle_mass_step);
 
-    SpaceEngine_Scene::sceneAttributes(options);
+    SpaceEngine_Scene::sceneAttributes();
 }
 
 

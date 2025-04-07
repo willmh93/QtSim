@@ -78,6 +78,12 @@ void Scene::mountToAll(Layout& viewports)
         viewport->mountScene(this);
 }
 
+bool Scene::keyPressed(int key)
+{
+    // todo: Add viewport focus support
+    return project->keyPressed(key);
+}
+
 int Scene::scene_dt(int average_samples)
 {
     if (dt_call_index >= dt_scene_ma_list.size())
@@ -307,19 +313,13 @@ void Project::_projectPrepare()
 {
     viewports.clear();
 
-    input_proxy->clearPointers();
 
-    ///projectAttributes(input_proxy);
-    //input_proxy->forceBroadcast();
+    ImGui::updatePointerValues();
 
     // Prepare project and create layout
     // Note: This is where old viewports get replaced
     scene_counter = 0;
     projectPrepare();
-
-    ImInputManager::updateWithStartingValues();
-
-    input_proxy->removeUnusedInputs();
 }
 
 void Project::_projectStart()
@@ -352,6 +352,8 @@ void Project::_projectStart()
         scene->dt_scene_ma_list.clear();
         scene->dt_project_ma_list.clear();
         scene->dt_project_draw_ma_list.clear();
+        scene->variableChangedClearMaps();
+
         scene->sceneStart();
     }
 
@@ -385,8 +387,6 @@ void Project::_projectStop()
 
 void Project::_projectDestroy()
 {
-    input_proxy->clearPointers();
-
     setProjectInfoState(ProjectInfo::INACTIVE);
     projectDestroy();
 }
@@ -486,7 +486,7 @@ void Project::_projectProcess()
         {
             timer_projectProcess.start();
 
-            // Process each scene scene
+            // Process each scene
             for (Scene* scene : viewports.all_scenes)
             {
                 scene->dt_call_index = 0;
@@ -510,6 +510,12 @@ void Project::_projectProcess()
 
                 viewport->old_width = viewport->width;
                 viewport->old_height = viewport->height;
+            }
+
+            // Post-Process each scene
+            for (Scene* scene : viewports.all_scenes)
+            {
+                scene->variableChangedUpdateCurrent();
             }
 
             dt_projectProcess = timer_projectProcess.elapsed();
@@ -596,8 +602,10 @@ void Project::mouseMove(int x, int y)
         double viewport_my = y - viewport->y;
         Camera& cam = viewport->camera;
 
-        if (viewport_mx >= 0 && viewport_my >= 0 &&
-            viewport_mx <= viewport->width && viewport_my <= viewport->height)
+        if (viewport_mx >= 0 && 
+            viewport_my >= 0 &&
+            viewport_mx <= viewport->width && 
+            viewport_my <= viewport->height)
         {
             Vec2 world_mouse = cam.toWorld(viewport_mx, viewport_my);
             mouse.viewport = viewport;
@@ -627,8 +635,31 @@ void Project::mouseWheel(int x, int y, int delta)
 
             if (cam.zooming_enabled)
             {
-                cam.targ_zoom_x += (((double)delta) * cam.targ_zoom_x) / 1000.0;
-                cam.targ_zoom_y = cam.targ_zoom_x;
+                //if ((abs(cam.targ_zoom_x / cam.targ_zoom_y) - 1.0) < 0.01)
+                //{
+                //    // lock values exactly if similar enough
+                //    cam.targ_zoom_x = cam.targ_zoom_y;
+                //}
+
+                double spin = (delta > 0) ? 50 : -50;
+
+                if (keyPressed(Qt::Key_Control) && keyPressed(Qt::Key_Shift))
+                {
+                    cam.rotation += (((double)delta)) / 3000.0;
+                }
+                else if (keyPressed(Qt::Key_Shift))
+                {
+                    cam.targ_zoom_y += (((double)delta) * cam.targ_zoom_y) / 1000.0;
+                }
+                else if (keyPressed(Qt::Key_Control))
+                {
+                    cam.targ_zoom_x += (((double)delta) * cam.targ_zoom_x) / 1000.0;
+                }
+                else
+                {
+                    cam.targ_zoom_x += (((double)delta) * cam.targ_zoom_x) / 1000.0;
+                    cam.targ_zoom_y += (((double)delta) * cam.targ_zoom_y) / 1000.0;
+                }
 
                 /// todo: With zoom/pan easing, handle this every frame, check if pixel pos changes
             }
@@ -647,12 +678,14 @@ void Project::mouseWheel(int x, int y, int delta)
 
 void Project::keyPress(QKeyEvent* e)
 {
+    key_pressed[e->key()] = true;
     for (Scene* scene : viewports.all_scenes)
         scene->keyPressed(e);
 }
 
 void Project::keyRelease(QKeyEvent* e)
 {
+    key_pressed[e->key()] = false;
     for (Scene* scene : viewports.all_scenes)
         scene->keyReleased(e);
 }

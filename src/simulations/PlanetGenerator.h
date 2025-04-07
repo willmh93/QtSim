@@ -227,7 +227,7 @@ struct PlanetGenerator_Scene : public Scene
     std::vector<Particle> particles;
 
     // --- Scene management ---
-    void sceneAttributes(Input* input) override;
+    void sceneAttributes() override;
     void sceneStart() override;
     //void sceneStop() override;
     void sceneDestroy() override;
@@ -253,7 +253,7 @@ struct PlanetGenerator_Project : public Project
 {
     int panel_count = 1;
 
-    void projectAttributes(Input* input) override;
+    void projectAttributes() override;
     void projectPrepare() override;
     //void projectStart() override;
     //void projectStop() override;

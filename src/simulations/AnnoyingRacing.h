@@ -423,7 +423,7 @@ struct AnnoyingRacing_Scene : public Scene
     QNanoImage *map;
     
 
-    void sceneAttributes(Input* input) override;
+    void sceneAttributes() override;
 
     void sceneStart() override;
     //void sceneStop() override;
@@ -447,7 +447,7 @@ struct AnnoyingRacing_Project : public Project
 {
     int panel_count = 2;
 
-    void projectAttributes(Input* options) override;
+    void projectAttributes() override;
     void projectPrepare() override;
     //void projectStart() override;
     //void projectStop() override;

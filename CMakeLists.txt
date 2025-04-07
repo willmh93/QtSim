@@ -6,8 +6,15 @@ include(ExternalProject)
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Enable IPO/LTO if available
+include(CheckIPOSupported)
+check_ipo_supported(RESULT result)
+if(result)
+    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+endif()
 
 # packages
 find_package(QT NAMES Qt6 Qt5 REQUIRED)
@@ -36,6 +43,12 @@ if (MSVC)
     add_compile_options(/MP) # Multi-threaded compilation
     add_compile_options(/permissive- /W3 /WX) # Enforce stricter conformance to C++ standard
     add_compile_options(/wd4244 /wd4267 /wd4101 /wd4996)
+
+    #add_compile_options(/O2 /arch:AVX2)
+    #add_compile_options(/O2 /arch:AVX2 /fp:fast)
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    #add_compile_options(-O3 -mavx2 -march=native)
+    #add_compile_options(-O3 -mavx2 -ffast-math -march=native)
 endif()
 
 # Linux Locate ffmpeg
@@ -126,6 +139,7 @@ target_include_directories(QtSim PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/ui)
 #target_include_directories(QtSim PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/imgui)
 target_include_directories(QtSim PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/widgets)
 target_include_directories(QtSim PRIVATE ${CMAKE_BINARY_DIR})
+
 
 # Link Qt libraries
 target_link_libraries(QtSim PRIVATE
@@ -254,18 +268,18 @@ function(add_ffmpeg)
     # Dlls
     if(WIN32)
         add_custom_command(TARGET QtSim POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different "${FFMPEG_DEST_DIR}/bin/avcodec-61.dll"    "${CMAKE_BINARY_DIR}/avcodec-61.dll"
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different "${FFMPEG_DEST_DIR}/bin/avformat-61.dll"   "${CMAKE_BINARY_DIR}/avformat-61.dll"
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different "${FFMPEG_DEST_DIR}/bin/avutil-59.dll"     "${CMAKE_BINARY_DIR}/avutil-59.dll"
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different "${FFMPEG_DEST_DIR}/bin/swscale-8.dll"     "${CMAKE_BINARY_DIR}/swscale-8.dll"
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different "${FFMPEG_DEST_DIR}/bin/swresample-5.dll"  "${CMAKE_BINARY_DIR}/swresample-5.dll"
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different "${FFMPEG_DEST_DIR}/bin/avcodec-62.dll"    "${CMAKE_BINARY_DIR}/avcodec-62.dll"
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different "${FFMPEG_DEST_DIR}/bin/avformat-62.dll"   "${CMAKE_BINARY_DIR}/avformat-62.dll"
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different "${FFMPEG_DEST_DIR}/bin/avutil-60.dll"     "${CMAKE_BINARY_DIR}/avutil-60.dll"
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different "${FFMPEG_DEST_DIR}/bin/swscale-9.dll"     "${CMAKE_BINARY_DIR}/swscale-9.dll"
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different "${FFMPEG_DEST_DIR}/bin/swresample-6.dll"  "${CMAKE_BINARY_DIR}/swresample-6.dll"
         )
 
-        find_library(AVCODEC_LIBRARY avcodec PATHS "${DEST_DIR}/bin/avcodec-61.dll")
-        find_library(AVFORMAT_LIBRARY avformat PATHS "${FFMPEG_DEST_DIR}/bin/avformat-61.dll")
-        find_library(AVUTIL_LIBRARY avutil PATHS "${FFMPEG_DEST_DIR}/bin/avutil-59.dll")
-        find_library(SWSCALE_LIBRARY swscale PATHS "${FFMPEG_DEST_DIR}/bin/swscale-8.dll")
-        find_library(SWSCALE_LIBRARY swscale PATHS "${FFMPEG_DEST_DIR}/bin/swresample-5.dll")
+        find_library(AVCODEC_LIBRARY avcodec PATHS "${DEST_DIR}/bin/avcodec-62.dll")
+        find_library(AVFORMAT_LIBRARY avformat PATHS "${FFMPEG_DEST_DIR}/bin/avformat-62.dll")
+        find_library(AVUTIL_LIBRARY avutil PATHS "${FFMPEG_DEST_DIR}/bin/avutil-60.dll")
+        find_library(SWSCALE_LIBRARY swscale PATHS "${FFMPEG_DEST_DIR}/bin/swscale-9.dll")
+        find_library(SWSCALE_LIBRARY swscale PATHS "${FFMPEG_DEST_DIR}/bin/swresample-6.dll")
     endif()
 endfunction()
 
@@ -296,10 +310,19 @@ endfunction()
 function(add_imgui)
     set(IMGUI_BUILD_DIR ${FETCHCONTENT_BASE_DIR}/${BUILD_SYSTEM_NAME}/imgui)
 
+    #FetchContent_Declare(
+    #    imgui
+    #    GIT_REPOSITORY https://github.com/willmh93/imgui.git
+    #    GIT_TAG master
+    #    SOURCE_DIR ${IMGUI_BUILD_DIR}/src
+    #    BINARY_DIR ${IMGUI_BUILD_DIR}/build
+    #    SUBBUILD_DIR ${IMGUI_BUILD_DIR}/subbuild
+    #)
+
     FetchContent_Declare(
         imgui
-        GIT_REPOSITORY https://github.com/willmh93/imgui.git
-        GIT_TAG master
+        GIT_REPOSITORY https://github.com/ocornut/imgui.git
+        GIT_TAG v1.91.9
         SOURCE_DIR ${IMGUI_BUILD_DIR}/src
         BINARY_DIR ${IMGUI_BUILD_DIR}/build
         SUBBUILD_DIR ${IMGUI_BUILD_DIR}/subbuild
@@ -361,6 +384,7 @@ endfunction()
 add_ffmpeg()
 add_qnanopainter()
 add_imgui()
+
 
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.

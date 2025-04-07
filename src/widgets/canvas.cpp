@@ -91,7 +91,9 @@ void ProjectCanvasWidget::paint(QNanoPainter* p)
 
     if (render_source)
     {
-        QMutexLocker locker(&main_window->sim_lock);
+        // Lock simulation processing while we paint simulation/imgui
+        ///QMutexLocker locker(&main_window->sim_lock);
+        QReadLocker readLock(&main_window->simLock);
 
         if (!render_to_offscreen)
         {

@@ -99,34 +99,14 @@ void PaintContext::drawSurface(const GLSurface& surface, double x, double y, dou
     }
 }
 
-void PaintContext::drawSurface(WorldBitmap& bmp)
-{
-    /*if (camera.transform_coordinates)
-    {
-        // Regular draw Bitmap to world
-        bmp.setWorldRect(x, y, x + w, y + h);
-    }
-    else
-    {
-        // Bitmap clamped to stage position, meaning that world 
-        // transformations trigger a reshade. Calculate world-rect
-        // and see if it changed
-        FRect wr = camera.toWorldRect(x, y, x + w, y + h);
-        bmp.setWorldRect(wr.x1, wr.y1, wr.x2, wr.y2);
-    }
 
-    if (bmp.needs_reshading)
-    {
-        if (bmp.shader)
-        {
-            qDebug() << "Reading Bitmap";
-            bmp.shader();
-        }
-        bmp.needs_reshading = false;
-    }*/
+void PaintContext::drawSurface(CanvasBitmapObject& bmp)
+{
+    bmp.img.loadFromData(bmp.data.data());
+    bmp.nano_img.updateImage(painter);
 
     camera.saveCameraTransform();
-    if (bmp.transform_stage)
+    if (bmp.coordinate_type == CoordinateType::STAGE)
     {
         camera.stageTransform();
     }
@@ -135,8 +115,33 @@ void PaintContext::drawSurface(WorldBitmap& bmp)
         camera.worldTransform();
     }
 
-    if (bmp.data.size())
-        drawSurface((Bitmap&)bmp, bmp._x0, bmp._y0, bmp._x1-bmp._x0, bmp._y1-bmp._y0);
+    if (camera.transform_coordinates)
+    {
+        painter->save();
+
+        painter->translate(bmp.x, bmp.y);
+        painter->rotate(bmp.rotation);
+        painter->translate(bmp.localAlignOffsetX(), bmp.localAlignOffsetY());
+        painter->scale(bmp.w / bmp.bmp_width, bmp.h / bmp.bmp_height);
+        painter->drawImage(bmp.nano_img, 0, 0);
+
+        painter->restore();
+    }
+    else
+    {
+        QTransform cur_transform = painter->currentTransform();
+        painter->resetTransform();
+        painter->transform(default_viewport_transform);
+
+        painter->translate(bmp.x, bmp.y);
+        painter->rotate(bmp.rotation);
+        painter->translate(bmp.localAlignOffsetX(), bmp.localAlignOffsetY());
+        painter->scale(bmp.w / bmp.bmp_width, bmp.h / bmp.bmp_height);
+        painter->drawImage(bmp.nano_img, 0, 0);
+
+        painter->resetTransform();
+        painter->transform(cur_transform);
+    }
 
     camera.restoreCameraTransform();
 }
@@ -182,7 +187,7 @@ void PaintContext::drawWorldAxis(
     Vec2 posY_intersect_world = camera.toWorld(posY_intersect);
 
     // Draw with world coordinates, without line scaling
-    camera.setTransformFilters(true, false, false);
+    camera.setTransformFilters(true, false, false, false);
 
     // Draw main axis lines
     setStrokeStyle(255, 255, 255, static_cast<int>(255.0 * axis_opacity));
@@ -195,13 +200,15 @@ void PaintContext::drawWorldAxis(
     lineToSharp(posY_intersect_world.x, posY_intersect_world.y);
     stroke();
 
+    double aspect_ratio = width / height;
+
     // Draw axis ticks
-    camera.setTransformFilters(false, false, false);
-    double ideal_step_wx = (width / 7.0) / camera.zoom_x;
+    camera.setTransformFilters(false);
+    double ideal_step_wx = ((width / aspect_ratio) / 7.0) / camera.zoom_x;
     double ideal_step_wy = (height / 7.0) / camera.zoom_y;
     double step_wx = roundAxisTickStep(ideal_step_wx);
     double step_wy = roundAxisTickStep(ideal_step_wy);
-    double step, ideal_step;
+    /*double step, ideal_step;
     if (step_wx < step_wy)
     {
         ideal_step = ideal_step_wx;
@@ -211,13 +218,13 @@ void PaintContext::drawWorldAxis(
     {
         ideal_step = ideal_step_wy;
         step = step_wx = step_wy;
-    }
+    }*/
 
     //double upperTickStep = 
 
-    double prev_step = fmod(step, ideal_step *2.0);
-    double next_step = roundAxisTickStep(prev_step * 5.0);
-    double step_stretch = (ideal_step - prev_step) / (next_step - prev_step);
+    //double prev_step = fmod(step, ideal_step *2.0);
+    //double next_step = roundAxisTickStep(prev_step * 5.0);
+    //double step_stretch = (ideal_step - prev_step) / (next_step - prev_step);
     double big_step_wx = step_wx * 5.0;
     double big_step_wy = step_wy * 5.0;
 
@@ -229,7 +236,7 @@ void PaintContext::drawWorldAxis(
     fillText("next_step: " + QString::number(next_step), 0, 40);
     fillText("step_stretch: " + QString::number(step_stretch), 0, 60);*/
 
-    double big_angle = step_stretch * M_PI * 2;
+    double big_angle = 0;// step_stretch* M_PI * 2;
     double small_angle = (big_angle) + M_PI/2;
 
     double big_visibility = 1;// sin(big_angle) / 2 + 0.5;
@@ -302,6 +309,7 @@ void PaintContext::drawWorldAxis(
     }
 
     // Small step
+    /*if (small_visibility > 0)
     {
         //setStrokeStyle(255, 255, 255, static_cast<int>(255.0 * grid_opacity));
         //beginPath();
@@ -336,75 +344,79 @@ void PaintContext::drawWorldAxis(
         }
 
         // X
-        /*Vec2 p1, p2;
+        ///Vec2 p1, p2;
+        ///for (double wx = ceilAxisValue(world_minX, step_wx); wx < world_maxX; wx += step_wx)
+        ///{
+        ///    if (abs(wx) < 1e-9) continue;
+        ///    Ray line_ray(camera.toStage(wx, 0), angle + M_PI_2);
+        ///    if (!getRayRectIntersection(&p1, &p2, stage_rect, line_ray)) break;
+        ///
+        ///    //moveToSharp(p1);
+        ///    //lineToSharp(p2);
+        ///}
+        ///
+        ///// Y
+        ///for (double wy = ceilAxisValue(world_minY, step_wy); wy < world_maxY; wy += step_wy)
+        ///{
+        ///    if (abs(wy) < 1e-9) continue;
+        ///    Ray line_ray(camera.toStage(0, wy), angle);
+        ///    if (!getRayRectIntersection(&p1, &p2, stage_rect, line_ray)) break;
+        ///
+        ///    //moveToSharp(p1);
+        ///    //lineToSharp(p2);
+        ///}
+
+        //stroke();
+    }*/
+
+    if (axis_opacity > 0 && text_opacity > 0)
+    {
+        setStrokeStyle(255, 255, 255, static_cast<int>(255.0 * axis_opacity));
+        setFillStyle(255, 255, 255, static_cast<int>(255.0 * text_opacity));
+        beginPath();
+
+        bool draw_text = (text_opacity > 0.01);
+
+        // Draw x-axis labels
         for (double wx = ceilAxisValue(world_minX, step_wx); wx < world_maxX; wx += step_wx)
         {
             if (abs(wx) < 1e-9) continue;
-            Ray line_ray(camera.toStage(wx, 0), angle + M_PI_2);
-            if (!getRayRectIntersection(&p1, &p2, stage_rect, line_ray)) break;
 
-            //moveToSharp(p1);
-            //lineToSharp(p2);
+            Vec2 stage_pos = camera.toStage(wx, 0);
+            QString txt = QString("%1").arg(wx);
+            Vec2 txt_size = boundingBoxNumberScientific(wx).size();
+
+            double txt_dist = (abs(cos(angle)) * txt_size.y + abs(sin(angle)) * txt_size.x) * 0.5 + spacing;
+
+            Vec2 tick_anchor = stage_pos + x_perp_off + (x_perp_norm * txt_dist);
+
+            moveToSharp(stage_pos - x_perp_off);
+            lineToSharp(stage_pos + x_perp_off);
+            if (draw_text) fillNumberScientific(wx, tick_anchor);
         }
 
-        // Y
+        // Draw y-axis labels
         for (double wy = ceilAxisValue(world_minY, step_wy); wy < world_maxY; wy += step_wy)
         {
             if (abs(wy) < 1e-9) continue;
-            Ray line_ray(camera.toStage(0, wy), angle);
-            if (!getRayRectIntersection(&p1, &p2, stage_rect, line_ray)) break;
 
-            //moveToSharp(p1);
-            //lineToSharp(p2);
-        }*/
+            Vec2 stage_pos = camera.toStage(0, wy);
+            QString txt = QString("%1").arg(wy);
+            //Vec2 txt_size = measureText(txt);
+            Vec2 txt_size = boundingBoxNumberScientific(wy).size();
 
-        //stroke();
+            double txt_dist = (abs(cos(angle)) * txt_size.y + abs(sin(angle)) * txt_size.x) * 0.5 + spacing;
+
+            Vec2 tick_anchor = stage_pos + y_perp_off + (y_perp_norm * txt_dist);
+
+            moveToSharp(stage_pos - y_perp_off);
+            lineToSharp(stage_pos + y_perp_off);
+            if (draw_text) fillNumberScientific(wy, tick_anchor);
+        }
+
+        stroke();
     }
 
-    setStrokeStyle(255, 255, 255, static_cast<int>(255.0 * axis_opacity));
-    setFillStyle(255, 255, 255, static_cast<int>(255.0 * text_opacity));
-    beginPath();
-
-    bool draw_text = (text_opacity > 0.01);
-
-    // Draw x-axis labels
-    for (double wx = ceilAxisValue(world_minX, step_wx); wx < world_maxX; wx += step_wx)
-    {
-        if (abs(wx) < 1e-9) continue;
-
-        Vec2 stage_pos = camera.toStage(wx, 0);
-        QString txt = QString("%1").arg(wx);
-        Vec2 txt_size = boundingBoxNumberScientific(wx).size();
-
-        double txt_dist = (abs(cos(angle)) * txt_size.y + abs(sin(angle)) * txt_size.x) * 0.5 + spacing;
-
-        Vec2 tick_anchor = stage_pos + x_perp_off + (x_perp_norm * txt_dist);
-
-        moveToSharp(stage_pos - x_perp_off);
-        lineToSharp(stage_pos + x_perp_off);
-        if (draw_text) fillNumberScientific(wx, tick_anchor);
-    }
-
-    // Draw y-axis labels
-    for (double wy = ceilAxisValue(world_minY, step_wy); wy < world_maxY; wy += step_wy)
-    {
-        if (abs(wy) < 1e-9) continue;
-
-        Vec2 stage_pos = camera.toStage(0, wy);
-        QString txt = QString("%1").arg(wy);
-        //Vec2 txt_size = measureText(txt);
-        Vec2 txt_size = boundingBoxNumberScientific(wy).size();
-
-        double txt_dist = (abs(cos(angle)) * txt_size.y + abs(sin(angle)) * txt_size.x) * 0.5 + spacing;
-
-        Vec2 tick_anchor = stage_pos + y_perp_off + (y_perp_norm * txt_dist);
-
-        moveToSharp(stage_pos - y_perp_off);
-        lineToSharp(stage_pos + y_perp_off);
-        if (draw_text) fillNumberScientific(wy, tick_anchor);
-    }
-
-    stroke();
     painter->restore();
-    camera.setTransformFilters(true, true, true);
+    camera.setTransformFilters(true);
 }

@@ -3,11 +3,11 @@ SIM_DECLARE(GLCube, "Framework Tests", "FBO Surfaces")
 
 /// Project ///
 
-void GLCube_Project::projectAttributes(Input* input)
+void GLCube_Project::projectAttributes()
 {
     //input->realtime_slider("Panel Count", &panel_count, 1, 16, 1);
 
-    ImGui::SliderInt("Panel Count", &panel_count, 1, 16);
+    ImGui::SliderInt("Panel Count", Initial(&panel_count), 1, 16);
 }
 
 void GLCube_Project::projectPrepare()
@@ -22,11 +22,11 @@ void GLCube_Project::projectPrepare()
 
 
 
-void GLCube_Scene::sceneAttributes(Input* input)
+void GLCube_Scene::sceneAttributes()
 {
     //input->realtime_slider("Camera Rotatation", &camera_rotation, 0.0, M_PI * 2.0, 0.0001);
 
-    ///ImGui::SliderFloat("Rotation", start(&camera_rotation), 0.0f, (float)M_PI * 2.0f);
+    ImGui::SliderFloat("Rotation", Initial(&camera_rotation), 0.0f, (float)M_PI * 2.0f);
 
     auto rotation_id = QString("float%0").arg(sceneIndex()).toStdString().c_str();
 
