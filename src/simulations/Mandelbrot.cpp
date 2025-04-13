@@ -17,24 +17,47 @@ void Mandelbrot_Scene::sceneAttributes()
 {
     thread_count = (int)(1.5 * ((double)QThread::idealThreadCount()));
 
-    //ImGui::Spline("Test Spline", x_spline);
+    static ImRect vr = { 0.0f, 0.8f, 0.8f, 0.0f };
+
+    //x_spline.set(x_spline_points, 6, 1000);
+    //if (!x_spline.initialized())
+    //{
+    //    x_spline = ImGui::Spline::fromEquation(-3, 3, 12, x_spline_points, [](float x)
+    //    {
+    //        return sin(x);
+    //    });
+    //}
+
+    //memset(x_spline_points, 0, sizeof(x_spline_points));
+    x_spline.set(x_spline_points, sizeof(x_spline_points)/(sizeof(float)*2), 10);
+    x_spline.fromEquation(0.01f, 5.0f, [](float x) {
+        return sin(x*3.0f)/2.0f;
+    }, 0.01f, 100);
+
+    y_spline.set(y_spline_points, sizeof(y_spline_points)/(sizeof(float)*2), 1000);
+    
+    //ImGui::SplineEditor("X Spline", &x_spline, &vr, 200);
+    //ImGui::SameLine();
+    //ImGui::SplineEditor("Y Spline", &y_spline, &vr, 200);
+
+    ImGui::SplineEditorPair("X/Y Spline", &x_spline, &y_spline, &vr, 900.0f);
 
     // CPU/GPU options
     ImGui::SeparatorText("Compute");
-    ImGui::SliderInt("Thread Count", &thread_count, 1, 32);
-    ImGui::Checkbox("GPU Compute (less options)", &gpu_compute);
-    ImGui::Checkbox("Discrete Step", &discrete_step);
-    
-    ImGui::Checkbox("log (x) modifier", &log_x);
-    ImGui::Checkbox("log (y) modifier", &log_y);
+    //ImGui::SliderInt("Threads", &thread_count, 1, 32);
+    //ImGui::Checkbox("GPU Compute (less options)", &gpu_compute);
+
+    //ImGui::Checkbox("log (x) modifier", &log_x);
+    //ImGui::Checkbox("log (y) modifier", &log_y);
 
     //if (!log_modifier)
     //    ImGui::Checkbox("Second Pass", &second_pass);
 
+    ImGui::Checkbox("Discrete Step", &discrete_step);
     if (discrete_step)
-        ImGui::DragDouble("Mandelbrot Steps", &quality, 1000.0, 1.0, 1000000.0, "%.0f", ImGuiSliderFlags_Logarithmic);
+        ImGui::DragDouble("Steps", &quality, 1000.0, 1.0, 1000000.0, "%.0f", ImGuiSliderFlags_Logarithmic);
     else
-        ImGui::SliderDouble("Mandelbrot Quality", &quality, 1.0, 150.0);
+        ImGui::SliderDouble("Quality", &quality, 1.0, 150.0);
 
     ImGui::SeparatorText("Main Cardioid");
     if (!gpu_compute)
@@ -42,79 +65,52 @@ void Mandelbrot_Scene::sceneAttributes()
         ImGui::Checkbox("Flatten", &flatten_main_cardioid);
         if (flatten_main_cardioid)
         {
-
             if (ImGui::SliderDouble("Flatness", &flatten_amount, 0.0, 1.0))
                 cardioid_lerp_amount = 1.0 - flatten_amount;
         }
 
-        ImGui::Checkbox("Show Inside ", &show_inside_main_cardioid);
-        ImGui::Checkbox("Show Left", &show_left_of_main_cardioid);
+        //ImGui::Checkbox("Show Inside ", &show_inside_main_cardioid);
+        ImGui::Checkbox("Show period-2 bulb", &show_period2_bulb);
     }
 
     ImGui::Checkbox("Interactive", &interactive_cardioid);
 
 
     ImGui::SeparatorText("Visual Options");
-    ImGui::Checkbox("Smoothing", &smoothing);
+    ImGui::Checkbox("Thresholding", &thresholding);
+    if (!thresholding)
+        ImGui::Checkbox("Smoothing", &smoothing);
 
+    ImGui::SeparatorText("View");
     ImGui::SliderDouble("Rotation", &cam_rotation, 0.0, M_PI * 2.0);
 
     // 1e16 = double limit before preicions loss
-    ImGui::DragDouble("Zoom", &cam_zoom, cam_zoom/100, 300.0, 1e16); 
+    //ImGui::DragDouble("Zoom X", &cam_zoom_x, cam_zoom_x / 100.0, 1.0, 1e16);
+    //ImGui::DragDouble("Zoom Y", &cam_zoom_y, cam_zoom_y / 100.0, 1.0, 1e16);
+    ImGui::DragDouble("Zoom Mult", &cam_zoom, cam_zoom / 100, 300.0, 1e16);
+    ImGui::SliderDouble2("Zoom X/Y", cam_zoom_xy, 0.1, 10.0);
 
     // CPU only
-    ImGui::Checkbox("Thresholding", &thresholding);
-
     if (ImGui::InputTextMultiline("Config", config_buf, 1024))
     {
         loadConfigBuffer();
     }
-
-    //static float v[5] = { 0.390f, 0.575f, 0.565f, 1.000f };
-    //ImGui::Bezier("X-Spline", x_spline);       // draw
-    //ImGui::Bezier("Y-Spline", y_spline);       // draw
-
-    
-    /*static float points[] = {
-        0.0f, 0.0f,
-        0.1f, 0.1f,
-        0.2f, 0.2f,
-        0.3f, 0.3f,
-        0.4f, 0.4f,
-        0.5f, 0.5f,
-        0.6f, 0.6f,
-        0.7f, 0.7f,
-        0.8f, 0.8f,
-    };
-    int new_count = 3;
-    ImGui::CurveEditor("Test Spline", points, 3, 
-        {300, 300},
-        0,
-        &new_count);*/
-
-    //float min = -3.0f;
-    //float max = 3.0f;
-    //float a = ImGui::BezierValueNormalize(0.0f, min, max, x_spline);
-    //float b = ImGui::BezierValueNormalize(0.5f, min, max, x_spline);
-    //float c = ImGui::BezierValueNormalize(1.0f, min, max, x_spline);
-    //float d = ImGui::BezierValueNormalize(2.0f, min, max, x_spline);
-    //float e = ImGui::BezierValueNormalize(-1.0f, min, max, x_spline);
-    //float f = ImGui::BezierValueNormalize(-2.0f, min, max, x_spline);
-    //int j = 5;
 }
 
 std::string Mandelbrot_Scene::serializeConfig()
 {
     QJsonObject info;
-    info["x"]             = camera->x;
-    info["y"]             = camera->y;
-    info["quality"]       = quality;
+    info["x"] = camera->x;
+    info["y"] = camera->y;
+    info["quality"] = quality;
     info["discrete_step"] = discrete_step;
-    info["zoom"]          = cam_zoom;
-    info["rotation"]      = cam_rotation;
-    info["log_x"]         = log_x;
-    info["log_y"]         = log_y;
-    info["smoothing"]     = smoothing;
+    info["zoom"] = cam_zoom;
+    info["zoom_x"] = cam_zoom_xy[0];
+    info["zoom_y"] = cam_zoom_xy[1];
+    info["rotation"] = cam_rotation;
+    info["smoothing"] = smoothing;
+    info["spline_x"] = x_spline.serialize().c_str();
+    info["spline_y"] = y_spline.serialize().c_str();
 
     QJsonDocument jsonDoc(info);
     return jsonDoc.toJson().toStdString();
@@ -126,15 +122,20 @@ void Mandelbrot_Scene::deserializeConfig(std::string json)
     if (jsonDoc.isNull() || !jsonDoc.isObject()) return;
     QJsonObject info = jsonDoc.object();
 
-    camera->x     = info["x"].toDouble(), 
-    camera->y     = info["y"].toDouble();
-    quality       = info["quality"].toDouble(quality);
+    camera->x = info["x"].toDouble(0),
+    camera->y = info["y"].toDouble(0);
+    quality = info["quality"].toDouble(quality);
     discrete_step = info["discrete_step"].toBool(discrete_step);
-    cam_zoom      = info["zoom"].toDouble();
-    cam_rotation  = info["rotation"].toDouble();
-    log_x         = info["log_x"].toBool(log_x);
-    log_y         = info["log_y"].toBool(log_y);
-    smoothing     = info["smoothing"].toBool(smoothing);
+    cam_zoom = info["zoom"].toDouble(1);
+    cam_zoom_xy[0] = info["zoom_x"].toDouble(1);
+    cam_zoom_xy[1] = info["zoom_y"].toDouble(1);
+    cam_rotation = info["rotation"].toDouble(0);
+    smoothing = info["smoothing"].toBool(smoothing);
+
+    if (info.contains("spline_x")) 
+        x_spline.deserialize(info["spline_x"].toString().toStdString());
+    if (info.contains("spline_y")) 
+        y_spline.deserialize(info["spline_y"].toString().toStdString());
 }
 
 void Mandelbrot_Scene::updateConfigBuffer()
@@ -170,7 +171,7 @@ void Mandelbrot_Scene::sceneMounted(Viewport* viewport)
     cam_zoom = camera->zoom_x;
     //camera->zoom_y = -camera->zoom_y;
     //camera->targ_zoom_y = -camera->targ_zoom_y;
-    
+
     context.setup();
 
     QString shader_src = R"(
@@ -219,7 +220,7 @@ void Mandelbrot_Scene::step_color(double step, uint8_t& r, uint8_t& g, uint8_t& 
     if (smoothing)
         ratio = fmod(step, 1.0);
     else
-        ratio = fmod(step/10.0, 1.0);
+        ratio = fmod(step / 10.0, 1.0);
 
     r = (uint8_t)(9 * (1 - ratio) * ratio * ratio * ratio * 255);
     g = (uint8_t)(15 * (1 - ratio) * (1 - ratio) * ratio * ratio * 255);
@@ -241,8 +242,8 @@ void Mandelbrot_Scene::iter_ratio_color(double ratio, uint8_t& r, uint8_t& g, ui
 
 
 void Mandelbrot_Scene::cpu_mandelbrot(
-    Viewport *ctx,
-    double fw, double fh, 
+    Viewport* ctx,
+    double fw, double fh,
     double wx0, double wy0,
     double ww, double wh,
     int pixel_count)
@@ -251,25 +252,26 @@ void Mandelbrot_Scene::cpu_mandelbrot(
     int ih = static_cast<int>(fw);
     double f_max_iter = static_cast<double>(iter_lim);
 
-    
+
     if (!flatten_main_cardioid)
     {
         // Standard
-        dispatchBooleans(
+        /*dispatchBooleans(
             boolsTemplate(regularMandelbrot, [&], ctx),
             smoothing,
             log_x, log_y,
             show_inside_main_cardioid,
-            show_left_of_main_cardioid
-        );
-
-        /*dispatchBooleans(
-            boolsTemplate(splineMandelbrot, [&], ctx),
-            smoothing,
-            log_x, log_y,
-            show_inside_main_cardioid,
-            show_left_of_main_cardioid
+            show_period2_bulb
         );*/
+
+        bool linear = false;// x_spline.isSimpleLinear() && y_spline.isSimpleLinear();
+
+        dispatchBooleans(
+            boolsTemplate(regularMandelbrot, [&], ctx),
+            smoothing,
+            linear,
+            show_period2_bulb
+        );
     }
     else
     {
@@ -277,17 +279,15 @@ void Mandelbrot_Scene::cpu_mandelbrot(
         dispatchBooleans(
             boolsTemplate(radialMandelbrot, [&], ctx),
             smoothing,
-            log_x, log_y,
-            show_inside_main_cardioid,
-            show_left_of_main_cardioid
+            show_period2_bulb
         );
     }
 }
 
 void Mandelbrot_Scene::gpu_mandelbrot(
-    double fw, double fh, 
-    double wx0, double wy0, 
-    double ww, double wh, 
+    double fw, double fh,
+    double wx0, double wy0,
+    double ww, double wh,
     int pixel_count)
 {
     int iw = static_cast<int>(fw);
@@ -384,24 +384,27 @@ void Mandelbrot_Scene::viewportProcess(Viewport* ctx)
     double f_max_iter = static_cast<double>(iter_lim);
 
     if (anyChanged(
-            quality, 
-            smoothing,
-            thresholding, 
-            discrete_step,
-            flatten_main_cardioid, 
-            show_inside_main_cardioid,
-            show_left_of_main_cardioid,
-            cardioid_lerp_amount,
-            log_x, log_y
-            //second_pass
-            )
+        quality,
+        smoothing,
+        thresholding,
+        discrete_step,
+        flatten_main_cardioid,
+        //show_inside_main_cardioid,
+        show_period2_bulb,
+        cardioid_lerp_amount,
+        //log_x, log_y,
+        x_spline.hash(),
+        y_spline.hash()
+        //second_pass
+        )
         )
     {
         bmp.setNeedsReshading();
     }
 
     camera->rotation = cam_rotation;
-    camera->setZoom(cam_zoom);
+    camera->setZoomX(cam_zoom * cam_zoom_xy[0]);
+    camera->setZoomY(cam_zoom * cam_zoom_xy[1]);
 
     bmp.setStageRect(0, 0, ctx->width, ctx->height);
     bmp.setBitmapSize(iw, ih);
@@ -429,8 +432,8 @@ void Mandelbrot_Scene::viewportDraw(Viewport* ctx)
         if (!flatten_main_cardioid)
         {
             // Regular interactive Mandelbrot
-            if (!log_x && !log_y)
-                Cardioid::plot(this, ctx, true);
+            //if (!log_x && !log_y)
+            //    Cardioid::plot(this, ctx, true);
         }
         else
         {
@@ -445,6 +448,7 @@ void Mandelbrot_Scene::viewportDraw(Viewport* ctx)
 
     ctx->print() << "Frame delta time: " << this->project_dt(10) << " ms";
     ctx->print() << "\nMax Iterations: " << iter_lim;
+    //ctx->print() << "\nLinear: " << x_spline.isLinear();
 
     double zoom_factor = camera->getRelativeZoomFactor().average();
     ctx->print() << "\nZoom: " << QString::asprintf("%.1f", zoom_factor) << "x";

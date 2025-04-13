@@ -88,6 +88,8 @@ public:
     void setCameraPos(double _x, double _y);
     void setPan(double pan_x, double pan_y, bool immediate=true);
     void setZoom(double zoom, bool immediate= true);
+    void setZoomX(double zoom_x, bool immediate= true);
+    void setZoomY(double zoom_y, bool immediate= true);
 
     Vec2 getRelativeZoomFactor() { 
         return { 
@@ -225,6 +227,20 @@ inline void Camera::setZoom(double zoom, bool immediate)
         zoom_x = zoom;
         zoom_y = zoom;
     }
+}
+
+inline void Camera::setZoomX(double _zoom_x, bool immediate)
+{
+    targ_zoom_x = _zoom_x;
+    if (immediate)
+        zoom_x = _zoom_x;
+}
+
+inline void Camera::setZoomY(double _zoom_y, bool immediate)
+{
+    targ_zoom_y = _zoom_y;
+    if (immediate)
+        zoom_y = _zoom_y;
 }
 
 inline void Camera::focusWorldRect(const FRect& r, bool stretch)

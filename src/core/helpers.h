@@ -550,6 +550,102 @@ Vec2 rotateVec(double cx, double cy, double angle, double x, double y);
 bool lineEqIntersect(Vec2 *targ, const Ray& ray1, const Ray& ray2, bool bidirectional=false);
 bool getRayRectIntersection(Vec2* back_intersect, Vec2* foward_intersect, const FRect& r, const Ray& ray);
 
+
+/*inline bool lineEqIntersect(
+    float* ix, float* iy,
+    float ray1_x, float ray1_y, float ray1_angle,
+    float ray2_x, float ray2_y, float ray2_angle,
+    bool bidirectional)
+{
+    // Compute unit direction vectors for each ray.
+    float d1x = cosf(ray1_angle), d1y = sinf(ray1_angle);
+    float d2x = cosf(ray2_angle), d2y = sinf(ray2_angle);
+
+    // Origins:
+    float x1 = ray1_x, y1 = ray1_y;
+    float x2 = ray2_x, y2 = ray2_y;
+
+    // Denom of the 2x2 system:
+    double denom = d1x * d2y - d1y * d2x;
+    if (fabs(denom) < 1e-9)
+    {
+        // Rays are parallel (or nearly so)
+        return false;
+    }
+
+    // Compute the parameters t and u such that:
+    //   ray1.origin + t*d1 = ray2.origin + u*d2
+    float dx = x2 - x1;
+    float dy = y2 - y1;
+    float t = (dx * d2y - dy * d2x) / denom;
+    float u = (dx * d1y - dy * d1x) / denom;
+
+    // If we're restricting to the forward direction, both t and u must be nonnegative.
+    if (!bidirectional)
+    {
+        if (t < 0 ) // || u < 0
+            return false;
+    }
+
+    // Compute intersection point.
+    *ix = x1 + t * d1x;
+    *iy = y1 + t * d1y;
+    return true;
+}
+
+inline bool rayIntersectVertLineY(float* iy, float ray1_x, float ray1_y, float ray1_angle, float line_x)
+{
+    float d1x = cosf(ray1_angle), d1y = sinf(ray1_angle);
+
+    if (fabs(d1x) < 1e-9)
+        return false;
+
+    float dx = line_x - ray1_x;
+    float t = dx / d1x;
+
+    // Restricting ray to forward direction
+    if (t < 0)
+        return false;
+
+    // Compute intersection point.
+    *iy = ray1_y + t * d1y;
+    return true;
+}
+
+
+        inline bool rayVecIntersectVertLineY(float* iy, float ray_x, float ray_y, float ray_vx, float ray_vy, float line_x)
+        {
+            float dx = line_x - ray_x;
+
+            if (fabsf(ray_vx) < 1e-9f)
+                return false;
+
+            float t = dx / ray_vx;
+            if (t < 0.0f)
+                return false;
+
+            *iy = ray_y + t * ray_vy;
+            return true;
+        }
+
+
+        inline float rayVecIntersectVertLineY(
+            float ray_x, float ray_y,
+            float ray_vx, float ray_vy,
+            float line_x)
+        {
+            if (ray_vx*ray_vx < 1e-18f)
+                return std::numeric_limits<float>::quiet_NaN();
+
+            float t = (line_x - ray_x) / ray_vx;
+            if (t < 0.0f)
+                return std::numeric_limits<float>::quiet_NaN();
+
+            return ray_y + t * ray_vy;
+        }
+*/
+
+
 template<typename T>
 std::vector<std::vector<T>> splitVector(const std::vector<T>& objects, size_t numParts)
 {

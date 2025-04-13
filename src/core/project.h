@@ -15,6 +15,7 @@
 #include <QMatrix4x4>
 
 // Standard libraries for projects
+#include <type_traits>
 #include <random>
 #include <cmath>
 #include <vector>
@@ -78,14 +79,14 @@ class VariableChangedTracker
         std::function<void()> committer;
     };
 
-    std::unordered_map<std::type_index, ClearCommit> registry_;
+    mutable std::unordered_map<std::type_index, ClearCommit> registry_;
     std::mutex mutex_;
 
 
     /// The per-type map is allocated once per type T via a static local; we also
     /// register it (lazily) so that global clear/commit can iterate over it.
     template <typename T>
-    StateMapPair<T>& getStateMap()
+    StateMapPair<T>& getStateMap() const
     {
         static StateMapPair<T> maps;
         static bool registered = registerType<T>(maps);
@@ -95,7 +96,7 @@ class VariableChangedTracker
 
     /// Register the given maps clear/commit methods in our registry
     template <typename T>
-    bool registerType(StateMapPair<T>& maps)
+    bool registerType(StateMapPair<T>& maps) const
     {
         //std::lock_guard<std::mutex> lock(mutex_);
 
@@ -126,29 +127,34 @@ public:
 
     /// Returns true if 'var' differs from its last committed value, false otherwise.
     template <typename T>
-    bool variableChanged(T& var)
+    bool variableChanged(T& var) const
     {
-        auto& maps = getStateMap<T>();
-        auto it = maps.previous.find(&var);
+        using NonConstT = typename std::remove_const<T>::type;
+        auto& maps = getStateMap<NonConstT>();
+
+        // Remove constness from the address
+        auto key = const_cast<NonConstT*>(&var);
+
+        auto it = maps.previous.find(key);
         if (it != maps.previous.end())
         {
             // Compare against the previously committed value
             bool changed = (var != it->second);
             // Always update 'current' so that commit will be correct
-            maps.current[&var] = var;
+            maps.current[key] = var;
             return changed;
         }
         else
         {
             // First time we see this variable; store it but it doesn't "count" as changed yet
-            maps.current[&var] = var;
+            maps.current[key] = var;
             return false;
         }
     }
 
     /// Returns true if any variable among args... has changed
     template <typename... Args>
-    bool anyChanged(Args&&... args)
+    bool anyChanged(Args&&... args) const
     {
         return (variableChanged(std::forward<Args>(args)) || ...);
     }

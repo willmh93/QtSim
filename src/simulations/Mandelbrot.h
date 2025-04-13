@@ -17,23 +17,15 @@ if (xx - yy + x0 > max_x)
     max_x = xx - yy + x0;
 }*/
 
-template <bool smoothing, bool log_x, bool log_y>
+template <bool smoothing>
 inline double mandelbrot(double x0, double y0, int iter_lim)
 {
     double x = 0.0, y = 0.0, xx = 0.0, yy = 0.0;
     int iter = 0;
     while (xx + yy <= 4.0 && iter < iter_lim)
     {
-        if constexpr (log_y)
-            y = log(2.0 * x * y + y0);
-        else 
-            y = (2.0 * x * y + y0);
-
-        if constexpr (log_x)
-            x = log(xx - yy + x0);
-        else 
-            x = (xx - yy + x0);
-
+        y = (2.0 * x * y + y0);
+        x = (xx - yy + x0);
 
         xx = x * x;
         yy = y * y;
@@ -50,20 +42,18 @@ inline double mandelbrot(double x0, double y0, int iter_lim)
         return iter;
 }
 
-template <bool smoothing, bool log_x, bool log_y>
-inline double spline_mandelbrot(double x0, double y0, int iter_lim, float *x_spline, float* y_spline)
+template <bool smoothing>
+inline double spline_mandelbrot(double x0, double y0, int iter_lim, ImGui::Spline& x_spline, ImGui::Spline& y_spline)
 {
     double x = 0.0, y = 0.0, xx = 0.0, yy = 0.0;
     int iter = 0;
     while (xx + yy <= 4.0 && iter < iter_lim)
     {
-        //y = 2.0 * x * y + y0;
-        //x = xx - yy + x0;
-        y = ImGui::BezierValueNormalize(2.0 * x * y + y0, -100.0f, 100.0f, x_spline);
-        x = ImGui::BezierValueNormalize(xx - yy + x0, -100.0f, 100.0f, y_spline);
+        y = (2.0 * x * y + y0);
+        x = (xx - yy + x0);
 
-        xx = x * x;
-        yy = y * y;
+        xx = x_spline(x * x);
+        yy = y_spline(y * y);
         iter++;
     }
 
@@ -93,13 +83,14 @@ struct Mandelbrot_Scene : public Scene
     double quality = 20.0;
     bool thresholding = false;
     bool smoothing = true;
-    bool log_x = false;
-    bool log_y = false;
     double cam_rotation = 0.0;
     double cam_zoom = 1;
+    double cam_zoom_xy[2] = { 1, 1 };
+    //double cam_zoom_x = 1;
+    //double cam_zoom_y = 1;
 
-    bool show_inside_main_cardioid = true;
-    bool show_left_of_main_cardioid = true;
+    //bool show_inside_main_cardioid = true;
+    bool show_period2_bulb = true;
     bool interactive_cardioid = false;
 
     int iter_lim;
@@ -108,8 +99,25 @@ struct Mandelbrot_Scene : public Scene
     double flatten_amount = 0.0;
     double cardioid_lerp_amount = 1.0; // 1 - flatten
 
-    float x_spline[5] = { 0.0f, 0.0f, 1.0f, 1.0f, 0.0f };
-    float y_spline[5] = { 0.0f, 0.0f, 1.0f, 1.0f, 0.0f };
+    ImGui::Spline x_spline;
+    ImGui::Spline y_spline;
+
+    float x_spline_points[120] = {
+        0.0f, 0.0f,
+        0.1f, 0.1f,
+        0.2f, 0.2f,
+        0.3f, 0.3f,
+        0.4f, 0.4f,
+        0.5f, 0.5f
+    };
+    float y_spline_points[12] = {
+        0.0f, 0.0f,
+        0.1f, 0.1f,
+        0.2f, 0.2f,
+        0.3f, 0.3f,
+        0.4f, 0.4f,
+        0.5f, 0.5f
+    };
 
     char config_buf[1024];
 
@@ -201,36 +209,16 @@ struct Mandelbrot_Scene : public Scene
 
     template<
         bool smoothed,
-        bool log_x,
-        bool log_y,
-        bool vis_main_cardioid,
+        bool linear,
         bool vis_left_of_main_cardioid
     >
     void regularMandelbrot(Viewport* ctx)
     {
-        bool a = false;
-        int b = 7;
-        double c = 8.0;
-
-
         double f_max_iter = static_cast<double>(iter_lim);
         bmp.forEachWorldPixel(ctx, [&](int x, int y, double wx, double wy)
         {
-            if constexpr (!vis_main_cardioid)
-            {
-                double tx, ty, ta, oa, d;
-                Cardioid::cardioidPolarCoord(wx, wy, tx, ty, ta, d, oa);
-
-                if (d < 0)
-                {
-                    bmp.setPixel(x, y, 127, 0, 0, 255);
-                    return;
-                }
-            }
-
             if constexpr (!vis_left_of_main_cardioid)
             {
-                //Vec2 mandel_pt = Cardioid::fromPolarCoordinate(perp_angle, -point_dist);
                 if (wx < -0.75)
                 {
                     bmp.setPixel(x, y, 127, 0, 0, 255);
@@ -238,11 +226,15 @@ struct Mandelbrot_Scene : public Scene
                 }
             }
 
-            double smooth_iter = mandelbrot<smoothed, log_x, log_y>(wx, wy, iter_lim);
+            double smooth_iter;
+            if constexpr (linear)
+                smooth_iter = mandelbrot<smoothed>(wx, wy, iter_lim);
+            else
+                smooth_iter = spline_mandelbrot<smoothed>(wx, wy, iter_lim, x_spline, y_spline);
 
             uint8_t r, g, b;
             if (discrete_step)
-                step_color(smooth_iter /*+ 0.5*/, r, g, b);
+                step_color(smooth_iter, r, g, b);
             else
             {
                 double ratio = smooth_iter / f_max_iter;
@@ -253,37 +245,17 @@ struct Mandelbrot_Scene : public Scene
         });
     };
 
-    template<
+    /*template<
         bool smoothed,
-        bool log_x,
-        bool log_y,
-        bool vis_main_cardioid,
         bool vis_left_of_main_cardioid
     >
     void splineMandelbrot(Viewport* ctx)
     {
-        bool a = false;
-        int b = 7;
-        double c = 8.0;
-
         double f_max_iter = static_cast<double>(iter_lim);
         bmp.forEachWorldPixel(ctx, [&](int x, int y, double wx, double wy)
         {
-            if constexpr (!vis_main_cardioid)
-            {
-                double tx, ty, ta, oa, d;
-                Cardioid::cardioidPolarCoord(wx, wy, tx, ty, ta, d, oa);
-
-                if (d < 0)
-                {
-                    bmp.setPixel(x, y, 127, 0, 0, 255);
-                    return;
-                }
-            }
-
             if constexpr (!vis_left_of_main_cardioid)
             {
-                //Vec2 mandel_pt = Cardioid::fromPolarCoordinate(perp_angle, -point_dist);
                 if (wx < -0.75)
                 {
                     bmp.setPixel(x, y, 127, 0, 0, 255);
@@ -291,11 +263,11 @@ struct Mandelbrot_Scene : public Scene
                 }
             }
 
-            double smooth_iter = spline_mandelbrot<smoothed, log_x, log_y>(wx, wy, iter_lim, x_spline, y_spline);
+            double smooth_iter = spline_mandelbrot<smoothed>(wx, wy, iter_lim, x_spline, y_spline);
 
             uint8_t r, g, b;
             if (discrete_step)
-                step_color(smooth_iter /*+ 0.5*/, r, g, b);
+                step_color(smooth_iter, r, g, b);
             else
             {
                 double ratio = smooth_iter / f_max_iter;
@@ -304,13 +276,10 @@ struct Mandelbrot_Scene : public Scene
 
             bmp.setPixel(x, y, r, g, b, 255);
         });
-    };
+    };*/
 
     template<
         bool smoothed,
-        bool log_x,
-        bool log_y,
-        bool vis_main_cardioid, 
         bool vis_left_of_main_cardioid
     >
     void radialMandelbrot(Viewport* ctx)
@@ -348,7 +317,7 @@ struct Mandelbrot_Scene : public Scene
                 }
             }
 
-            double smooth_iter = mandelbrot<smoothed, log_x, log_y>(mandel_pt.x, mandel_pt.y, iter_lim);
+            double smooth_iter = mandelbrot<smoothed>(mandel_pt.x, mandel_pt.y, iter_lim);
             double ratio = smooth_iter / f_max_iter;
 
             uint8_t r, g, b;
