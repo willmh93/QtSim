@@ -29,18 +29,21 @@ void Mandelbrot_Scene::sceneAttributes()
     //}
 
     //memset(x_spline_points, 0, sizeof(x_spline_points));
-    x_spline.set(x_spline_points, sizeof(x_spline_points)/(sizeof(float)*2), 10);
-    x_spline.fromEquation(0.01f, 5.0f, [](float x) {
-        return sin(x*3.0f)/2.0f;
-    }, 0.01f, 100);
 
-    y_spline.set(y_spline_points, sizeof(y_spline_points)/(sizeof(float)*2), 1000);
+    x_spline.set(x_spline_points, ImSpline::PointsArrSize(x_spline_points), 1000);
+    
+    //x_spline.fromEquation(0.01f, 5.0f, [](float x) {
+    //    return logf(x);
+    //    //return sin(x*3.0f)/2.0f;
+    //}, 0.01f, 6, 100, 10);
+
+    y_spline.set(y_spline_points, ImSpline::PointsArrSize(y_spline_points), 1000);
     
     //ImGui::SplineEditor("X Spline", &x_spline, &vr, 200);
     //ImGui::SameLine();
     //ImGui::SplineEditor("Y Spline", &y_spline, &vr, 200);
 
-    ImGui::SplineEditorPair("X/Y Spline", &x_spline, &y_spline, &vr, 900.0f);
+    ImSpline::SplineEditorPair("X/Y Spline", &x_spline, &y_spline, &vr, 900.0f);
 
     // CPU/GPU options
     ImGui::SeparatorText("Compute");

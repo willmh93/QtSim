@@ -306,7 +306,7 @@ inline void splineToBezierHandles(
 	}
 }
 
-namespace ImGui
+namespace ImSpline
 {
 	// Forward declare
 	class Spline;
@@ -323,6 +323,31 @@ namespace ImGui
 		"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 		"abcdefghijklmnopqrstuvwxyz"
 		"0123456789+/";
+
+	/*class SplineDataManager
+	{
+		float* buffer;
+		int length;
+
+
+	};*/
+
+	constexpr size_t PointsArrSize(int points)
+	{
+		return points * 2;
+	}
+
+	constexpr size_t KnotsArrSize(int knots)
+	{
+		return knots * 6;
+	}
+
+	template <std::size_t N>
+	constexpr std::size_t PointsArrSize(const float(&arr)[N]) {
+		static_assert(N % 2 == 0, "Array size must be divisible by 2 for 2D points");
+		return N / 2;
+	}
+
 
 	class Spline
 	{
@@ -349,6 +374,8 @@ namespace ImGui
 		// Externally provided x/y point buffer
 		float* points;
 		int point_count;
+		int point_count_max;
+
 		inline ImVec2* pointVecArray() { return reinterpret_cast<ImVec2*>(points); }
 
 		// Generated path info
@@ -769,7 +796,7 @@ namespace ImGui
 			onChanged();
 		}*/
 
-		bool set(float* xy_points, int num_points, int segment_count = 100)
+		bool set(float* xy_points, int num_points, int max_points, int segment_count = 100)
 		{
 			if (points != xy_points ||
 				point_count != point_count ||
@@ -783,6 +810,7 @@ namespace ImGui
 
 			points = xy_points;
 			point_count = num_points;
+			point_count_max = max_points;
 			path_length = segment_count;
 
 			bInitialized = true;
@@ -815,7 +843,7 @@ namespace ImGui
 			float tail_dx = points[0] - tail_knot_x;
 			if ((tail_dx < 0 && x < tail_knot_x) || (tail_dx > 0 && x > tail_knot_x))
 				counter++;
-
+			
 			float head_knot_x = points[(point_count - 2) * 2];
 			float head_dx = points[(point_count - 1) * 2] - head_knot_x;
 			if ((head_dx < 0 && x < head_knot_x) || (head_dx > 0 && x > head_knot_x))
@@ -1116,6 +1144,8 @@ namespace ImGui
 
 	inline int SplineEditor(const char* label, Spline* spline, ImRect* view_rect, float max_editor_size=300.0f)
 	{
+		using namespace ImGui;
+
 		const ImGuiStyle& Style = GetStyle();
 		const ImGuiIO& IO = GetIO();
 		ImDrawList* DrawList = GetWindowDrawList();
@@ -1129,11 +1159,14 @@ namespace ImGui
 		ImColor pink(1.0f, 0.0f, 0.75f, 1.0);
 		ImColor red_dim(1.0f, 0.0f, 0.0f, 0.5);
 		ImColor red(1.0f, 0.0f, 0.0f, 1.0);
+		ImColor blue(0.2f, 0.1f, 1.0f, 1.0);
+		ImColor purple(0.65f, 0.0f, 1.0f, 1.0);
 		ImColor cyan_inactive(0.00f, 0.5f, 1.0f, 1.0f);
 		ImColor cyan_active(0.0f, 0.75f, 1.0f, 1.0f);
-		ImColor grid_color(1.0f, 1.0f, 1.0f, 0.2f);
-		ImColor bright_grid_color(1.0f, 1.0f, 1.0f, 1.0f);
+		ImColor grid_color(0.5f, 0.5f, 0.5f, 1.0f);
+		ImColor bright_grid_color(0.8f, 0.8f, 0.8f, 1.0f);
 		ImColor white(1.0f, 1.0f, 1.0f, 1.0f);
+		ImColor white_dim(1.0f, 1.0f, 1.0f, 1.0f);
 
 
 		float* points = spline->points;
@@ -1345,8 +1378,8 @@ namespace ImGui
 			return niceMultiplier * factor * (ideal_step < 0.0f ? -1.0f : 1.0f);
 		};
 
-		float step_x = roundStep(view_rect->GetWidth() / 6.0f);
-		float step_y = roundStep(view_rect->GetHeight() / 6.0f);
+		float step_x = roundStep(view_rect->GetWidth() / (bb.GetWidth()/100.0f));
+		float step_y = roundStep(view_rect->GetHeight() / (bb.GetHeight()/100.0f));
 		float grid_x = floor(view_rect->Min.x / step_x) * step_x;
 		float grid_y = floor(view_rect->Min.y / step_y) * step_y;
 		int grid_count_x = 2 + floor(fabs(view_rect->GetWidth()) / fabs(step_x));
@@ -1358,6 +1391,8 @@ namespace ImGui
 			ImColor color = is_origin ? bright_grid_color : grid_color;
 
 			float px = bb.Min.x + ((grid_x - view_rect->Min.x) / (view_rect->Max.x - view_rect->Min.x) * bb.GetWidth());
+			px = floorf(px);
+
 			DrawList->AddLine(ImVec2(px, bb.Min.y), ImVec2(px, bb.Max.y), color, 1);
 
 			if (px > bb.Min.x + 10)
@@ -1375,6 +1410,8 @@ namespace ImGui
 			ImColor color = is_origin ? ImColor(bright_grid_color) : grid_color;
 
 			float py = bb.Min.y + ((grid_y - view_rect->Min.y) / (view_rect->Max.y - view_rect->Min.y) * bb.GetHeight());
+			py = floorf(py);
+			
 			DrawList->AddLine(ImVec2(bb.Min.x, py), ImVec2(bb.Max.x, py), color, 1);
 
 			if (py > bb.Min.y + 10)
@@ -1401,9 +1438,10 @@ namespace ImGui
 
 		// Draw Spline
 		ImVector<ImVec2> spline_path;
+		//spline_path.push_back(fromGraph({ 0.0f, spline->intersectY(0.0f) }));
 		for (size_t i = 0; i < path.size(); i++)
 			spline_path.push_back(fromGraph(path[i]));
-		DrawList->AddPolyline(spline_path.Data, spline_path.Size, green, false, 2);
+		DrawList->AddPolyline(spline_path.Data, spline_path.Size, purple, false, 4);
 
 		// Draw handle lines
 		for (size_t knot_point_index = 1; knot_point_index < numPoints; knot_point_index += 3)
@@ -1412,24 +1450,27 @@ namespace ImGui
 			ImVec2& h1 = point_arr[knot_point_index - 1];
 			ImVec2& h2 = point_arr[knot_point_index + 1];
 			ImVec2 knot_pos = fromGraph(knot);
-			DrawList->AddLine(knot_pos, fromGraph(h1), ImColor(cyan_inactive), 2);
-			DrawList->AddLine(knot_pos, fromGraph(h2), ImColor(cyan_inactive), 2);
+			DrawList->AddLine(knot_pos, fromGraph(h1), white_dim, 1);
+			DrawList->AddLine(knot_pos, fromGraph(h2), white_dim, 1);
 		}
 
 		// Draw handle circles
 		for (int i = 0; i < numPoints; i++)
 		{
 			bool dragging_point = (spline->dragging_index == i);
-			DrawList->AddCircleFilled(fromGraph(point_arr[i]), handle_size, dragging_point ? cyan_active : cyan_inactive);
+			DrawList->AddCircleFilled(fromGraph(point_arr[i]), handle_size, dragging_point ? cyan_active : white_dim);
 		}
 
 		// Show intersections
-		int intersection_count = spline->countIntersectsY(graph_mouse.x);
-		DrawList->AddLine(ImVec2(mouse.x, bb.Min.y), ImVec2(mouse.x, bb.Max.y), red_dim, 1.0f);
-		for (int i = 0; i < intersection_count; i++)
+		if (spline->dragging_index < 0)
 		{
-			float iy = spline->intersectY(graph_mouse.x, i);
-			DrawList->AddCircleFilled(fromGraph(ImVec2(graph_mouse.x, iy)), 4, red);
+			int intersection_count = spline->countIntersectsY(graph_mouse.x);
+			DrawList->AddLine(ImVec2(mouse.x, bb.Min.y), ImVec2(mouse.x, bb.Max.y), red_dim, 1.0f);
+			for (int i = 0; i < intersection_count; i++)
+			{
+				float iy = spline->intersectY(graph_mouse.x, i);
+				DrawList->AddCircleFilled(fromGraph(ImVec2(graph_mouse.x, iy)), 4, red);
+			}
 		}
 
 		DrawList->PopClipRect();

@@ -6,12 +6,11 @@
 int countDecimals(double num)
 {
     std::ostringstream out;
-    out << std::fixed << std::setprecision(10) << num;  // Ensure sufficient precision
+    out << std::fixed << std::setprecision(10) << num;
     std::string str = out.str();
 
     size_t pos = str.find('.');
-    if (pos == std::string::npos) return 0;  // No decimal point, so no decimal places
-
+    if (pos == std::string::npos) return 0; 
     return str.size() - pos - 1;
 }
 

@@ -99,7 +99,6 @@ void PaintContext::drawSurface(const GLSurface& surface, double x, double y, dou
     }
 }
 
-
 void PaintContext::drawSurface(CanvasBitmapObject& bmp)
 {
     bmp.img.loadFromData(bmp.data.data());

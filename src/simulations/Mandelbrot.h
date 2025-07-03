@@ -43,7 +43,7 @@ inline double mandelbrot(double x0, double y0, int iter_lim)
 }
 
 template <bool smoothing>
-inline double spline_mandelbrot(double x0, double y0, int iter_lim, ImGui::Spline& x_spline, ImGui::Spline& y_spline)
+inline double spline_mandelbrot(double x0, double y0, int iter_lim, ImSpline::Spline& x_spline, ImSpline::Spline& y_spline)
 {
     double x = 0.0, y = 0.0, xx = 0.0, yy = 0.0;
     int iter = 0;
@@ -99,10 +99,10 @@ struct Mandelbrot_Scene : public Scene
     double flatten_amount = 0.0;
     double cardioid_lerp_amount = 1.0; // 1 - flatten
 
-    ImGui::Spline x_spline;
-    ImGui::Spline y_spline;
+    ImSpline::Spline x_spline;
+    ImSpline::Spline y_spline;
 
-    float x_spline_points[120] = {
+    float x_spline_points[ImSpline::PointsArrSize(6)] = {
         0.0f, 0.0f,
         0.1f, 0.1f,
         0.2f, 0.2f,

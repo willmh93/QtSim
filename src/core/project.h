@@ -368,7 +368,7 @@ public:
 
     int scene_dt(int average_samples=1);
 
-    int project_dt(int average_samples);
+    int project_dt(int average_samples=1);
 
     int project_draw_dt(int average_samples);
 
